@@ -32,7 +32,8 @@ r.get('/materials', async (req, res) => {
   if (f.q) add("(m.title ILIKE '%' || ? || '%' OR m.url ILIKE '%' || ? || '%')", f.q);
   if (f.domain) add("m.url ILIKE '%' || ? || '%'", f.domain);
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
-  const total = (await one(`SELECT count(*)::int AS n FROM materials m ${LATEST} ${w}`, params)).n;
+  // $1 (próg) musi wystąpić w zapytaniu także wtedy, gdy nie filtrujemy po ryzyku
+  const total = (await one(`SELECT count(*)::int AS n, max($1::numeric) AS threshold FROM materials m ${LATEST} ${w}`, params)).n;
   const sortCol = { score: 'a.score', fetched_at: 'm.fetched_at', title: 'm.title' }[f.sort];
   params.push(f.size, (f.page - 1) * f.size);
   const items = await q(
