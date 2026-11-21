@@ -127,3 +127,17 @@ def test_identifiers_are_extracted():
 def test_generic_text_has_no_watchlist_hits():
     r = run("Dom maklerski oferuje akcje i obligacje. Inwestowanie wiąże się z ryzykiem.")
     assert r["watchlists"] == []
+
+
+def test_short_registry_name_matches_only_as_uppercase_acronym():
+    from app.registry import get_registry
+    reg = get_registry()
+    assert any(f["name"] == "XTB S.A." for f in reg.find_in_text("Rachunek maklerski w XTB S.A."))
+    assert reg.find_in_text("tekst o xtb pisany małymi literami") == []
+    assert reg.find_in_text("ALL IN ONE – SKY IS THE LIMIT") == []
+
+
+def test_short_single_word_name_requires_proper_noun():
+    from app.registry import get_registry
+    reg = get_registry()
+    assert not any(f["name"].startswith("Solid") for f in reg.find_in_text("We deliver solid returns and a solid plan."))

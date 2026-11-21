@@ -12,6 +12,7 @@ const Material = lazy(() => import('./pages/Material.jsx'));
 const Results = lazy(() => import('./pages/Results.jsx'));
 const Scan = lazy(() => import('./pages/Scan.jsx'));
 const Search = lazy(() => import('./pages/Search.jsx'));
+const Registries = lazy(() => import('./pages/Registries.jsx'));
 import './styles.css';
 
 function Shell() {
@@ -30,6 +31,7 @@ function Shell() {
           <NavLink to="/alerts">Alerty {unread > 0 && <span className="badge">{unread}</span>}</NavLink>
           <NavLink to="/entities">Podmioty</NavLink>
           <NavLink to="/search">Wyszukiwarka</NavLink>
+          <NavLink to="/registries">Rejestry (KRS, LEI)</NavLink>
           <NavLink to="/calibration">Kalibracja</NavLink>
           <NavLink to="/scan">Skanowanie i źródła</NavLink>
         </nav>
@@ -52,6 +54,7 @@ function Shell() {
           <Route path="/entities" element={<Entities />} />
           <Route path="/entities/:id" element={<Entity />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/registries" element={<Registries />} />
           <Route path="/calibration" element={<Calibration />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="*" element={<div className="empty">Nie znaleziono strony</div>} />

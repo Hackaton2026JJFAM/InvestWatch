@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -29,6 +30,16 @@ ENTITY_RX = re.compile(
     r"([A-ZĄĆĘŁŃÓŚŹŻ0-9][\w&.\-ĄĆĘŁŃÓŚŹŻąćęłńóśźż]*(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ0-9&][\w&.\-ĄĆĘŁŃÓŚŹŻąćęłńóśźż]*){0,5})\s*,?\s+"
     r"(S\.A\.|Sp\.\s?z\s?o\.o\.|sp\.\s?z\s?o\.o\.|Ltd\.?|Limited|GmbH|AG|PLC|plc|LLC|B\.V\.|S\.à r\.l\.|AS|SE|sp\.k\.)"
 )
+
+
+# skróty firm, które są też zwykłymi słowami/kodami – nie dopasowujemy ich w treści
+COMMON_ACRONYMS = {"ALL", "COM", "MAN", "SKY", "TOM", "MEX", "GBR", "EVO", "DUB", "PAM", "EXT", "AVA", "BUX", "PGE"}
+
+
+def fold_case_keep(text: str) -> str:
+    """Usuwa znaki diakrytyczne, ale zachowuje wielkość liter (do dopasowań nazw własnych)."""
+    t = unicodedata.normalize("NFKD", text).replace("ł", "l").replace("Ł", "L")
+    return "".join(c for c in t if not unicodedata.combining(c))
 
 
 def domain_matches(host: str | None, domain: str) -> bool:
@@ -119,8 +130,17 @@ class Registry:
         for firm in self.firms:
             for variant in ({firm.core, firm.distinctive} if firm.distinctive else ()):
                 if len(variant) < 4 and " " not in variant:
-                    continue  # zbyt krótkie nazwy dają fałszywe trafienia
+                    # krótkie nazwy (np. „XTB”) tylko jako skrót wielkimi literami i osobne słowo w oryginalnym tekście
+                    acronym = variant.upper()
+                    if (len(variant) == 3 and variant.isalpha() and acronym not in COMMON_ACRONYMS and firm.name not in hits
+                            and re.search(rf"(?<![\w.]){acronym}(?![\w])", text)):
+                        hits[firm.name] = {**firm.public(), "matched_as": acronym}
+                    continue
                 if f" {variant} " in folded and firm.name not in hits:
+                    # krótka jednowyrazowa nazwa („solid”, „saxo”) musi wystąpić jako nazwa własna (wielka litera)
+                    if " " not in variant and len(variant) < 7 and not re.search(
+                            rf"(?<![\w]){re.escape(variant[0].upper())}{re.escape(variant[1:])}(?![\w])|(?<![\w]){re.escape(variant.upper())}(?![\w])", fold_case_keep(text)):
+                        continue
                     hits[firm.name] = {**firm.public(), "matched_as": variant}
             if domain and any(domain_matches(domain, d) for d in firm.domains) and firm.name not in hits:
                 hits[firm.name] = {**firm.public(), "matched_as": f"domena {domain}"}

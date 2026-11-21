@@ -65,3 +65,22 @@ def test_gleif_requires_name_or_lei():
         enrich.gleif()
     with pytest.raises(ValueError):
         enrich.gleif(lei="zly")
+
+
+def test_gleif_record_extracts_krs_for_polish_registry():
+    rec = {"id": "259400AVUPSABLEXNT19", "attributes": {"lei": "259400AVUPSABLEXNT19",
+           "entity": {"legalName": {"name": "SYNTETYCZNA SPÓŁKA AKCYJNA"}, "legalAddress": {"city": "Warszawa", "country": "PL"},
+                      "registeredAt": {"id": "RA000484"}, "registeredAs": "0000999999", "status": "ACTIVE"},
+           "registration": {"status": "ISSUED"}}}
+    assert enrich._gleif_record(rec)["krs"] == "0000999999"
+    rec["attributes"]["entity"]["registeredAt"] = {"id": "RA000999"}
+    assert enrich._gleif_record(rec)["krs"] is None
+
+
+def test_krs_full_extract_is_attached_on_request():
+    enrich._cache["krs:0000999999"] = (time.time(), KRS_FIXTURE)
+    enrich._cache["krs-full:0000999999:P"] = (time.time(), {"rodzaj": "Pełny", "dane": {"dzial1": {}}})
+    d = enrich.krs("0000999999", full=True)
+    assert d["raw"]["dane"]["dzial1"]["kapital"]
+    assert d["raw_full"]["rodzaj"] == "Pełny"
+    assert "raw_full" not in enrich.krs("0000999999")

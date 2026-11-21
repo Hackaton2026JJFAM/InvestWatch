@@ -40,6 +40,9 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [x] Adapter GLEIF (LEI) – wyszukiwanie po nazwie lub LEI, oznaczenie dokładnego dopasowania
 - [x] Lista ostrzeżeń publicznych KNF (669 wpisów, domeny/KRS/NIP) – przesłanki M1.5 i M3.4
 - [x] Rejestr MiCA ESMA: 409 CASP + 217 podmiotów niezgodnych – przesłanki M1.6 (bez licencji) i M1.7 (licencja CASP / brak w rejestrze)
+- [x] KRS bez znajomości numeru: nazwa → GLEIF (urząd RA000484) → numer KRS → odpis; dopasowanie rekordu LEI z uwzględnieniem kraju z formy prawnej
+- [x] Wszystkie dane z rejestrów: odpis KRS aktualny (6 działów) i pełny z historią, rekord LEI z relacjami (dominujący bezpośredni/najwyższy, zależne), drzewo danych z filtrem; strona „Rejestry”
+- [x] Rejestr KNF: skróty 3-literowe (np. XTB) dopasowywane jako nazwa własna wielkimi literami; krótkie nazwy jednowyrazowe tylko z wielkiej litery
 - [ ] Ostrzeżenia zagranicznych organów nadzoru (strona KNF) i IOSCO I-SCAN jako kolejne listy
 - [ ] Harmonogram odświeżania snapshotów list (dziś: `python -m tools.watchlists_import`)
 - [ ] Graf powiązań osób – wymaga źródła z niezamaskowanymi danymi (np. dostęp instytucjonalny do KRS)

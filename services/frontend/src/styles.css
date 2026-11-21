@@ -136,3 +136,11 @@ label.f { display: flex; flex-direction: column; gap: 3px; font-size: .75rem; co
 .modal-bg { position: fixed; inset: 0; background: rgba(16, 24, 40, .45); display: flex; align-items: center; justify-content: center; z-index: 60; padding: 16px; }
 .modal { width: 380px; max-width: 100%; }
 .linkbtn { background: none; border: none; color: #ffd166; cursor: pointer; padding: 0; font: inherit; text-decoration: underline; }
+
+.data-tree { font-size: .85rem; }
+.dt-node { margin: 2px 0; }
+.dt-node > summary { cursor: pointer; font-weight: 600; padding: 4px 2px; color: var(--brand); }
+.dt-children { margin-left: 14px; border-left: 2px solid var(--border); padding-left: 10px; }
+.dt-row { display: grid; grid-template-columns: minmax(160px, 34%) 1fr; gap: 10px; padding: 3px 0; border-bottom: 1px dashed var(--border); }
+.dt-key { color: var(--muted); }
+.dt-val { overflow-wrap: anywhere; white-space: pre-wrap; }

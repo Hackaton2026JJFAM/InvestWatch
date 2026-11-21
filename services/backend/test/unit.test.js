@@ -43,3 +43,28 @@ test('isAdmin: bez ciasteczka lub z podrobionym podpisem = brak uprawnień', asy
   assert.equal(isAdmin(''), false);
   assert.equal(isAdmin(`iw_admin=${Date.now() + 60000}.podrobiony`), false);
 });
+
+test('coreName/pickGleif: nazwa bez formy prawnej wybiera właściwy rekord LEI', async () => {
+  const { coreName, pickGleif } = await import('../src/enrichment.js');
+  assert.equal(coreName('XTB SPÓŁKA AKCYJNA'), coreName('XTB S.A.'));
+  const recs = [{ lei: 'A', name: 'XTB S.A. SUCCURSALE FRANCAISE', country: 'FR' }, { lei: 'B', name: 'XTB SPÓŁKA AKCYJNA', country: 'PL', krs: '0000217580' }];
+  assert.equal(pickGleif(recs, 'XTB S.A.')?.lei, 'B');
+  assert.equal(pickGleif(recs, 'Inna Firma S.A.'), null);
+  assert.equal(pickGleif(recs, 'cokolwiek', 'A')?.lei, 'A');
+});
+
+test('pickGleif: forma prawna wskazuje kraj przy kilku zgodnych nazwach', async () => {
+  const { pickGleif, isPolishForm } = await import('../src/enrichment.js');
+  const recs = [{ lei: 'CY1', name: 'XTB LIMITED', country: 'CY' }, { lei: 'PL1', name: 'XTB SPÓŁKA AKCYJNA', country: 'PL', krs: '0000217580' }];
+  assert.equal(isPolishForm('XTB S.A.'), true);
+  assert.equal(isPolishForm('XTB Ltd'), false);
+  assert.equal(pickGleif(recs, 'XTB S.A.')?.lei, 'PL1');
+  assert.equal(pickGleif(recs, 'XTB Ltd')?.lei, 'CY1');
+});
+
+test('pickGleif: nie przypisuje rekordu z kraju niezgodnego z formą prawną', async () => {
+  const { pickGleif } = await import('../src/enrichment.js');
+  const onlyPl = [{ lei: 'PL1', name: 'XTB SPÓŁKA AKCYJNA', country: 'PL' }];
+  assert.equal(pickGleif(onlyPl, 'XTB Ltd'), null);
+  assert.equal(pickGleif(onlyPl, 'XTB'), onlyPl[0]);
+});

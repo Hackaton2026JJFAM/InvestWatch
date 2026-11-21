@@ -232,13 +232,19 @@ def _upstream(fn, *args, **kw):
 
 
 @app.get("/enrich/krs/{number}")
-def enrich_krs(number: str):
-    return _upstream(enrich.krs, number)
+def enrich_krs(number: str, full: bool = False):
+    return _upstream(enrich.krs, number, full=full)
 
 
 @app.get("/enrich/gleif")
-def enrich_gleif(name: str | None = Query(default=None, max_length=300), lei: str | None = Query(default=None, max_length=20)):
-    return _upstream(enrich.gleif, name=name, lei=lei)
+def enrich_gleif(name: str | None = Query(default=None, max_length=300), lei: str | None = Query(default=None, max_length=20),
+                 country: str | None = Query(default=None, pattern=r"^[A-Z]{2}$")):
+    return _upstream(enrich.gleif, name=name, lei=lei, country=country)
+
+
+@app.get("/enrich/gleif/{lei}")
+def enrich_gleif_detail(lei: str):
+    return _upstream(enrich.gleif_detail, lei)
 
 
 @app.get("/watchlists/check")

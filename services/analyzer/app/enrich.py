@@ -16,7 +16,10 @@ import time
 import httpx
 
 KRS_URL = "https://api-krs.ms.gov.pl/api/krs/OdpisAktualny/{krs}"
+KRS_FULL_URL = "https://api-krs.ms.gov.pl/api/krs/OdpisPelny/{krs}"
 GLEIF_URL = "https://api.gleif.org/api/v1/lei-records"
+# Urząd rejestrowy KRS w GLEIF – dla polskich spółek pole registeredAs zawiera numer KRS
+GLEIF_RA_KRS = "RA000484"
 UA = {"User-Agent": "InvestWatch-enrichment/0.1", "Accept": "application/json"}
 TTL = 6 * 3600
 _cache: dict[str, tuple[float, object]] = {}
@@ -62,7 +65,7 @@ def _address(sa: dict) -> str | None:
     return s or None
 
 
-def krs(number: str) -> dict:
+def krs(number: str, full: bool = False) -> dict:
     if not re.fullmatch(r"[0-9]{10}", number):
         raise ValueError("Numer KRS musi mieć 10 cyfr")
 
@@ -117,36 +120,101 @@ def krs(number: str) -> dict:
         "shareholders": shareholders,
         "persons_masked": any(p["masked"] for p in persons + shareholders),
         "source_url": f"https://api-krs.ms.gov.pl/api/krs/OdpisAktualny/{number}?rejestr={rejestr}&format=json",
+        # kompletny odpis aktualny (wszystkie działy) – do wyświetlenia wszystkich danych
+        "raw": odpis,
+        **({"raw_full": krs_full(number, rejestr)} if full else {}),
     }
+
+
+def krs_full(number: str, rejestr: str = "P") -> dict:
+    """Odpis pełny – wszystkie dane z historią zmian (wpisy wprowadzone/wykreślone)."""
+    def fetch():
+        with httpx.Client(timeout=30, headers=UA) as c:
+            r = c.get(KRS_FULL_URL.format(krs=number), params={"rejestr": rejestr, "format": "json"})
+            if r.status_code == 404:
+                raise NotFound(f"Brak odpisu pełnego dla KRS {number}")
+            r.raise_for_status()
+            return r.json()["odpis"]
+
+    return _cached(f"krs-full:{number}:{rejestr}", fetch)
+
+
+def _fmt_address(addr: dict) -> str:
+    return ", ".join(x for x in [*(addr.get("addressLines") or []), addr.get("postalCode"), addr.get("city"), addr.get("country")] if x)
 
 
 def _gleif_record(rec: dict) -> dict:
     a = rec["attributes"]
     e = a["entity"]
     addr = e.get("legalAddress") or {}
+    reg_at = (e.get("registeredAt") or {}).get("id")
+    reg_as = (e.get("registeredAs") or "").strip()
+    digits = re.sub(r"\D", "", reg_as)
+    lei = a.get("lei") or rec.get("id")
     return {
         "registry": "gleif",
-        "lei": a.get("lei") or rec.get("id"),
+        "lei": lei,
         "name": (e.get("legalName") or {}).get("name"),
+        "other_names": [n.get("name") for n in e.get("otherNames") or [] if n.get("name")],
         "country": addr.get("country"),
         "city": addr.get("city"),
-        "address": ", ".join(x for x in [*(addr.get("addressLines") or []), addr.get("postalCode"), addr.get("city"), addr.get("country")] if x),
+        "address": _fmt_address(addr),
+        "hq_address": _fmt_address(e.get("headquartersAddress") or {}),
+        "jurisdiction": e.get("jurisdiction"),
         "legal_form": (e.get("legalForm") or {}).get("id"),
+        "category": e.get("category"),
+        "created_at": e.get("creationDate"),
         "entity_status": e.get("status"),
         "registration_status": (a.get("registration") or {}).get("status"),
+        "initial_registration": (a.get("registration") or {}).get("initialRegistrationDate"),
+        "last_update": (a.get("registration") or {}).get("lastUpdateDate"),
         "next_renewal": (a.get("registration") or {}).get("nextRenewalDate"),
-        "registered_as": e.get("registeredAs"),
-        "source_url": f"https://search.gleif.org/#/record/{a.get('lei') or rec.get('id')}",
+        "registered_at": reg_at,
+        "registered_as": reg_as or None,
+        # numer KRS z GLEIF (urząd rejestrowy RA000484) – pozwala pobrać odpis KRS bez znajomości numeru
+        "krs": digits.zfill(10) if reg_at == GLEIF_RA_KRS and digits and len(digits) <= 10 else None,
+        "bic": a.get("bic"),
+        "source_url": f"https://search.gleif.org/#/record/{lei}",
+        "raw": a,
     }
 
 
-def gleif(name: str | None = None, lei: str | None = None, limit: int = 5) -> list[dict]:
+def gleif_detail(lei: str) -> dict:
+    """Rekord LEI z relacjami: podmiot dominujący bezpośredni i najwyższy, podmioty zależne."""
+    if not re.fullmatch(r"[A-Z0-9]{18}[0-9]{2}", lei):
+        raise ValueError("Niepoprawny format LEI")
+
+    def fetch():
+        with httpx.Client(timeout=20, headers=UA) as c:
+            r = c.get(f"{GLEIF_URL}/{lei}")
+            if r.status_code == 404:
+                raise NotFound(f"Brak rekordu LEI {lei}")
+            r.raise_for_status()
+            out = {"record": _gleif_record(r.json()["data"])}
+            for key in ("direct-parent", "ultimate-parent"):
+                p = c.get(f"{GLEIF_URL}/{lei}/{key}")
+                if p.status_code == 200 and p.json().get("data"):
+                    out[key.replace("-", "_")] = _gleif_record(p.json()["data"])
+                else:
+                    # brak relacji – GLEIF publikuje wtedy powód (reporting exception)
+                    ex = c.get(f"{GLEIF_URL}/{lei}/{key}-reporting-exception")
+                    out[key.replace("-", "_")] = {"exception": (ex.json().get("data") or {}).get("attributes", {}).get("reason")} if ex.status_code == 200 else None
+            ch = c.get(f"{GLEIF_URL}/{lei}/direct-children", params={"page[size]": "20"})
+            out["direct_children"] = [_gleif_record(x) for x in ch.json().get("data", [])] if ch.status_code == 200 else []
+            return out
+
+    return _cached(f"gleif-detail:{lei}", fetch)
+
+
+def gleif(name: str | None = None, lei: str | None = None, limit: int = 5, country: str | None = None) -> list[dict]:
     if lei:
         if not re.fullmatch(r"[A-Z0-9]{18}[0-9]{2}", lei):
             raise ValueError("Niepoprawny format LEI")
         params = {"filter[lei]": lei}
     elif name and len(name.strip()) >= 3:
         params = {"filter[fulltext]": name.strip(), "page[size]": str(limit)}
+        if country:
+            params["filter[entity.legalAddress.country]"] = country
     else:
         raise ValueError("Podaj nazwę (min. 3 znaki) albo LEI")
 

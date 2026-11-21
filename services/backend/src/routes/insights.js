@@ -154,10 +154,28 @@ r.post('/entities/:id/enrich', async (req, res) => {
   if (Date.now() - (lastEnrich.get(id) ?? 0) < 5000) return res.status(429).json({ error: 'Odczekaj chwilę przed ponownym wzbogaceniem' });
   lastEnrich.set(id, Date.now());
   const out = await enrichEntity(id, b);
-  res.json({ krs: out.krsUsed, candidates: out.candidates, errors: out.errors, found: { krs: Boolean(out.krs && !out.krs.notFound), gleif: out.gleif?.length ?? 0, watchlists: out.watchlists?.hits.length ?? 0 } });
+  res.json({ krs: out.krsUsed, krsSource: out.krsSource, lei: out.gleifDetail?.record?.lei ?? null, candidates: out.candidates, errors: out.errors, found: { krs: Boolean(out.krs && !out.krs.notFound), gleif: out.gleif?.length ?? 0, watchlists: out.watchlists?.hits.length ?? 0 } });
 });
 
 r.get('/watchlists', async (_req, res) => res.json(await analyzer.watchMeta()));
+
+// Rejestry na żądanie (bez zapisu): KRS po numerze, GLEIF po nazwie/LEI – pełne dane do wglądu analityka.
+r.get('/registries/krs/:krs', async (req, res) => {
+  const { krs } = parse(z.object({ krs: z.string().regex(/^[0-9]{10}$/, 'Numer KRS: 10 cyfr') }), req.params);
+  const { full } = parse(z.object({ full: z.enum(['0', '1']).default('0') }), req.query);
+  res.json(await analyzer.enrichKrs(krs, full === '1'));
+});
+
+r.get('/registries/gleif', async (req, res) => {
+  const b = parse(z.object({ name: z.string().trim().min(3).max(300).optional(), lei: z.string().regex(/^[A-Z0-9]{18}[0-9]{2}$/, 'Niepoprawny LEI').optional(), country: z.string().regex(/^[A-Z]{2}$/).optional() })
+    .refine((x) => x.name || x.lei, 'Podaj nazwę albo LEI'), req.query);
+  res.json(await analyzer.enrichGleif(b));
+});
+
+r.get('/registries/gleif/:lei', async (req, res) => {
+  const { lei } = parse(z.object({ lei: z.string().regex(/^[A-Z0-9]{18}[0-9]{2}$/, 'Niepoprawny LEI') }), req.params);
+  res.json(await analyzer.gleifDetail(lei));
+});
 
 r.get('/entities/:id/crisis', async (req, res) => {
   const { id } = parse(idParam, req.params);

@@ -23,27 +23,83 @@ async function record(t, entityId, registry, status, data, country = null) {
     [entityId, registry, country, status, data]);
 }
 
+// Nazwa bez formy prawnej i znaków diakrytycznych – do porównania nazw z KRS/GLEIF i z materiałów.
+export function coreName(name = '') {
+  return name.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l')
+    .replace(/\b(spolka akcyjna|spolka z ograniczona odpowiedzialnoscia|spolka komandytowa|s\.?\s?a\.?|sp\.?\s?z\s?o\.?\s?o\.?|sp\.?\s?k\.?|ltd\.?|limited|gmbh|ag|plc|llc|inc\.?)\b/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
+const PL_FORM = /(^|\s)(s\.\s?a\.?|sp\.\s?z\s?o\.\s?o\.?|sp\.\s?k\.?|spółka|spolka)(\s|$)/i;
+export const isPolishForm = (name = '') => PL_FORM.test(name.toLowerCase());
+const FOREIGN_FORM = /(^|\s)(ltd\.?|limited|gmbh|ag|plc|llc|inc\.?|b\.v\.|n\.v\.|s\.r\.o\.|a\.s\.|se|sarl|s\.à r\.l\.|oyj|ab|kft)(\s|$)/i;
+export const isForeignForm = (name = '') => FOREIGN_FORM.test(name.toLowerCase());
+
+// Rekord GLEIF odpowiadający podmiotowi: podany LEI albo zgodna nazwa (bez formy prawnej);
+// przy kilku zgodnych preferowany kraj wynikający z formy prawnej (S.A./sp. z o.o. -> PL).
+export function pickGleif(records, name, lei, country = null) {
+  if (!records?.length) return null;
+  if (lei) return records.find((g) => g.lei === lei) ?? null;
+  const target = coreName(name);
+  const same = records.filter((g) => coreName(g.name) === target || g.other_names?.some((n) => coreName(n) === target));
+  const wantPl = country ? country === 'PL' : isPolishForm(name);
+  const preferred = same.find((g) => (g.country === 'PL') === wantPl);
+  // forma prawna jednoznacznie wskazuje kraj – nie przypisujemy rekordu z innego kraju (np. polski LEI dla „XTB Ltd”)
+  const formKnown = Boolean(country) || isPolishForm(name) || isForeignForm(name);
+  return preferred ?? (formKnown ? null : same[0] ?? null);
+}
+
+// Wyszukiwanie w GLEIF: dla polskich podmiotów po nazwie bez formy prawnej z filtrem PL, potem po pełnej nazwie.
+async function searchGleif(e, lei) {
+  if (lei) return analyzer.enrichGleif({ lei });
+  const queries = [];
+  if (isPolishForm(e.name) || e.country === 'PL') queries.push({ name: coreName(e.name) || e.name, country: 'PL' });
+  queries.push({ name: e.name });
+  if (coreName(e.name) && coreName(e.name) !== e.name.toLowerCase()) queries.push({ name: coreName(e.name) });
+  const seen = new Map();
+  for (const qy of queries) {
+    for (const g of await analyzer.enrichGleif(qy)) if (!seen.has(g.lei)) seen.set(g.lei, g);
+    if (pickGleif([...seen.values()], e.name, null, e.country)) break;
+  }
+  return [...seen.values()];
+}
+
 export async function enrichEntity(entityId, { krs = null, lei = null } = {}) {
   const e = await one('SELECT * FROM entities WHERE id = $1', [entityId]);
   if (!e) return null;
   const candidates = await krsCandidates(entityId);
-  const krsNumber = krs ?? e.krs ?? (candidates.length === 1 ? candidates[0] : null);
-  const out = { krs: null, gleif: null, watchlists: null, errors: [] };
+  let krsNumber = krs ?? e.krs ?? (candidates.length === 1 ? candidates[0] : null);
+  let krsSource = krs ? 'podany' : e.krs ? 'zapisany' : krsNumber ? 'z materiału' : null;
+  const out = { krs: null, gleif: null, gleifDetail: null, watchlists: null, errors: [] };
 
+  // 1. GLEIF: kod LEI, a dla polskich spółek także numer KRS (urząd rejestrowy RA000484)
+  if (e.kind === 'company' || lei || e.lei) {
+    try {
+      out.gleif = await searchGleif(e, lei || e.lei);
+    } catch (err) {
+      out.errors.push(`GLEIF: ${err.message}`);
+    }
+  }
+  const exact = pickGleif(out.gleif ?? [], e.name, lei || e.lei, e.country);
+  if (!krsNumber && exact?.krs) {
+    krsNumber = exact.krs;
+    krsSource = 'z GLEIF (LEI)';
+  }
+  if (exact) {
+    try {
+      out.gleifDetail = await analyzer.gleifDetail(exact.lei);
+    } catch (err) {
+      out.errors.push(`GLEIF – relacje: ${err.message}`);
+    }
+  }
+
+  // 2. KRS: odpis aktualny (wszystkie działy)
   if (krsNumber && KRS_RX.test(krsNumber)) {
     try {
       out.krs = await analyzer.enrichKrs(krsNumber);
     } catch (err) {
       out.errors.push(`KRS: ${err.message}`);
       if (err instanceof UpstreamError && err.status === 404) out.krs = { notFound: true, krs: krsNumber };
-    }
-  }
-  if (e.kind === 'company' || lei) {
-    try {
-      const name = out.krs?.name ?? e.name;
-      out.gleif = await analyzer.enrichGleif(lei ? { lei } : { name });
-    } catch (err) {
-      out.errors.push(`GLEIF: ${err.message}`);
     }
   }
   try {
@@ -66,8 +122,8 @@ export async function enrichEntity(entityId, { krs = null, lei = null } = {}) {
       }
     }
     if (out.gleif) {
-      const exact = out.gleif.find((g) => g.name && g.name.toLowerCase() === (out.krs?.name ?? e.name).toLowerCase());
-      await record(t, entityId, 'gleif', out.gleif.length ? 'found' : 'not_found', { records: out.gleif, exact: exact?.lei ?? null }, exact?.country ?? null);
+      await record(t, entityId, 'gleif', out.gleif.length ? 'found' : 'not_found',
+        { records: out.gleif, exact: exact?.lei ?? null, detail: out.gleifDetail, krs_source: krsSource }, exact?.country ?? null);
       if (exact) await t.q('UPDATE entities SET lei = $2, country = COALESCE(country, $3) WHERE id = $1', [entityId, exact.lei, exact.country]);
     }
     if (out.watchlists) {
@@ -79,7 +135,7 @@ export async function enrichEntity(entityId, { krs = null, lei = null } = {}) {
     await t.q('UPDATE entities SET enriched_at = now() WHERE id = $1', [entityId]);
   });
   emit('entity:enriched', { id: entityId });
-  return { ...out, krsUsed: krsNumber, candidates };
+  return { ...out, krsUsed: krsNumber, krsSource, candidates };
 }
 
 // Automatyczne wzbogacanie nowych spółek w tle – kolejka szeregowa, 1 podmiot na 2 s (oszczędnie wobec API).

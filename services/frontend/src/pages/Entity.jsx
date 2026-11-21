@@ -3,12 +3,13 @@ import { Fragment, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../api.js';
+import DataTree from '../components/DataTree.jsx';
+import { GleifRelations, GleifSummary, KrsSummary } from '../components/Registry.jsx';
 import { Empty, fmtDate, Panel, RiskBadge, Score } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 import { KIND, REG } from './Entities.jsx';
 
-const money = (c) => (c ? `${c.value.toLocaleString('pl-PL', { maximumFractionDigits: 2 })} ${c.currency ?? ''}` : 'brak danych');
 const SourceLink = ({ url, label = 'źródło' }) => (url ? <a href={url} target="_blank" rel="noreferrer noopener">{label}</a> : null);
 
 function EnrichBar({ entity, candidates, onDone }) {
@@ -20,7 +21,7 @@ function EnrichBar({ entity, candidates, onDone }) {
     setBusy(true);
     api.post(`/entities/${entity.id}/enrich`, krs ? { krs } : {})
       .then((r) => {
-        toast({ kind: 'info', title: 'Wzbogacono dane', text: `KRS: ${r.found.krs ? 'tak' : 'nie'} · LEI: ${r.found.gleif} · listy: ${r.found.watchlists}${r.errors.length ? ` · błędy: ${r.errors.join('; ')}` : ''}` });
+        toast({ kind: 'info', title: 'Wzbogacono dane', text: `KRS: ${r.found.krs ? `tak (${r.krs}, ${r.krsSource})` : 'nie'} · LEI: ${r.found.gleif} · listy: ${r.found.watchlists}${r.errors.length ? ` · błędy: ${r.errors.join('; ')}` : ''}` });
         onDone();
       })
       .catch((err) => toast({ kind: 'alert', title: 'Wzbogacanie nie powiodło się', text: err.message }))
@@ -42,19 +43,9 @@ function RegistryPanel({ entity, registry }) {
   const knf = entity.registry_ref;
   return (
     <Panel title="Dane rejestrowe" meta={k ? `KRS · ${fmtDate(k.checked_at)}` : 'KRS: nie pobrano'}>
-      {d ? (
-        <dl className="kv">
-          <dt>Nazwa (KRS)</dt><dd>{d.name}</dd>
-          <dt>Forma prawna</dt><dd>{d.legal_form ?? '–'}</dd>
-          <dt>KRS / NIP / REGON</dt><dd className="mono">{d.krs} / {d.nip ?? '–'} / {d.regon ?? '–'}</dd>
-          <dt>Data rejestracji</dt><dd>{d.registered_at ?? 'brak danych'}</dd>
-          <dt>Kapitał zakładowy</dt><dd>{money(d.capital)}</dd>
-          <dt>Adres</dt><dd>{d.address ?? 'brak danych'}</dd>
-          <dt>Strona WWW</dt><dd>{d.website ?? '–'}</dd>
-          <dt>Stan na</dt><dd>{d.state_as_of ?? '–'} · <SourceLink url={d.source_url} label="odpis KRS" /></dd>
-        </dl>
-      ) : k?.status === 'not_found' ? <div className="notice">Nie znaleziono numeru KRS {k.data?.krs} w rejestrze przedsiębiorców ani stowarzyszeń.</div>
-        : <p className="small muted">Brak odczytu KRS. Podaj numer KRS i użyj „Wzbogać dane”.</p>}
+      {d ? <KrsSummary d={d} source={registry.gleif?.data?.krs_source} />
+        : k?.status === 'not_found' ? <div className="notice">Nie znaleziono numeru KRS {k.data?.krs} w rejestrze przedsiębiorców ani stowarzyszeń.</div>
+        : <p className="small muted">Brak odczytu KRS. Podaj numer KRS albo użyj „Wzbogać dane” – dla spółek z kodem LEI numer KRS zostanie odczytany z GLEIF. Dowolny podmiot sprawdzisz też na stronie <Link to="/registries">Rejestry</Link>.</p>}
       {knf && (
         <>
           <h3 style={{ marginTop: 14 }}>Rejestr firm inwestycyjnych KNF</h3>
@@ -86,6 +77,7 @@ function LicensePanel({ entity, registry }) {
           <div key={g.lei}><a href={g.source_url} target="_blank" rel="noreferrer noopener" className="mono">{g.lei}</a> {g.name} · {g.country} · {g.entity_status}{g.lei === gleif.exact && <span className="chip pass" style={{ marginLeft: 6 }}>dokładne</span>}</div>))
           : 'brak rekordów LEI') : 'nie sprawdzono'}</dd>
       </dl>
+      <GleifRelations detail={gleif?.detail} />
       {esma?.casp?.[0]?.services?.length > 0 && <p className="small muted" style={{ marginBottom: 0 }}>Usługi CASP: {esma.casp[0].services.join(' · ')}</p>}
     </Panel>
   );
@@ -171,6 +163,36 @@ function ReservesPanel({ id }) {
   );
 }
 
+function AllRegistryData({ registry }) {
+  const [tab, setTab] = useState('krs');
+  const [full, setFull] = useState({ data: null, busy: false, error: null });
+  const krs = registry.krs?.status === 'found' ? registry.krs.data : null;
+  const gleif = registry.gleif?.data;
+  const exact = gleif?.records?.find((g) => g.lei === gleif.exact);
+  const loadFull = () => {
+    setFull({ data: null, busy: true, error: null });
+    api.get(`/registries/krs/${krs.krs}?full=1`).then((d) => setFull({ data: d.raw_full, busy: false, error: null }))
+      .catch((error) => setFull({ data: null, busy: false, error }));
+  };
+  const tabs = [['krs', 'KRS – odpis aktualny'], ['krs_full', 'KRS – odpis pełny (historia)'], ['gleif', 'GLEIF – LEI'], ['lists', 'Listy KNF / ESMA']];
+  return (
+    <Panel title="Wszystkie dane z rejestrów" meta="pełna treść odpowiedzi rejestrów">
+      <div className="tabs">{tabs.map(([k, v]) => <button key={k} className={tab === k ? 'active' : ''} onClick={() => setTab(k)}>{v}</button>)}</div>
+      {tab === 'krs' && (krs?.raw ? <DataTree data={krs.raw} title="KRS" /> : <Empty>Brak odpisu KRS – użyj „Wzbogać dane”.</Empty>)}
+      {tab === 'krs_full' && (!krs ? <Empty>Najpierw pobierz odpis KRS.</Empty> : full.data ? <DataTree data={full.data} title="KRS pełny" />
+        : <div><button className="btn primary" disabled={full.busy} onClick={loadFull}>{full.busy ? 'Pobieranie…' : `Pobierz odpis pełny KRS ${krs.krs}`}</button>
+          {full.error && <p className="small" style={{ color: 'var(--high)' }}>{full.error.message}</p>}
+          <p className="small muted">Odpis pełny zawiera historię: dawne nazwy, zmiany zarządu, kapitału i adresu (wpisy wprowadzone i wykreślone).</p></div>)}
+      {tab === 'gleif' && (gleif?.records?.length ? (
+        <>
+          {exact ? <GleifSummary g={exact} /> : <p className="small muted">Brak dokładnego dopasowania nazwy – poniżej wszystkie znalezione rekordy LEI.</p>}
+          <DataTree data={{ ...(exact ? { record: exact.raw } : Object.fromEntries(gleif.records.map((g) => [g.name, g.raw]))), ...(gleif.detail ? { direct_parent: gleif.detail.direct_parent?.raw ?? gleif.detail.direct_parent, ultimate_parent: gleif.detail.ultimate_parent?.raw ?? gleif.detail.ultimate_parent, direct_children: gleif.detail.direct_children?.map((c) => c.raw) } : {}) }} title="GLEIF" />
+        </>) : <Empty>Brak rekordów LEI.</Empty>)}
+      {tab === 'lists' && <DataTree data={{ lista_ostrzezen_KNF: registry.knf_warnings?.data ?? null, rejestr_MiCA_ESMA: registry.esma_mica?.data ?? null }} title="listy" />}
+    </Panel>
+  );
+}
+
 export default function Entity() {
   const { id } = useParams();
   const { tick, threshold, subscribe } = useLive();
@@ -196,6 +218,7 @@ export default function Entity() {
         <CrisisPanel id={id} />
         <ReservesPanel id={id} />
       </div>
+      <AllRegistryData registry={registry} />
       <Panel title="Materiały powiązane">
         {materials.length ? <table><thead><tr><th>Materiał</th><th>Rola podmiotu</th><th>Wynik</th><th>Ryzyko</th><th>Data</th></tr></thead>
           <tbody>{materials.map((m) => <Fragment key={`${m.id}-${m.role}`}><tr><td><Link to={`/materials/${m.id}`}>{m.title || m.url}</Link></td><td className="small">{m.role}</td><td><Score score={m.score} threshold={threshold} /></td><td><RiskBadge risk={m.risk} /></td><td className="small muted">{fmtDate(m.fetched_at)}</td></tr></Fragment>)}</tbody></table>
