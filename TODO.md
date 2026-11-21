@@ -30,7 +30,7 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [x] Przetestować REST i zapis na osobnym PostgreSQL 16 (audyt): 40/51 zaliczonych w wariancie diagnostycznym.
 - [ ] (!) Dodać brakujący sterownik `ioredis` do aplikacji i powtórzyć test backendu w docelowym Compose.
 - [ ] (!) Na hackathonie: wczytać próbki od UKNF (pendrive) przez „Import wielu plików”, oznaczyć je i przeliczyć kalibrację
-- [ ] Sprawdzić konsolę na buildzie produkcyjnym (w dev StrictMode/HMR dodają ostrzeżenia WebSocket)
+- [x] Konsola bez ostrzeżeń WebSocket (jedno połączenie Socket.io na aplikację)
 - [ ] Import obrazów/zrzutów reklam (OCR) – formaty dziś pomijane przy imporcie
 - [ ] Przycisk „Usuń materiał” w UI (endpoint już jest)
 

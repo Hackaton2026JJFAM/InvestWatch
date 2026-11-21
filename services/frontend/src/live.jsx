@@ -3,6 +3,9 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { io } from 'socket.io-client';
 import { api } from './api.js';
 
+// Jedno połączenie na całą aplikację (singleton modułu).
+const socket = io({ path: '/socket.io', transports: ['websocket', 'polling'] });
+
 const LiveCtx = createContext(null);
 export const useLive = () => useContext(LiveCtx);
 
@@ -26,24 +29,30 @@ export function LiveProvider({ children }) {
 
   useEffect(() => {
     refreshCounters();
-    const socket = io({ path: '/socket.io', transports: ['websocket', 'polling'] });
-    socket.on('connect', () => setConnected(true));
-    socket.on('disconnect', () => setConnected(false));
     const bump = (event) => (payload) => {
       setTick((t) => t + 1);
       listeners.current.forEach((fn) => fn(event, payload));
     };
-    socket.on('alert:new', (a) => {
-      setUnread((n) => n + 1);
-      toast({ kind: 'alert', title: `Wysokie ryzyko (${Math.round(a.score)}/100)`, text: a.title || a.url, href: `/materials/${a.materialId}` });
-      bump('alert:new')(a);
-    });
-    socket.on('alert:update', () => { refreshCounters(); bump('alert:update')(); });
-    socket.on('material:new', bump('material:new'));
-    socket.on('material:status', bump('material:status'));
-    socket.on('scan:update', bump('scan:update'));
-    socket.on('settings:update', (s) => { setThreshold(s.threshold); bump('settings:update')(s); });
-    return () => socket.disconnect();
+    // Efekt tylko podpina/odpina słuchaczy – samo połączenie jest jedno na aplikację,
+    // więc podwójne montowanie (StrictMode) nie zrywa łączącego się WebSocketu.
+    const handlers = {
+      connect: () => setConnected(true),
+      disconnect: () => setConnected(false),
+      'alert:new': (a) => {
+        setUnread((n) => n + 1);
+        toast({ kind: 'alert', title: `Wysokie ryzyko (${Math.round(a.score)}/100)`, text: a.title || a.url, href: `/materials/${a.materialId}` });
+        bump('alert:new')(a);
+      },
+      'alert:update': () => { refreshCounters(); bump('alert:update')(); },
+      'material:new': bump('material:new'),
+      'material:status': bump('material:status'),
+      'material:deleted': () => { refreshCounters(); bump('material:deleted')(); },
+      'scan:update': bump('scan:update'),
+      'settings:update': (s) => { setThreshold(s.threshold); bump('settings:update')(s); },
+    };
+    Object.entries(handlers).forEach(([ev, fn]) => socket.on(ev, fn));
+    setConnected(socket.connected);
+    return () => Object.entries(handlers).forEach(([ev, fn]) => socket.off(ev, fn));
   }, [refreshCounters, toast]);
 
   const subscribe = useCallback((fn) => {
