@@ -46,9 +46,10 @@ CREATE TABLE materials (
   ground_truth  BOOLEAN,                              -- etykieta testowa do kalibracji (TRUE = ryzykowny)
   simhash       TEXT,                                 -- odcisk treści do wykrywania prawie-duplikatów
   near_duplicate_of INT REFERENCES materials(id) ON DELETE SET NULL,
-  fetched_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE (url, content_hash)
+  layout_hash   TEXT,                                 -- odcisk wyglądu ostrzeżeń (zmiana CSS = nowa wersja)
+  fetched_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+CREATE UNIQUE INDEX materials_version_uq ON materials (url, content_hash, coalesce(layout_hash, ''));
 CREATE INDEX materials_hash ON materials (content_hash);
 CREATE INDEX materials_fetched ON materials (fetched_at DESC);
 CREATE INDEX materials_text_trgm ON materials USING gin (content_text gin_trgm_ops);
@@ -184,8 +185,8 @@ CREATE TABLE reserves_reports (
   fetched_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- próg ryzyka wstawia backend z DEFAULT_THRESHOLD przy pierwszym starcie
 INSERT INTO settings (key, value) VALUES
-  ('threshold', '45'),
   ('alert_modules', '["m1","m2","m3"]');
 
 INSERT INTO crisis_periods (name, start_date, end_date) VALUES

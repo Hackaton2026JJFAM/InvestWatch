@@ -11,11 +11,13 @@ Każdy wynik ma przesłanki: `rule_id`, podstawę prawną, uzasadnienie i cytowa
 ## Quick Start
 
 ```bash
-cp .env.example .env        # ustaw POSTGRES_PASSWORD
+cp .env.example .env        # ustaw POSTGRES_PASSWORD i ADMIN_PASSWORD
 docker compose up -d --build
 ```
 
-Dashboard: http://localhost:8080. Przy pierwszym starcie ładowanych jest 18 oznaczonych próbek demo (`data/samples`). Wyłącza to `SEED_DEMO=false`.
+Dashboard: http://localhost:8080 (domyślnie tylko z tego komputera, `WEB_BIND`). Przy pierwszym starcie ładowanych jest 18 oznaczonych próbek demo (`data/samples`) i fikcyjne podmioty DEMO. Wyłącza to `SEED_DEMO=false`.
+
+Przeglądanie i import materiałów nie wymagają logowania. Zmiana progu, zarządzanie źródłami, ładowanie próbek i usuwanie materiałów wymagają hasła administratora (`ADMIN_PASSWORD`).
 
 Lokalny LLM do podsumowań (opcjonalnie):
 
@@ -43,7 +45,7 @@ Bez Ollamy podsumowanie powstaje z szablonu na podstawie tych samych przesłanek
 | `scraper` | Python, FastAPI, Playwright, BeautifulSoup | 8001 | Pobieranie, render 3 viewportów, ekstrakcja treści i metadanych, ochrona SSRF, rotacja UA/proxy |
 | `analyzer` | Python, FastAPI, scikit-learn, RapidFuzz | 8002 | Moduły 1–3, klasyfikator zdań, scoring, rejestr KNF, podsumowanie |
 | `postgres` | PostgreSQL 16 (pg_trgm, unaccent) | 5432 | Materiały, analizy, przesłanki, alerty, podmioty |
-| `redis` | Redis 7 | 6379 | Kolejka zadań |
+| `redis` | Valkey 8 (BSD, protokół Redis) | 6379 | Kolejka zadań |
 | `ollama` | profil `llm` | 11434 | Lokalny model do podsumowań |
 
 ## Konfiguracja (`.env`)
@@ -51,17 +53,20 @@ Bez Ollamy podsumowanie powstaje z szablonu na podstawie tych samych przesłanek
 | Zmienna | Domyślnie | Opis |
 |---|---|---|
 | `POSTGRES_USER/PASSWORD/DB` | – | Dane bazy |
-| `WEB_PORT` | 8080 | Port dashboardu |
+| `WEB_PORT`, `WEB_BIND` | 8080, 127.0.0.1 | Port dashboardu i adres nasłuchu (`0.0.0.0` = dostęp z sieci) |
+| `ADMIN_PASSWORD` | – | Hasło administratora; puste = operacje administracyjne wyłączone |
+| `SECURE_COOKIES` | false | `true` za reverse proxy z HTTPS |
+| `ALLOWED_ORIGINS` | – | Dodatkowe Origin dopuszczone do WebSocket (domyślnie tylko ten sam host) |
 | `SCAN_CRON` | `0 */6 * * *` | Harmonogram skanowania źródeł |
-| `DEFAULT_THRESHOLD` | 45 | Próg ryzyka 0–100 (zmiana w panelu kalibracji) |
+| `DEFAULT_THRESHOLD` | 45 | Początkowy próg ryzyka 0–100 (później zmiana w panelu kalibracji) |
 | `SCRAPER_PROXIES` | – | Lista proxy rozdzielona przecinkami |
 | `SCRAPER_ALLOW_PRIVATE` | false | Zezwolenie na adresy prywatne (domyślnie blokada SSRF) |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | –, `gemma3:4b` | LLM do podsumowań |
-| `SEED_DEMO` | true | Załadowanie próbek przy pustej bazie |
+| `SEED_DEMO` | true | Próbki przy pustej bazie i fikcyjne podmioty DEMO w rejestrze (oznaczone jako DEMO, nigdy jako wpis KNF) |
 
 ## Uruchomienie bez Dockera (dev)
 
-Wbudowany PostgreSQL z npm, kolejka w pamięci (`REDIS_URL=memory`). Restart całego stosu jednym poleceniem (Windows; logi w `.devdata/logs`, `-ResetDb` zakłada bazę od zera):
+Wymaga Python ≥ 3.12 i Node ≥ 20. Wbudowany PostgreSQL z npm, kolejka w pamięci (`REDIS_URL=memory`). Restart całego stosu jednym poleceniem (Windows; logi w `.devdata/logs`, `-ResetDb` zakłada bazę od zera, hasło administratora z `.env`, domyślnie `investwatch-dev`):
 
 ```bash
 powershell -ExecutionPolicy Bypass -File tools/devstack/restart.ps1
@@ -83,11 +88,12 @@ cd services/frontend && npx vite                                         # http:
 python -m venv .venv && .venv/Scripts/pip install -r services/analyzer/requirements-dev.txt -r services/scraper/requirements.txt
 cd services/analyzer && ../../.venv/Scripts/python -m pytest -q
 cd services/backend && npm test                                          # integracyjne wymagają działającego stosu
+AUDIT_ADMIN_PASSWORD=... python -m pytest audit_tests -q                 # testy audytowe, opis w audit_tests/README.md
 python -m tools.evaluate --samples ../../data/samples --threshold 45   # wymaga scrapera i analyzera
 python -m tools.knf_import --out app/data/knf_registry.json            # odświeżenie rejestru KNF
 ```
 
-Bezpieczeństwo łańcucha dostaw: wersje zależności są przypięte; CI (`.github/workflows/ci.yml`) uruchamia `pip-audit` i `npm audit`, a obrazy Docker przerywają build przy podatnościach wysokiego ryzyka. Sekrety są tylko w `.env`, poza repozytorium.
+Bezpieczeństwo łańcucha dostaw: wersje zależności są przypięte; CI (`.github/workflows/ci.yml`) uruchamia `pip-audit` i `npm audit`; obrazy Node przerywają build przy podatnościach wysokiego ryzyka (`npm audit --audit-level=high`). `GET /api/health` to gotowość całego stosu (503, gdy brakuje bazy, kolejki, scrapera lub analizatora), `GET /api/live` – sam proces. Sekrety są tylko w `.env`, poza repozytorium.
 
 Architektura: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Proces pracy z asystentami AI: [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md). Lista zadań: [TODO.md](TODO.md).
 

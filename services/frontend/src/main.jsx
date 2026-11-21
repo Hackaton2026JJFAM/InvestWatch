@@ -1,6 +1,7 @@
 import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router-dom';
+import { AdminLogin, useAdmin } from './components/AdminAuth.jsx';
 import { LiveProvider, useLive } from './live.jsx';
 const Alerts = lazy(() => import('./pages/Alerts.jsx'));
 const Calibration = lazy(() => import('./pages/Calibration.jsx'));
@@ -15,6 +16,7 @@ import './styles.css';
 
 function Shell() {
   const { connected, unread, threshold, toasts } = useLive();
+  const admin = useAdmin();
   return (
     <div className="app">
       <aside className="sidebar">
@@ -34,6 +36,9 @@ function Shell() {
         <div className="foot">
           <div><span className={`dot ${connected ? 'on' : ''}`} />{connected ? 'Na żywo (WebSocket)' : 'Brak połączenia'}</div>
           <div style={{ marginTop: 6 }}>Próg ryzyka: <b>{threshold ?? '–'}</b></div>
+          <div style={{ marginTop: 6 }}>
+            {admin.admin ? <>Administrator · <button className="linkbtn" onClick={admin.logout}>wyloguj</button></> : admin.enabled ? 'Tryb analityka' : 'Operacje admin. wyłączone'}
+          </div>
           <div style={{ marginTop: 10 }}>Wyniki są sygnałem do weryfikacji, nie stwierdzeniem naruszenia.</div>
         </div>
       </aside>
@@ -53,6 +58,7 @@ function Shell() {
         </Routes>
         </Suspense>
       </main>
+      <AdminLogin onChange={admin.refresh} />
       <div className="toasts" aria-live="polite">
         {toasts.map((t) => (
           <div key={t.id} className={`toast ${t.kind === 'alert' ? '' : 'info'}`}>

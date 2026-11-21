@@ -53,7 +53,7 @@ class Ctx:
         s = doc.sentences
         self.profit = [x for x in s if T.has(T.PROFIT, x.text) or x.labels.get("profit", 0) > 0.6]
         # „bez ryzyka” / „zero ryzyka” to obietnica, a nie ostrzeżenie – usuwamy takie frazy przed detekcją
-        self.risk = [x for x in s if is_risk_warning(x.text) or (x.labels.get("risk", 0) > 0.6 and not T.has(T.GUARANTEE, x.text))]
+        self.risk = [x for x in s if is_risk_warning(x.text) or (x.labels.get("risk", 0) > 0.6 and not promises(x.text))]
         # wynik historyczny = odniesienie do przeszłości + liczba (%), z wyłączeniem prognoz
         self.hist = [x for x in s if T.has(T.HIST, x.text) and PCT.search(x.text) and not T.has(T.FORECAST, x.text)]
         self.promotional = bool(self.profit) or any(T.has(T.CTA, x.text) for x in s)
@@ -67,6 +67,11 @@ class Ctx:
 
 def is_risk_warning(text: str) -> bool:
     return bool(T.RISK.search(T.GUARANTEE.sub(" ", T.fold(text))))
+
+
+def promises(text: str) -> bool:
+    """Obietnica zysku/bezpieczeństwa niezaprzeczona w zdaniu."""
+    return T.has_affirmed(T.GUARANTEE, text)
 
 
 def dominant_font(blocks: list[dict]) -> float | None:
@@ -90,9 +95,12 @@ def r1(c: Ctx) -> Finding:
         return F("1", NA, "Materiał nie ma cech przekazu promocyjnego.")
     reg = get_registry()
     firms = reg.find_in_text(c.doc.text, c.doc.domain)
+    if firms and all(f.get("demo") for f in firms):
+        return F("1", PASS, "W materiale wskazano nazwę firmy z danych DEMO (podmiot fikcyjny, nie wpis w rejestrze KNF).",
+                 [ev(f["name"], "rejestr DEMO", category=f["category"]) for f in firms[:5]])
     if firms:
         return F("1", PASS, "W materiale wskazano nazwę firmy inwestycyjnej z rejestru KNF.",
-                 [ev(f["name"], "rejestr", category=f["category"]) for f in firms[:5]])
+                 [ev(f["name"], "rejestr", category=f["category"]) for f in firms[:5] if not f.get("demo")])
     names = extract_entity_names(c.doc.text)
     if names:
         return F("1", WARN, "Wskazano podmiot z formą prawną, ale nie odnaleziono go w lokalnym rejestrze firm inwestycyjnych KNF – do weryfikacji.",
@@ -101,7 +109,11 @@ def r1(c: Ctx) -> Finding:
 
 
 def r2(c: Ctx) -> Finding:
-    labels = [x for x in c.doc.sentences if T.has(T.AD_LABEL, x.text)]
+    denials = [x for x in c.doc.sentences if T.has(T.DENIAL_AD, x.text)]
+    labels = [x for x in c.doc.sentences if T.has_affirmed(T.AD_LABEL, x.text) and not T.has(T.DENIAL_AD, x.text)]
+    if denials and c.promotional:
+        return F("2", FAIL, "Materiał o cechach promocyjnych zaprzecza swojemu reklamowemu charakterowi.",
+                 [ev(x.text, "zaprzeczenie") for x in denials[:3]])
     if labels:
         return F("2", PASS, "Materiał jest oznaczony jako reklamowy/marketingowy.", [ev(x.text) for x in labels[:3]])
     if not c.promotional:
@@ -129,9 +141,9 @@ def r3(c: Ctx) -> Finding:
 
 
 def g1(c: Ctx) -> Finding:
-    hits = [x for x in c.doc.sentences if T.has(T.GUARANTEE, x.text)]
+    hits = [x for x in c.doc.sentences if promises(x.text)]
     if hits:
-        phrases = sorted({p for x in hits for p in T.find_all(T.GUARANTEE, x.text)})
+        phrases = sorted({p for x in hits for p in T.affirmed(T.GUARANTEE, x.text)})
         return F("G1", FAIL, f"Wykryto sformułowania sugerujące zysk bez ryzyka: {', '.join(phrases)}.", [ev(x.text) for x in hits[:4]])
     return F("G1", PASS, "Nie wykryto obietnic gwarantowanego zysku ani braku ryzyka.")
 
@@ -289,7 +301,7 @@ def r17_18(c: Ctx) -> list[Finding]:
     appr = [x for x in sup if T.has(T.APPROVAL, x.text)]
     safe = [x for x in sup if T.has(T.SAFETY, x.text)] + \
            [x for x in c.doc.sentences if T.has(T.SAFETY, x.text) and near(x, sup, 1) and not T.has(T.RISK, x.text)]
-    safe = [x for x in safe if not T.has(T.RISK, x.text) or T.has(T.GUARANTEE, x.text)]
+    safe = [x for x in safe if not T.has(T.RISK, x.text) or promises(x.text)]
     f17 = F("17", FAIL, "Odwołanie do organu nadzoru sugeruje zatwierdzenie lub aprobatę produktu/usługi.", [ev(x.text) for x in appr[:3]]) if appr \
         else F("17", PASS, "Odwołanie do organu nadzoru ma charakter informacyjny (bez sugerowania aprobaty).", [ev(sup[0].text)])
     f18 = F("18", FAIL, "Nadzór organu przedstawiono jako argument bezpieczeństwa inwestycji.", [ev(x.text) for x in safe[:3]]) if safe \
@@ -387,7 +399,7 @@ def r8(c: Ctx) -> Finding:
             problems.append(f"{vp}: ostrzeżenie niewidoczne")
             continue
         b = max(vis, key=lambda b: b["font_size"])
-        if b.get("clipped") or b.get("offscreen_x"):
+        if b.get("clipped") or b.get("clipped_y") or b.get("offscreen_x"):
             problems.append(f"{vp}: tekst ostrzeżenia ucięty / poza ekranem")
             evid.append(ev(b["text"], vp))
         if b["font_size"] < 10:
@@ -411,7 +423,7 @@ def highlights(doc: Doc, limit: int = 40) -> list[dict]:
             continue
         if is_risk_warning(b["text"]):
             kind = "risk"
-        elif T.has(T.GUARANTEE, b["text"]) or T.has(T.PROFIT, b["text"]):
+        elif promises(b["text"]) or T.has(T.PROFIT, b["text"]):
             kind = "profit"
         else:
             continue

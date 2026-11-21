@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { Empty, Evidence, fmtDate, MAT_STATUS, MODULES, ModuleChips, Panel, pct, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
+import { REG } from './Entities.jsx';
 import { useLive } from '../live.jsx';
 
 const TABS = ['Podsumowanie', 'Reguły zgodności (M2)', 'Finfluencerzy (M1)', 'Shadow Advisory (M3)', 'Materiał', 'Historia'];
@@ -104,7 +105,7 @@ export default function Material() {
           <Panel title="Wykryte podmioty">
             {entities.length ? <table><tbody>{entities.map((e) => (
               <tr key={`${e.id}-${e.role}`}><td><Link to={`/entities/${e.id}`}>{e.name}</Link></td><td className="small muted">{{ advertised_firm: 'reklamowana firma', publisher: 'publikujący', advisor: 'podmiot doradczy' }[e.role]}</td>
-                <td><span className={`chip ${e.registry_status === 'registered' ? 'pass' : e.registry_status === 'not_found' ? 'warn' : 'na'}`}>{{ registered: 'w rejestrze KNF', not_found: 'brak w rejestrze', unknown: 'nieustalone' }[e.registry_status]}</span></td></tr>))}
+                <td><span className={`chip ${REG[e.registry_status]?.[0] ?? 'na'}`}>{REG[e.registry_status]?.[1] ?? 'nieustalone'}</span></td></tr>))}
             </tbody></table> : <Empty>Nie wykryto podmiotów.</Empty>}
             <h3 style={{ marginTop: 16 }}>Profil klasyfikatora zdań ({r.ml?.model})</h3>
             <div className="kv">{Object.entries(r.ml?.max ?? {}).map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{pct(v)} (maks.)</dd></Fragment>)}</div>

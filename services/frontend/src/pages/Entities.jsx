@@ -4,7 +4,7 @@ import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
 export const KIND = { company: 'spółka', influencer: 'finfluencer', person: 'osoba', unknown: 'autor / wydawca' };
-export const REG = { registered: ['pass', 'w rejestrze KNF'], not_found: ['warn', 'brak w rejestrze'], unknown: ['na', 'nie sprawdzono'] };
+export const REG = { registered: ['pass', 'w rejestrze KNF'], demo: ['mid', 'DEMO – podmiot fikcyjny'], not_found: ['warn', 'brak w rejestrze'], unknown: ['na', 'nie sprawdzono'] };
 
 export default function Entities() {
   const { tick, threshold } = useLive();

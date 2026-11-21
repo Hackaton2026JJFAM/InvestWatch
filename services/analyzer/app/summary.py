@@ -18,6 +18,22 @@ FORBIDDEN = re.compile(r"narusza(?:ją)? prawo|jest nielegaln|popełni|przestęp
 MODULE_NAMES = {"m1": "Finfluencerzy i podmioty trzecie", "m2": "Zgodność i informacja o ryzyku", "m3": "Shadow Advisory"}
 
 
+CITE = re.compile(r"\[([\w.]+)\]")
+
+
+def citations_ok(text: str, result: dict) -> bool:
+    """Każde zdanie cytuje regułę, a cytowane reguły istnieją wśród przesłanek fail/warn."""
+    allowed = {f["rule_id"] for f in result["findings"] if f["status"] in ("fail", "warn")}
+    sentences = [s for s in re.split(r"(?<=[.!?])\s+|\n+", text.strip()) if len(s.strip()) > 3]
+    if not sentences:
+        return False
+    for s in sentences:
+        cited = CITE.findall(s)
+        if not cited or any(c not in allowed for c in cited):
+            return False
+    return True
+
+
 def template(result: dict) -> str:
     issues = [f for f in result["findings"] if f["status"] in ("fail", "warn")]
     if not issues:
@@ -58,8 +74,8 @@ async def summarize(result: dict) -> tuple[str, str]:
                                   json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False, "options": {"temperature": 0.1}})
             r.raise_for_status()
             text = r.json().get("response", "").strip()
-        if not text or FORBIDDEN.search(text) or not re.search(r"\[[\w.]+\]", text):
-            log.info("odrzucono odpowiedź LLM (brak cytowań lub wniosek prawny) – fallback do szablonu")
+        if not text or FORBIDDEN.search(text) or not citations_ok(text, result):
+            log.info("odrzucono odpowiedź LLM (brak cytowań, nieznana reguła lub wniosek prawny) – fallback do szablonu")
             return template(result), "template"
         return text, f"ollama:{OLLAMA_MODEL}"
     except Exception as exc:

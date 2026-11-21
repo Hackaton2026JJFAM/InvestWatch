@@ -21,3 +21,25 @@ test('riskSql: kategorie względem progu', () => {
   assert.match(sql, /a\.score >= \$1 THEN 'wysokie'/);
   assert.match(sql, /\$1 \* 0\.6 THEN 'średnie'/);
 });
+
+test('parseRedisUrl: hasło, użytkownik, baza i TLS', async () => {
+  const { parseRedisUrl } = await import('../src/config.js');
+  assert.deepEqual(parseRedisUrl('rediss://user:p%40ss@cache.local:6380/4'),
+    { host: 'cache.local', port: 6380, username: 'user', password: 'p@ss', db: 4, tls: {} });
+  assert.equal(parseRedisUrl('memory'), null);
+  assert.throws(() => parseRedisUrl('http://x'));
+});
+
+test('originAllowed: tylko ten sam host lub lista dozwolonych', async () => {
+  const { originAllowed } = await import('../src/realtime.js');
+  assert.equal(originAllowed('http://localhost:5173', 'localhost:5173'), true);
+  assert.equal(originAllowed('https://evil-audit.example', 'localhost:5173'), false);
+  assert.equal(originAllowed(undefined, 'localhost:5173'), true);
+  assert.equal(originAllowed('nie-url', 'localhost:5173'), false);
+});
+
+test('isAdmin: bez ciasteczka lub z podrobionym podpisem = brak uprawnień', async () => {
+  const { isAdmin } = await import('../src/auth.js');
+  assert.equal(isAdmin(''), false);
+  assert.equal(isAdmin(`iw_admin=${Date.now() + 60000}.podrobiony`), false);
+});

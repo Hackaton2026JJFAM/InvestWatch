@@ -45,7 +45,7 @@ export function LiveProvider({ children }) {
       },
       'alert:update': () => { refreshCounters(); bump('alert:update')(); },
       'material:new': bump('material:new'),
-      'material:status': bump('material:status'),
+      'material:status': () => { refreshCounters(); bump('material:status')(); },
       'material:deleted': () => { refreshCounters(); bump('material:deleted')(); },
       'scan:update': bump('scan:update'),
       'settings:update': (s) => { setThreshold(s.threshold); bump('settings:update')(s); },

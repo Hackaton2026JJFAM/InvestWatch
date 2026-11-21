@@ -7,12 +7,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 import httpx
 
 
 def main() -> None:
+    # UTF-8 niezależnie od strony kodowej konsoli (Windows cp1250 nie zna np. „≥”)
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser()
     ap.add_argument("--samples", required=True)
     ap.add_argument("--scraper", default="http://localhost:8001")

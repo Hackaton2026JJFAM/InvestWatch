@@ -77,7 +77,7 @@ GUARANTEE = rx(
     r"bezpieczn\w* inwestycj\w* bez", r"zysk bez ryzyka",
 )
 RISK = rx(
-    r"\bryzyk\w*", r"mozesz (?:\w+ )?straci\w*", r"utrat\w* (?:czesci |calosci |calego |zainwestowan\w* )?(?:kapital|srodk|zainwestowan)\w*",
+    r"\bryzyk(?!owa|uj)\w*",  # bez czasownika „ryzykować” (np. „lubi ryzykować”) r"mozesz (?:\w+ )?straci\w*", r"utrat\w* (?:czesci |calosci |calego |zainwestowan\w* )?(?:kapital|srodk|zainwestowan)\w*",
     r"\bstrat\w*", r"zlozonymi instrumentami", r"\d+(?:[.,]\d+)?\s?% (?:rachunkow|kont) (?:inwestorow )?detalicznych",
     r"wartosc \w+ moze (?:spadac|spasc|male|ulec)", r"nie gwarantuj\w*", r"\brisk\w*", r"\blose\b", r"\bloss\w*",
     r"dzwigni\w* finansow\w*", r"wahani\w* (?:kurs|wartosc|cen)\w*",
@@ -138,6 +138,26 @@ INSTRUMENTS = {
     "Surowce": rx(r"\bzlot\w*", r"\bsurowc\w*", r"\bropa\b", r"\bgold\b"),
     "Zarządzanie portfelem": rx(r"zarzadzani\w* portfel\w*", r"asset management", r"\bwealth management\b"),
 }
+
+
+NEGATION = re.compile(r"\b(?:nie|ani|zadn\w*|nigdy|no|not|never)\b")
+DENIAL_AD = rx(r"\bnie (?:jest|stanowi) (?:to )?(?:reklam|material\w* (?:reklamow|marketingow|sponsorowan)|wspolprac)\w*",
+               r"\bnie (?:jest|jestem) (?:sponsorowan|oplacon)\w*", r"\bthis is not an? (?:ad|advert)")
+
+
+def affirmed(pattern: re.Pattern, text: str) -> list[str]:
+    """Dopasowania niepoprzedzone negacją w tej samej części zdania („Nie obiecujemy gwarantowanego zysku”)."""
+    f = fold(text)
+    out = []
+    for m in pattern.finditer(f):
+        clause = re.split(r"[.,;:!?–-]", f[max(0, m.start() - 60):m.start()])[-1]
+        if not NEGATION.search(clause):
+            out.append(m.group(0))
+    return out
+
+
+def has_affirmed(pattern: re.Pattern, text: str) -> bool:
+    return bool(affirmed(pattern, text))
 
 
 def find_all(pattern: re.Pattern, text: str) -> list[str]:

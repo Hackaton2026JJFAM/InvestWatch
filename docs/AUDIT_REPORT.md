@@ -621,3 +621,60 @@ Nie wdrożono żadnej z tych propozycji w aplikacji.
 - Wyniki: `audit_tests/results/summary.json`, pliki XML/JSON i PNG.
   Narzędzia audytowe/interpretery pozostały w katalogu tymczasowym;
   ich obecność nie naprawia czystej instalacji repozytorium.
+
+## 11. Stan po poprawkach (21.11.2026, po audycie)
+
+Poprawki w kodzie aplikacji wprowadzono po zakończeniu audytu. Treść sekcji 1–10 pozostawiono bez zmian,
+jako zapis stanu z commitu `450a8e6`. Testy audytowe uruchomiono ponownie na lokalnym stosie deweloperskim
+(`tools/devstack`: PostgreSQL 16, kolejka w pamięci, Chromium/Playwright 1.65.2). Testy backendu działały
+na osobnej, pustej bazie `investwatch_audit`.
+
+| ID | Stan | Poprawka |
+|---|---|---|
+| B01 | naprawione | lockfile frontendu odtworzony (PR #1); `npm ci` przechodzi |
+| B02 | naprawione | jawna zależność `ioredis@6.0.0`; brak Redisa przy starcie kończy proces czytelnym błędem; logi błędów kolejki ograniczone do 1/30 s |
+| B03 | naprawione | `$1` (próg) zawsze używany w zapytaniu liczącym; lista i wszystkie filtry zwracają 200 |
+| B04 | naprawione | `/api/health` = gotowość (503 bez bazy/kolejki/scrapera/analizatora), `/api/live` = proces; healthcheck backendu w Compose |
+| B05 | częściowo | rola administratora (`ADMIN_PASSWORD`, sesja HMAC, limit prób logowania) dla progu, źródeł, próbek i usuwania; port frontendu domyślnie tylko na `127.0.0.1`. Pełne konta i role analityków – poza MVP |
+| B06 | naprawione | `allowRequest` Socket.io: tylko ten sam host lub `ALLOWED_ORIGINS`; nginx przekazuje `Host` |
+| B07 | naprawione | klient REST zgłasza błąd przy odpowiedzi innej niż JSON |
+| B08 | naprawione | `layout_hash` (wygląd ostrzeżeń); duplikat = URL + treść + wygląd; zmiana CSS tworzy nową wersję materiału |
+| B09 | naprawione | tytuł, autor i platforma z importu HTML mają pierwszeństwo przed odczytanymi z dokumentu |
+| B10 | naprawione | pusta lub biała treść → 422 |
+| B11 | naprawione | modele Pydantic dla viewportów, bloków, linków i wyniku podsumowania → 422; nieoczekiwane błędy jako JSON |
+| B12 | naprawione | status `demo` w rejestrze, bazie i UI; wpisy demo ładowane tylko przy `DEMO_REGISTRY`/`SEED_DEMO` |
+| B13 | naprawione | dopasowanie domeny z granicą etykiety; usunięta heurystyka „nazwa w domenie”; nazwy złożone z samych słów ogólnych nie są wyszukiwane |
+| B14 | naprawione | negacje w zdaniu („nie obiecujemy…”, „to nie jest reklama”); czasownik „ryzykować” nie jest ostrzeżeniem |
+| B15 | naprawione | zezwolenie liczy się tylko dla doradcy; podmiot w kontekście wykonania transakcji nie autoryzuje oferty |
+| B16 | naprawione | pomiar ucięcia pionowego (overflow przodków); współrzędne przy bieżącym przewinięciu |
+| B17 | naprawione | ekstrakcja treści z DOM po renderze (ta sama migawka co pomiary) |
+| B18 | naprawione | `alert:update` przy zmianie statusu materiału; frontend odświeża licznik |
+| B19 | naprawione | status HTTP ≥ 400 z `page.goto` i `/discover` → 502 |
+| B20 | naprawione | ewaluator wymusza UTF-8 na stdout |
+
+Pozostałe uwagi z sekcji 2 i 5:
+- **Redis → Valkey 8.1 (BSD-3).** Usuwa rozbieżność z licencją RSALv2/SSPLv1. Zgodność z BullMQ sprawdzona tylko na poziomie protokołu, bez uruchomienia Compose.
+- **`REDIS_URL`** zachowuje użytkownika, hasło, numer bazy i TLS (`rediss://`).
+- **`DEFAULT_THRESHOLD`** jest stosowany przy pierwszym starcie (backend wstawia próg, jeśli go brak).
+- **Podsumowanie LLM:** każde zdanie musi cytować `[rule_id]` istniejącej przesłanki fail/warn.
+- **`fetch`** pobiera strumieniowo z przerwaniem po `MAX_BYTES`.
+
+Testy audytowe po poprawkach:
+
+| Zestaw | Wynik |
+|---|---|
+| `test_node.mjs` | 8 PASS |
+| `test_http.py` + `test_visual.py` + `test_scoring.py` | 63 PASS |
+| `test_backend.py` + `test_backend_workflows.py` + `test_controlled_scrape.py` | 59 PASS |
+| `test_browser.py` (Chromium; konsola i odpowiedzi ≥ 400: 0 zdarzeń) | 12 PASS |
+| `test_public_scrape.py` | 5 PASS |
+
+Zmiana w testach audytowych: operacje administracyjne logują się hasłem z `AUDIT_ADMIN_PASSWORD`.
+Test B05 nadal wysyła żądanie bez sesji i oczekuje 401/403. Asercji nie osłabiono.
+
+Nadal otwarte:
+- Docker Compose od czystych obrazów (brak Dockera na stanowisku).
+- Pełne uwierzytelnianie i role analityków.
+- DNS rebinding (przypinanie adresu do połączenia) i izolacja Chromium (`--no-sandbox`).
+- Polityka retencji danych i SBOM z licencjami.
+- Prezentacja PDF i opis zgłoszenia.

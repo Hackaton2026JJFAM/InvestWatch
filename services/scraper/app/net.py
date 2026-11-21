@@ -63,11 +63,19 @@ async def fetch(url: str) -> httpx.Response:
     async with httpx.AsyncClient(timeout=20, proxy=proxy, follow_redirects=False,
                                  headers={"User-Agent": random_ua(), "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.6"}) as client:
         for _ in range(6):
-            resp = await client.get(current)
-            if resp.is_redirect and resp.headers.get("location"):
-                current = validate_url(str(resp.url.join(resp.headers["location"])))
-                continue
-            if len(resp.content) > MAX_BYTES:
-                raise ValueError("Odpowiedź przekracza limit rozmiaru")
-            return resp
+            # strumieniowo – przerwanie po przekroczeniu limitu zamiast pobierania całości do pamięci
+            async with client.stream("GET", current) as resp:
+                if resp.is_redirect and resp.headers.get("location"):
+                    current = validate_url(str(resp.url.join(resp.headers["location"])))
+                    continue
+                if int(resp.headers.get("content-length") or 0) > MAX_BYTES:
+                    raise ValueError("Odpowiedź przekracza limit rozmiaru")
+                body = bytearray()
+                async for chunk in resp.aiter_bytes():
+                    body.extend(chunk)
+                    if len(body) > MAX_BYTES:
+                        raise ValueError("Odpowiedź przekracza limit rozmiaru")
+                # treść jest już zdekodowana (gzip/br) – usuwamy nagłówki kodowania i długości
+                headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in ("content-encoding", "content-length")]
+                return httpx.Response(resp.status_code, headers=headers, content=bytes(body), request=resp.request)
     raise ValueError("Zbyt wiele przekierowań")

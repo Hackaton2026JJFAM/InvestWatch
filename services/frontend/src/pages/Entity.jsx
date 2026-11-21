@@ -11,7 +11,8 @@ function RegistryPanel({ entity, registry }) {
   const d = rec?.data ?? entity.registry_ref ?? {};
   return (
     <Panel title="Dane rejestrowe" meta={rec ? `${rec.registry.toUpperCase()} · ${fmtDate(rec.checked_at)}` : 'nie sprawdzono'}>
-      {rec?.status === 'found' || entity.registry_status === 'registered' ? (
+      {entity.registry_status === 'demo' && <div className="notice" style={{ marginBottom: 8 }}>Podmiot fikcyjny z danych demonstracyjnych – nie jest wpisem w rejestrze KNF.</div>}
+      {['found', 'demo'].includes(rec?.status) || ['registered', 'demo'].includes(entity.registry_status) ? (
         <dl className="kv">
           <dt>Nazwa w rejestrze</dt><dd>{d.name}{d.demo && <span className="chip mid" style={{ marginLeft: 6 }}>DEMO</span>}</dd>
           <dt>Kategoria</dt><dd>{d.category}</dd>

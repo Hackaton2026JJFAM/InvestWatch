@@ -12,8 +12,9 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Query
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, Query, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field, field_validator
 
 from . import m1, m3, rules_m2
 from .classifier import get_classifier, simhash
@@ -26,8 +27,59 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 VERSION = "0.1.0"
 
 
+class Block(BaseModel):
+    """Blok tekstu z renderu (kontrakt ze scraperem). Braki uzupełniane neutralnymi wartościami."""
+    text: str = Field(max_length=5000)
+    tag: str | None = None
+    font_size: float = Field(default=16, ge=0, le=1000)
+    font_size_min: float | None = None
+    font_weight: int | None = None
+    color: list[float] = [0, 0, 0]
+    bg: list[float] = [255, 255, 255]
+    contrast: float = Field(default=21, ge=0, le=21)
+    opacity: float = Field(default=1, ge=0, le=1)
+    x: float = 0
+    y: float = 0
+    w: float = 0
+    h: float = 0
+    visible: bool = True
+    occluded: bool = False
+    clipped: bool = False
+    clipped_y: bool = False
+    offscreen_x: bool = False
+    in_footer: bool = False
+    in_fine_print: bool = False
+    in_collapsed: bool = False
+    in_modal: bool = False
+    is_link: bool = False
+    href: str | None = None
+
+    model_config = {"extra": "ignore"}
+
+
+class Viewport(BaseModel):
+    width: int = Field(gt=0, le=10000)
+    height: int = Field(gt=0, le=20000)
+    page_height: int | None = None
+    screenshot_height: int | None = None
+    blocks: list[Block] = Field(default=[], max_length=5000)
+
+
+class Layout(BaseModel):
+    engine: str = "none"
+    reason: str | None = None
+    viewports: dict[str, Viewport] = {}
+
+    model_config = {"extra": "ignore"}
+
+
+class Link(BaseModel):
+    text: str = Field(default="", max_length=2000)
+    href: str = Field(max_length=4096)
+
+
 class Material(BaseModel):
-    url: str = Field(max_length=4096)
+    url: str = Field(min_length=1, max_length=4096)
     final_url: str | None = None
     title: str | None = None
     author: str | None = None
@@ -39,10 +91,17 @@ class Material(BaseModel):
     social_handle: str | None = None
     content_text: str = Field(max_length=1_000_000)
     full_text: str | None = Field(default=None, max_length=2_000_000)
-    links: list[dict] = []
-    layout: dict = {}
+    links: list[Link] = Field(default=[], max_length=2000)
+    layout: Layout = Layout()
 
     model_config = {"extra": "ignore"}
+
+    @field_validator("content_text")
+    @classmethod
+    def not_blank(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("Treść materiału jest pusta")
+        return v
 
 
 @asynccontextmanager
@@ -92,14 +151,41 @@ def analyze(m: Material):
     return analyze_material(m.model_dump())
 
 
+class FindingIn(BaseModel):
+    module: str
+    rule_id: str
+    title: str
+    status: str
+    severity: int = 0
+    legal_basis: str | None = None
+    explanation: str = ""
+    evidence: list[dict] = []
+
+
+class ResultIn(BaseModel):
+    """Minimalny kontrakt wyniku analizy potrzebny do podsumowania."""
+    score: float = Field(ge=0, le=100)
+    modules: list[str] = []
+    findings: list[FindingIn]
+
+    model_config = {"extra": "allow"}
+
+
 class SummaryReq(BaseModel):
-    result: dict
+    result: ResultIn
 
 
 @app.post("/summary")
 async def summary(req: SummaryReq):
-    text, engine = await summarize(req.result)
+    text, engine = await summarize(req.result.model_dump())
     return {"summary": text, "engine": engine}
+
+
+@app.exception_handler(Exception)
+async def unexpected(_: Request, exc: Exception):
+    # Spójny JSON także dla błędów nieprzewidzianych (bez szczegółów wewnętrznych).
+    logging.getLogger("analyzer").exception("unhandled error: %s", type(exc).__name__)
+    return JSONResponse(status_code=500, content={"detail": "Błąd wewnętrzny analizatora"})
 
 
 @app.get("/rules")
@@ -117,6 +203,10 @@ def registry_search(q: str = Query(min_length=2, max_length=200)):
 def registry_check(name: str = Query(min_length=2, max_length=300)):
     reg = get_registry()
     hit = reg.lookup(name)
-    return {"name": name, "status": "registered" if hit else "not_found", "match": hit,
-            "note": None if hit else "Brak w lokalnym rejestrze KNF nie oznacza nielegalnej działalności – sygnał do weryfikacji.",
-            "registry": reg.meta}
+    if hit and hit.get("demo"):
+        status, note = "demo", "Podmiot fikcyjny z danych demonstracyjnych – nie jest wpisem w rejestrze KNF."
+    elif hit:
+        status, note = "registered", None
+    else:
+        status, note = "not_found", "Brak w lokalnym rejestrze KNF nie oznacza nielegalnej działalności – sygnał do weryfikacji."
+    return {"name": name, "status": status, "match": hit, "note": note, "registry": reg.meta}

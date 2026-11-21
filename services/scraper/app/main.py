@@ -8,7 +8,10 @@ POST /discover      wyszukiwanie podstron z materiałami inwestycyjnymi w obręb
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
+import json
 import logging
+import re
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -16,7 +19,7 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from .extract import content_hash, discover_links, extract, normalize_text, platform_for
 from .net import UnsafeUrl, fetch, validate_url
-from .render import Renderer
+from .render import Renderer, SourceHttpError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger("scraper")
@@ -43,6 +46,9 @@ class HtmlReq(BaseModel):
     html: str = Field(min_length=1, max_length=5_000_000)
     url: str = Field(default="about:sample", max_length=2048)
     render: bool = True
+    title: str | None = Field(default=None, max_length=500)
+    author: str | None = Field(default=None, max_length=200)
+    platform: str | None = Field(default=None, max_length=30)
 
 
 class TextReq(BaseModel):
@@ -62,10 +68,28 @@ def _now() -> str:
     return dt.datetime.now(dt.timezone.utc).isoformat()
 
 
+RISK_HINT = re.compile(r"ryzyk|strat|utrat|risk|lose|loss", re.I)
+
+
+def layout_hash(layout: dict) -> str | None:
+    """Odcisk cech wizualnych ostrzeżeń (rozmiar, kontrast, widoczność, położenie) – zmiana wyglądu
+    reklamy przy tej samej treści daje nową wersję materiału zamiast duplikatu."""
+    feats = []
+    for vp, data in sorted((layout.get("viewports") or {}).items()):
+        for b in data.get("blocks", []):
+            if RISK_HINT.search(b["text"]):
+                feats.append([vp, b["text"][:120], round(b["font_size"]), round(b["contrast"], 1), b["visible"],
+                              b["in_collapsed"], b["in_footer"], b["in_fine_print"], b["clipped"], b.get("clipped_y"),
+                              b["occluded"], round(b.get("opacity", 1), 1)])
+    if not layout.get("viewports"):
+        return None
+    return hashlib.sha256(json.dumps(feats, ensure_ascii=False).encode()).hexdigest()
+
+
 def _material(url: str, final_url: str, html: str, layout: dict) -> dict:
     data = extract(html, final_url)
     data.update({"url": url, "final_url": final_url, "fetched_at": _now(), "layout": layout,
-                 "scraper_version": VERSION})
+                 "layout_hash": layout_hash(layout), "scraper_version": VERSION})
     return data
 
 
@@ -89,6 +113,8 @@ async def scrape(req: ScrapeReq):
             rendered = await renderer.render(url=url)
             html, final_url = rendered.pop("html"), rendered.pop("final_url")
             layout = rendered
+        except SourceHttpError as exc:
+            raise HTTPException(502, str(exc))
         except Exception as exc:
             log.warning("render failed for %s: %s", url, exc)
             layout = {"engine": "none", "reason": f"render_error: {type(exc).__name__}"}
@@ -108,15 +134,22 @@ async def scrape(req: ScrapeReq):
 @app.post("/scrape/html")
 async def scrape_html(req: HtmlReq):
     layout: dict = {"engine": "none"}
+    html = req.html
     if req.render and renderer.available:
         try:
             rendered = await renderer.render(html=req.html)
-            rendered.pop("html", None)
+            # ekstrakcja z DOM po renderze – ta sama migawka co pomiary layoutu
+            html = rendered.pop("html", None) or req.html
             rendered.pop("final_url", None)
             layout = rendered
         except Exception as exc:
             log.warning("render of provided html failed: %s", exc)
-    return _material(req.url, req.url, req.html, layout)
+    material = _material(req.url, req.url, html, layout)
+    # metadane podane ręcznie przez analityka mają pierwszeństwo przed odczytanymi z dokumentu
+    for key in ("title", "author", "platform"):
+        if getattr(req, key):
+            material[key] = getattr(req, key)
+    return material
 
 
 @app.post("/scrape/text")
@@ -140,5 +173,7 @@ async def discover(req: DiscoverReq):
         raise HTTPException(400, str(exc))
     except Exception as exc:
         raise HTTPException(502, f"Nie udało się pobrać strony: {type(exc).__name__}")
+    if resp.status_code >= 400:
+        raise HTTPException(502, f"Źródło zwróciło HTTP {resp.status_code}")
     data = extract(resp.text, str(resp.url))
     return {"url": url, "candidates": discover_links(data["links"], str(resp.url), req.limit)}

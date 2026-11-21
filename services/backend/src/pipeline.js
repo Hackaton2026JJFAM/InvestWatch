@@ -10,7 +10,10 @@ const normName = (s) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, ''
 
 async function fetchMaterial(data) {
   if (data.kind === 'url') return scraper.url(data.url);
-  if (data.kind === 'html') return scraper.html(data.html, data.url);
+  if (data.kind === 'html') {
+    const meta = Object.fromEntries(Object.entries({ title: data.title, author: data.author, platform: data.platform }).filter(([, v]) => v));
+    return scraper.html(data.html, data.url, meta);
+  }
   return scraper.text({ text: data.text, url: data.url, title: data.title, author: data.author, platform: data.platform });
 }
 
@@ -31,10 +34,10 @@ async function upsertEntity(t, { name, kind, country = null, domain = null, regi
 async function saveEntities(t, materialId, result) {
   const links = [];
   for (const f of result.m1?.firms ?? []) {
-    const e = await upsertEntity(t, { name: f.name, kind: 'company', country: f.country, registryStatus: 'registered', registryRef: f });
+    const e = await upsertEntity(t, { name: f.name, kind: 'company', country: f.country, registryStatus: f.demo ? 'demo' : 'registered', registryRef: f });
     links.push([e.id, 'advertised_firm']);
-    await t.q(`INSERT INTO registry_records (entity_id, registry, country, status, data) VALUES ($1, $2, $3, 'found', $4)`,
-      [e.id, f.demo ? 'demo' : 'knf', f.country, f]);
+    await t.q(`INSERT INTO registry_records (entity_id, registry, country, status, data) VALUES ($1, $2, $3, $4, $5)`,
+      [e.id, f.demo ? 'demo' : 'knf', f.country, f.demo ? 'demo' : 'found', f]);
   }
   const pub = result.m1?.publisher;
   if (pub?.name && pub.type === 'podmiot_trzeci') {
@@ -44,10 +47,11 @@ async function saveEntities(t, materialId, result) {
   }
   for (const ent of result.m3?.entities ?? []) {
     const found = Boolean(ent.registry_match);
-    const e = await upsertEntity(t, { name: ent.name, kind: 'company', registryStatus: found ? 'registered' : 'not_found', registryRef: ent.registry_match });
+    const regStatus = found ? (ent.registry_match.demo ? 'demo' : 'registered') : 'not_found';
+    const e = await upsertEntity(t, { name: ent.name, kind: 'company', registryStatus: regStatus, registryRef: ent.registry_match });
     links.push([e.id, 'advisor']);
     await t.q(`INSERT INTO registry_records (entity_id, registry, status, data) VALUES ($1, 'knf', $2, $3)`,
-      [e.id, found ? 'found' : 'not_found', ent.registry_match]);
+      [e.id, found ? (ent.registry_match.demo ? 'demo' : 'found') : 'not_found', ent.registry_match]);
   }
   for (const [entityId, role] of links) {
     await t.q('INSERT INTO material_entities (material_id, entity_id, role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [materialId, entityId, role]);
@@ -67,7 +71,9 @@ export async function processScan(job) {
     return fail(jobId, err, job);
   }
 
-  const dup = await one('SELECT id FROM materials WHERE url = $1 AND content_hash = $2', [material.url, material.content_hash]);
+  // duplikat = ten sam URL, ta sama treść i ten sam wygląd ostrzeżeń; zmiana samego CSS tworzy nową wersję
+  const dup = await one('SELECT id FROM materials WHERE url = $1 AND content_hash = $2 AND layout_hash IS NOT DISTINCT FROM $3',
+    [material.url, material.content_hash, material.layout_hash ?? null]);
   if (dup) {
     await q("UPDATE scan_jobs SET status = 'duplicate', material_id = $2, finished_at = now() WHERE id = $1", [jobId, dup.id]);
     emit('scan:update', { id: jobId, status: 'duplicate', materialId: dup.id });
@@ -96,11 +102,11 @@ export async function processScan(job) {
   async function save() {
     return tx(async (t) => {
     const m = await t.one(
-      `INSERT INTO materials (source_id, url, final_url, title, author, published_at, lang, platform, content_text, content_hash, raw, ground_truth, simhash, near_duplicate_of)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id, fetched_at`,
+      `INSERT INTO materials (source_id, url, final_url, title, author, published_at, lang, platform, content_text, content_hash, raw, ground_truth, simhash, near_duplicate_of, layout_hash)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id, fetched_at`,
       [data.sourceId ?? null, material.url, material.final_url, material.title, material.author,
         parseDate(material.published_at), material.lang, material.platform, material.content_text, material.content_hash,
-        { ...material, layout: { ...layoutNoShot, screenshot } }, data.groundTruth ?? null, simhash, nearDup?.id ?? null],
+        { ...material, layout: { ...layoutNoShot, screenshot } }, data.groundTruth ?? null, simhash, nearDup?.id ?? null, material.layout_hash ?? null],
     );
     const a = await t.one(
       `INSERT INTO analyses (material_id, score, module_scores, modules, result, analyzer_version)

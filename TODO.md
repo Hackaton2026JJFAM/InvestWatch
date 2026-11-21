@@ -24,11 +24,10 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [x] `DELETE /api/materials/:id`
 
 ## Następne kroki (priorytet)
-- [ ] (!) Pierwsze uruchomienie `docker compose up --build` i test całego stosu (odłożone – brak Dockera)
-- [x] Wykonać testy przeglądarkowe (audyt): 10/12 zaliczonych; toast WebSocket i zapis progu działają.
-- [ ] (!) Naprawić listę materiałów i filtry (HTTP 502), odświeżanie licznika alertów oraz ponownie sprawdzić konsolę – zweryfikować wobec raportu audytu.
-- [x] Przetestować REST i zapis na osobnym PostgreSQL 16 (audyt): 40/51 zaliczonych w wariancie diagnostycznym.
-- [ ] (!) Dodać brakujący sterownik `ioredis` do aplikacji i powtórzyć test backendu w docelowym Compose.
+- [ ] (!) Pierwsze uruchomienie `docker compose up --build` i test całego stosu (odłożone – brak Dockera; sprawdzić też Valkey + BullMQ i healthchecki)
+- [x] Błędy audytu B01–B20 poprawione (B05 częściowo: rola administratora) – [stan po poprawkach](docs/AUDIT_REPORT.md#11-stan-po-poprawkach-21112026-po-audycie)
+- [x] Ponowne testy audytowe: Node 8/8, HTTP+wizualne+scoring 63/63, backend+workflow+kontrolowane 59/59, Chromium 12/12 (0 zdarzeń konsoli), publiczne 5/5
+- [ ] (!) Ustawić `ADMIN_PASSWORD` na demo i przekazać zespołowi (nie commitować)
 - [ ] (!) Na hackathonie: wczytać próbki od UKNF (pendrive) przez „Import wielu plików”, oznaczyć je i przeliczyć kalibrację
 - [x] Konsola bez ostrzeżeń WebSocket (jedno połączenie Socket.io na aplikację)
 - [ ] Import obrazów/zrzutów reklam (OCR) – formaty dziś pomijane przy imporcie
@@ -61,3 +60,9 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [x] Wykonać zestawy audytowe: 161 przypadków, 130 zaliczonych i 31 niezaliczonych. [Raport i reprodukcje](docs/AUDIT_REPORT.md), [wyniki](audit_tests/results/summary.json).
 - [x] Poprawić przyczyny nieudanego CI na `test/audit`: niespójny lockfile frontendu i brak instalacji `pip-audit`.
 - [ ] Usunąć pozostałe błędy audytu; zielone CI nie zastępuje testu pełnego stosu ani nie oznacza zaliczenia wszystkich przypadków audytowych.
+
+## Bezpieczeństwo (po audycie)
+- [ ] Pełne uwierzytelnianie i role analityków (dziś: tylko rola administratora dla konfiguracji)
+- [ ] DNS rebinding w scraperze (przypięcie zweryfikowanego IP do połączenia) i izolacja Chromium bez `--no-sandbox`
+- [ ] Polityka retencji danych, rejestr operacji analityków, SBOM z licencjami obrazów i modelu
+- [ ] `pip-audit` w obrazach Python (dziś tylko w CI)

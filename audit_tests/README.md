@@ -20,7 +20,7 @@ python -m unittest audit_tests/test_scoring.py -v
 node --test audit_tests/test_node.mjs
 ```
 
-Backend: port 4000, frontend Vite: 5173. Testy Chromium wymagają
+Backend: port 4000, frontend Vite: 5173. Operacje administracyjne (próg, źródła) wymagają `AUDIT_ADMIN_PASSWORD` równego `ADMIN_PASSWORD` backendu. Testy Chromium wymagają
 `python -m playwright install chromium`. Domyślne porty serwisów Python można
 zmienić zmiennymi `AUDIT_SCRAPER`, `AUDIT_ANALYZER`; backendu: `AUDIT_BACKEND`.
 

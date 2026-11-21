@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from . import text as T
 from .model import FAIL, NA, PASS, WARN, Doc, Finding, ev
-from .registry import get_registry
+from .registry import core_name, domain_matches, get_registry
 
 AFFILIATE = T.rx(r"\bkod\w* (?:polecaj|rabat|promocyj|partnersk)\w*", r"\blink\w* (?:afiliac|partnersk|polecaj)\w*", r"link w bio",
                  r"z moim (?:kodem|linkiem)", r"\bref=", r"\baff(?:iliate)?=", r"utm_(?:source|campaign)", r"\bbonus\w* na start",
@@ -23,12 +23,10 @@ def publisher_type(doc: Doc, firms: list[dict]) -> tuple[str, str | None]:
     author = doc.author or doc.meta.get("social_handle")
     dom = doc.domain or ""
     for f in firms:
-        if f.get("domains") and any(dom.endswith(d) for d in f["domains"]):
+        # tylko zweryfikowane domeny podmiotu; sama nazwa w domenie nie dowodzi własności
+        if any(domain_matches(dom, d) for d in f.get("domains") or []):
             return "firma", f["name"]
-        core = T.fold(f["name"]).split()[0] if f.get("name") else ""
-        if core and len(core) >= 4 and core in dom.replace("-", ""):
-            return "firma", f["name"]
-        if author and T.fold(f["name"])[:12] in T.fold(author):
+        if author and core_name(author) == core_name(f["name"]):
             return "firma", f["name"]
     if doc.platform != "web" and author:
         return "podmiot_trzeci", author

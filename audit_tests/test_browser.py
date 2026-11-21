@@ -1,5 +1,6 @@
 """Rzeczywisty Chromium, frontend Vite + backend HTTP; bez atrap API."""
 import json
+import os
 from pathlib import Path
 import time
 import uuid
@@ -11,6 +12,7 @@ from playwright.sync_api import sync_playwright
 ROOT = "http://127.0.0.1:5173"
 API = "http://127.0.0.1:4000/api"
 RESULTS = Path(__file__).parent / "results"
+ADMIN_PASSWORD = os.getenv("AUDIT_ADMIN_PASSWORD")
 
 
 @pytest.fixture(scope="module")
@@ -77,19 +79,31 @@ def test_live_toast_for_new_high_risk(page):
 
 
 def test_calibration_slider_and_save(page):
+    # Zapis progu to operacja administratora (B05): UI pokazuje okno logowania,
+    # hasło z AUDIT_ADMIN_PASSWORD. Przywrócenie progu przez zalogowaną sesję HTTP.
     original = httpx.get(API + "/settings").json()["threshold"]
+    admin = httpx.Client(timeout=30)
+    if ADMIN_PASSWORD:
+        admin.post(API + "/auth/login", json={"password": ADMIN_PASSWORD})
     try:
         page.goto(ROOT + "/calibration")
         slider = page.get_by_role("slider", name="Próg ryzyka")
         slider.wait_for()
         slider.fill("100")
         page.get_by_role("button", name="Zapisz próg 100", exact=True).click()
+        dialog = page.get_by_role("dialog")
+        dialog.or_(page.get_by_text("Nowy próg ryzyka: 100", exact=True)).first.wait_for()
+        if dialog.count():
+            assert ADMIN_PASSWORD, "zapis progu wymaga AUDIT_ADMIN_PASSWORD"
+            dialog.get_by_placeholder("Hasło (ADMIN_PASSWORD)").fill(ADMIN_PASSWORD)
+            dialog.get_by_role("button", name="Zaloguj").click()
         page.get_by_text("Nowy próg ryzyka: 100", exact=True).wait_for()
         assert httpx.get(API + "/settings").json()["threshold"] == 100
         slider.fill("0")
         assert "wysokie ≥ 0" in page.locator("main").inner_text()
     finally:
-        httpx.patch(API + "/settings", json={"threshold": original})
+        admin.patch(API + "/settings", json={"threshold": original})
+        admin.close()
 
 
 def test_material_status_updates_unread_badge(page):

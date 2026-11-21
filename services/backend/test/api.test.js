@@ -4,6 +4,13 @@ import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
 
 const API = process.env.API_URL ?? 'http://127.0.0.1:4000/api';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'investwatch-dev';
+let adminCookie = '';
+const login = async () => {
+  const r = await fetch(`${API}/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ password: ADMIN_PASSWORD }) });
+  adminCookie = (r.headers.get('set-cookie') ?? '').split(';')[0];
+  return r.status;
+};
 const json = { 'content-type': 'application/json' };
 const get = async (p) => { const r = await fetch(API + p); return { status: r.status, body: await r.json().catch(() => null) }; };
 const send = async (method, p, body) => {
@@ -48,8 +55,8 @@ describe('API', () => {
     const r1 = await send('POST', '/scans', { url: 'ftp://x' });
     assert.equal(r1.status, 400);
     assert.ok(r1.body.details.length > 0);
-    const r2 = await send('PATCH', '/settings', { threshold: 150 });
-    assert.equal(r2.status, 400);
+    const r2 = await send('PATCH', '/settings', { threshold: 45 });
+    assert.equal(r2.status, 401, 'zmiana progu bez logowania');
     const r3 = await get('/materials/abc');
     assert.equal(r3.status, 400);
     const r4 = await get('/materials/999999');
@@ -84,6 +91,8 @@ describe('API', () => {
     // ten sam URL i treść -> deduplikacja
     const c = await send('POST', '/scans/upload', { text, platform: 'tiktok', author: '@test_api', url: `https://www.tiktok.com/@test_api/video/${stamp}` });
     assert.equal((await waitJob(c.body.id)).status, 'duplicate');
-    for (const id of [jobA.material_id, jobB.material_id]) assert.equal((await fetch(`${API}/materials/${id}`, { method: 'DELETE' })).status, 204);
+    assert.equal((await fetch(`${API}/materials/${jobA.material_id}`, { method: 'DELETE' })).status, 401, 'usuwanie bez logowania');
+    assert.equal(await login(), 200, 'logowanie administratora');
+    for (const id of [jobA.material_id, jobB.material_id]) assert.equal((await fetch(`${API}/materials/${id}`, { method: 'DELETE', headers: { cookie: adminCookie } })).status, 204);
   });
 });

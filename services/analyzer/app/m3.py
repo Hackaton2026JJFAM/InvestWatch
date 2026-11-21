@@ -8,7 +8,12 @@ from __future__ import annotations
 
 from . import text as T
 from .model import FAIL, NA, PASS, WARN, Doc, Finding, ev
-from .registry import extract_entity_names, get_registry
+from .registry import domain_matches, extract_entity_names, get_registry
+
+# kontekst wykonania transakcji – broker/bank prowadzący rachunek, a nie podmiot doradzający
+EXECUTION = T.rx(r"\btransakcj\w* (?:wykonasz|wykonujesz|zrealizujesz|realizujesz|zawierasz)\b", r"\bza posrednictwem\b",
+                 r"\brachun\w* (?:maklersk\w* )?(?:w|prowadzi)\b", r"\bprzez (?:dom|biuro) maklersk\w*", r"\bkonto maklerskie w\b",
+                 r"\bbroker\w* (?:wykonuj|realizuj|prowadz)\w*", r"\bzlecenia (?:sklada|wykonuj|realizuj)\w*")
 
 SERVICE = T.rx(r"\bwealth management\b", r"\bfamily office\w*", r"\binvestment (?:consulting|advisory)\b", r"\bdoradztw\w* inwestycyjn\w*",
                r"\bdoradc\w* (?:inwestycyjn|finansow|majatkow)\w*", r"\bzarzadzani\w* (?:majatkiem|kapitalem|portfelem)\b", r"\bprivate bank\w*",
@@ -52,12 +57,19 @@ def run(doc: Doc) -> dict:
         classification = "usługa_doradcza_ogólna"
 
     reg = get_registry()
-    names = extract_entity_names(doc.text)
     entities = []
-    for n in names:
+    for n in extract_entity_names(doc.text):
         hit = reg.lookup(n)
-        entities.append({"name": n, "registry": "znaleziono" if hit else "brak w rejestrze", "registry_match": hit})
-    authorized = any(e["registry_match"] for e in entities) or bool(reg.find_in_text(doc.text, doc.domain))
+        # podmiot wymieniony tylko jako miejsce wykonania transakcji (broker) nie jest doradcą
+        ctx = [x for x in s if n.split()[0] in x.text]
+        role = "wykonawca_transakcji" if ctx and all(T.has(EXECUTION, x.text) for x in ctx) else "doradca"
+        status = ("demo" if hit.get("demo") else "znaleziono") if hit else "brak w rejestrze"
+        entities.append({"name": n, "role": role, "registry": status, "registry_match": hit})
+    advisors = [e for e in entities if e["role"] == "doradca"]
+    # zezwolenie liczy się tylko dla doradcy (albo właściciela zweryfikowanej domeny), nie dla dowolnej wzmianki
+    own_domain = [f for f in reg.find_in_text(doc.text, doc.domain)
+                  if any(domain_matches(doc.domain, d) for d in f.get("domains") or [])]
+    authorized = any(e["registry_match"] for e in advisors) or bool(own_domain)
 
     findings: list[Finding] = []
     evid = [ev(x.text, "usługa") for x in service[:2]] + [ev(x.text, "personalizacja") for x in personal[:2]] + \

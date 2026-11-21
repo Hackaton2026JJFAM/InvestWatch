@@ -4,6 +4,7 @@ import { one, q } from '../db.js';
 import { enqueue } from '../queue.js';
 import { runSources } from '../scheduler.js';
 import { seedSamples } from '../seed.js';
+import { requireAdmin } from '../auth.js';
 import { parse } from '../validate.js';
 
 const httpUrl = z.url({ protocol: /^https?$/ }).max(2048);
@@ -30,7 +31,7 @@ r.post('/scans/upload', async (req, res) => {
   }).refine((b) => b.html || b.text, 'Podaj html albo text'), req.body);
   const url = body.url || `upload://${Date.now()}`;
   const job = body.html
-    ? await enqueue({ kind: 'html', html: body.html, url, groundTruth: body.ground_truth }, 'upload')
+    ? await enqueue({ kind: 'html', html: body.html, url, title: body.title, author: body.author, platform: body.platform, groundTruth: body.ground_truth }, 'upload')
     : await enqueue({ kind: 'text', text: body.text, url, title: body.title, author: body.author, platform: body.platform, groundTruth: body.ground_truth }, 'upload');
   res.status(202).json(job);
 });
@@ -48,7 +49,7 @@ r.get('/scans/:id', async (req, res) => {
 
 r.get('/sources', async (_req, res) => res.json(await q('SELECT * FROM sources ORDER BY id DESC')));
 
-r.post('/sources', async (req, res) => {
+r.post('/sources', requireAdmin, async (req, res) => {
   const b = parse(z.object({ url: httpUrl, label: z.string().max(200).optional(), kind: z.enum(['web', 'social']).default('web') }), req.body);
   const row = await one(
     'INSERT INTO sources (url, label, kind) VALUES ($1, $2, $3) ON CONFLICT (url) DO UPDATE SET enabled = TRUE RETURNING *',
@@ -57,7 +58,7 @@ r.post('/sources', async (req, res) => {
   res.status(201).json(row);
 });
 
-r.patch('/sources/:id', async (req, res) => {
+r.patch('/sources/:id', requireAdmin, async (req, res) => {
   const { id } = parse(z.object({ id: z.coerce.number().int().positive() }), req.params);
   const b = parse(z.object({ enabled: z.boolean() }), req.body);
   const row = await one('UPDATE sources SET enabled = $2 WHERE id = $1 RETURNING *', [id, b.enabled]);
@@ -65,13 +66,13 @@ r.patch('/sources/:id', async (req, res) => {
   res.json(row);
 });
 
-r.delete('/sources/:id', async (req, res) => {
+r.delete('/sources/:id', requireAdmin, async (req, res) => {
   const { id } = parse(z.object({ id: z.coerce.number().int().positive() }), req.params);
   await q('DELETE FROM sources WHERE id = $1', [id]);
   res.status(204).end();
 });
 
-r.post('/sources/run', async (_req, res) => res.status(202).json(await runSources()));
-r.post('/seed', async (_req, res) => res.status(202).json(await seedSamples({ force: true })));
+r.post('/sources/run', requireAdmin, async (_req, res) => res.status(202).json(await runSources()));
+r.post('/seed', requireAdmin, async (_req, res) => res.status(202).json(await seedSamples({ force: true })));
 
 export default r;

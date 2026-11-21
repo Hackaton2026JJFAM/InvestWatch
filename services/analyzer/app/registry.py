@@ -5,6 +5,7 @@ Brak podmiotu w bazie NIE oznacza nielegalnej działalności – to sygnał do w
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from functools import lru_cache
@@ -30,6 +31,13 @@ ENTITY_RX = re.compile(
 )
 
 
+def domain_matches(host: str | None, domain: str) -> bool:
+    """host == domena albo jej subdomena (granica etykiety, nie sam sufiks znaków)."""
+    host = (host or "").lower().rstrip(".")
+    domain = domain.lower().strip(".")
+    return bool(domain) and (host == domain or host.endswith("." + domain))
+
+
 def core_name(name: str) -> str:
     s = fold(name)
     s = LEGAL_FORMS.sub(" ", s)
@@ -52,7 +60,10 @@ class Firm:
     former_names: list[str]
 
     def public(self) -> dict:
-        return {k: v for k, v in self.__dict__.items() if k not in ("core", "distinctive")}
+        out = {k: v for k, v in self.__dict__.items() if k not in ("core", "distinctive")}
+        # proweniencja: wpisy demo nigdy nie są przedstawiane jako wpis w rejestrze KNF
+        out["registry_status"] = "demo" if self.demo else "registered"
+        return out
 
 
 class Registry:
@@ -85,7 +96,7 @@ class Registry:
             for f in data["firms"]:
                 self._add(f, demo=False)
         demo = DATA / "demo_registry.json"
-        if demo.exists():
+        if demo.exists() and os.getenv("DEMO_REGISTRY", "true").lower() == "true":
             for f in json.loads(demo.read_text(encoding="utf-8"))["firms"]:
                 self._add(f, demo=True)
 
@@ -111,7 +122,7 @@ class Registry:
                     continue  # zbyt krótkie nazwy dają fałszywe trafienia
                 if f" {variant} " in folded and firm.name not in hits:
                     hits[firm.name] = {**firm.public(), "matched_as": variant}
-            if domain and firm.domains and any(domain.endswith(d) for d in firm.domains) and firm.name not in hits:
+            if domain and any(domain_matches(domain, d) for d in firm.domains) and firm.name not in hits:
                 hits[firm.name] = {**firm.public(), "matched_as": f"domena {domain}"}
         return list(hits.values())
 

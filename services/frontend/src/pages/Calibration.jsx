@@ -28,7 +28,9 @@ export default function Calibration() {
   if (error) return <Empty>{error.message}</Empty>;
   if (!data || t === null) return <Empty>Ładowanie…</Empty>;
 
-  const save = () => api.patch('/settings', { threshold: t }).then((s) => { setThreshold(s.threshold); toast({ title: 'Zapisano próg', text: `Nowy próg ryzyka: ${s.threshold}` }); });
+  const save = () => api.patch('/settings', { threshold: t })
+    .then((s) => { setThreshold(s.threshold); toast({ title: 'Zapisano próg', text: `Nowy próg ryzyka: ${s.threshold}` }); })
+    .catch((err) => { if (err.auth !== 'cancelled') toast({ kind: 'alert', title: 'Nie zapisano progu', text: err.message }); });
   const points = data.items.map((i) => ({ ...i, y: i.ground_truth === null ? 0.5 : i.ground_truth ? 1 : 0 }));
   const cur = confusion(data.items, data.current);
 

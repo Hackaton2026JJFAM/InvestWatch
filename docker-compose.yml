@@ -15,13 +15,14 @@ services:
       interval: 5s
       retries: 20
 
+  # Valkey (licencja BSD-3) – otwarty fork Redisa zgodny z protokołem; Redis 7.4+ ma licencję RSALv2/SSPLv1
   redis:
-    image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes"]
+    image: valkey/valkey:8.1-alpine
+    command: ["valkey-server", "--appendonly", "yes"]
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       retries: 20
 
@@ -40,6 +41,7 @@ services:
     environment:
       OLLAMA_URL: ${OLLAMA_URL:-}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:4b}
+      DEMO_REGISTRY: ${SEED_DEMO:-true}
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8002/health')"]
       interval: 10s
@@ -55,6 +57,9 @@ services:
       SCAN_CRON: ${SCAN_CRON:-0 */6 * * *}
       DEFAULT_THRESHOLD: ${DEFAULT_THRESHOLD:-45}
       SEED_DEMO: ${SEED_DEMO:-true}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
     volumes:
       - ./data/samples:/app/samples:ro
     depends_on:
@@ -62,13 +67,18 @@ services:
       redis: { condition: service_healthy }
       scraper: { condition: service_healthy }
       analyzer: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/api/health"]
+      interval: 10s
+      retries: 20
 
   frontend:
     build: ./services/frontend
     ports:
-      - "${WEB_PORT:-8080}:80"
+      # domyślnie tylko lokalnie (brak uwierzytelniania); WEB_BIND=0.0.0.0 udostępnia w sieci
+      - "${WEB_BIND:-127.0.0.1}:${WEB_PORT:-8080}:80"
     depends_on:
-      - backend
+      backend: { condition: service_healthy }
 
   ollama:
     image: ollama/ollama:0.5.4

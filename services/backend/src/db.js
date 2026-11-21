@@ -47,10 +47,15 @@ export async function waitForDb(retries = 30) {
 const MIGRATIONS = [
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS simhash TEXT',
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS near_duplicate_of INT REFERENCES materials(id) ON DELETE SET NULL',
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS layout_hash TEXT',
+  'ALTER TABLE materials DROP CONSTRAINT IF EXISTS materials_url_content_hash_key',
+  "CREATE UNIQUE INDEX IF NOT EXISTS materials_version_uq ON materials (url, content_hash, coalesce(layout_hash, ''))",
 ];
 
 export async function migrate() {
   for (const sql of MIGRATIONS) await pool.query(sql);
+  // próg domyślny z konfiguracji (DEFAULT_THRESHOLD) – tylko gdy nie ustawiono go wcześniej
+  await pool.query("INSERT INTO settings (key, value) VALUES ('threshold', $1) ON CONFLICT (key) DO NOTHING", [JSON.stringify(config.defaultThreshold)]);
 }
 
 export async function getThreshold() {

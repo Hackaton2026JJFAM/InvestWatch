@@ -58,11 +58,15 @@ $env:DATABASE_URL = 'postgres://investwatch:investwatch@localhost:5433/investwat
 $env:REDIS_URL = 'memory'
 $env:SAMPLES_DIR = (Join-Path $root 'data\samples')
 $env:SEED_DEMO = 'true'
+# hasło administratora: z .env (ADMIN_PASSWORD=...), inaczej domyślne hasło deweloperskie
+$envFile = Join-Path $root '.env'
+$adminLine = if (Test-Path $envFile) { Get-Content $envFile | Where-Object { $_ -match '^ADMIN_PASSWORD=.+' } | Select-Object -First 1 }
+$env:ADMIN_PASSWORD = if ($adminLine) { $adminLine.Substring(15) } else { 'investwatch-dev' }
 Start-Svc 'backend' 'node' 'src/index.js' (Join-Path $root 'services\backend')
 $null = Wait-Url 'backend' 'http://127.0.0.1:4000/api/health'
 
 Start-Svc 'frontend' 'node' 'node_modules/vite/bin/vite.js --port 5173 --strictPort' (Join-Path $root 'services\frontend')
-$null = Wait-Url 'frontend' 'http://localhost:5173/'
+$null = Wait-Url 'frontend' 'http://127.0.0.1:5173/'
 
 Write-Host ''
 Write-Host 'Dashboard: http://localhost:5173' -ForegroundColor Green

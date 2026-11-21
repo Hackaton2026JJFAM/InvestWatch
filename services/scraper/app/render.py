@@ -13,6 +13,14 @@ log = logging.getLogger("scraper.render")
 
 SHOT_MAX_H = 4000
 
+
+class SourceHttpError(Exception):
+    """Źródło odpowiedziało kodem błędu – strona błędu nie jest materiałem."""
+
+    def __init__(self, status: int):
+        super().__init__(f"Źródło zwróciło HTTP {status}")
+        self.status = status
+
 VIEWPORTS = {
     "desktop": {"width": 1366, "height": 768},
     "tablet": {"width": 768, "height": 1024},
@@ -34,6 +42,21 @@ LAYOUT_JS = r"""
     for (let e = el; e; e = e.parentElement) { const c = parseRGBA(getComputedStyle(e).backgroundColor);
       if (c[3] > 0.5) { bg = c.slice(0,3); break; } } return bg; };
   const blockOf = (el) => { let e = el; while (e && e !== document.body && INLINE.has(getComputedStyle(e).display)) e = e.parentElement; return e || document.body; };
+  // Ułamek powierzchni bloku niezasłonięty przez przodków z overflow hidden/clip (oba kierunki).
+  const clipFraction = (el, r) => {
+    const area = r.width * r.height;
+    if (area <= 0) return 0;
+    let L = r.left, T = r.top, R = r.right, B = r.bottom;
+    for (let e = el.parentElement; e && e !== document.documentElement; e = e.parentElement) {
+      const s = getComputedStyle(e);
+      const cx = ['hidden','clip'].includes(s.overflowX), cy = ['hidden','clip'].includes(s.overflowY);
+      if (!cx && !cy) continue;
+      const er = e.getBoundingClientRect();
+      if (cx) { L = Math.max(L, er.left); R = Math.min(R, er.right); }
+      if (cy) { T = Math.max(T, er.top); B = Math.min(B, er.bottom); }
+    }
+    return Math.max(0, R - L) * Math.max(0, B - T) / area;
+  };
   const opacityOf = (el) => { let o = 1; for (let e = el; e; e = e.parentElement) o *= parseFloat(getComputedStyle(e).opacity || '1'); return o; };
   const groups = new Map();
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
@@ -58,6 +81,9 @@ LAYOUT_JS = r"""
     }
     const fontSize = Number(Object.entries(sizes).sort((a,b) => b[1]-a[1])[0][0]);
     const r = block.getBoundingClientRect();
+    // pozycja w dokumencie liczona przy aktualnym przewinięciu (hit-test niżej przewija stronę)
+    const docX = r.left + window.scrollX, docY = r.top + window.scrollY;
+    const shown = clipFraction(block, r);
     const visible = block.checkVisibility ? block.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : r.width > 0;
     const bg = bgOf(block); const L1 = lum(color.slice(0,3)), L2 = lum(bg);
     const contrast = (Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);
@@ -72,13 +98,15 @@ LAYOUT_JS = r"""
     }
     const cs = getComputedStyle(block);
     const clipped = (block.scrollWidth > block.clientWidth + 2 && ['hidden','clip'].includes(cs.overflowX)) || cs.textOverflow === 'ellipsis' && block.scrollWidth > block.clientWidth;
+    // ucięcie pionowe: własny overflow-y albo przodek z overflow hidden/clip zasłaniający część bloku
+    const clippedY = (block.scrollHeight > block.clientHeight + 2 && ['hidden','clip'].includes(cs.overflowY)) || shown < 0.6;
     const link = block.closest('a');
     out.push({
       text: text.slice(0, 2000), tag: block.tagName.toLowerCase(),
       font_size: fontSize, font_size_min: fsMin, font_weight: weight,
       color: color.slice(0,3), bg, contrast: Math.round(contrast*100)/100, opacity: Math.round(opacity*100)/100,
-      x: Math.round(r.left + scrollX), y: Math.round(r.top + scrollY), w: Math.round(r.width), h: Math.round(r.height),
-      visible, occluded, clipped: !!clipped,
+      x: Math.round(docX), y: Math.round(docY), w: Math.round(r.width), h: Math.round(r.height),
+      visible, occluded, clipped: !!clipped, clipped_y: !!clippedY, shown_fraction: Math.round(shown * 100) / 100,
       offscreen_x: r.right > vw + 2 || r.left < -2,
       in_footer: !!block.closest('footer,[class*="footer" i],[id*="footer" i],[class*="legal" i],[id*="legal" i],[class*="disclaimer" i]'),
       in_fine_print: !!block.closest('small,sup,sub,[class*="fine" i],[class*="footnote" i],[class*="przypis" i]'),
@@ -138,7 +166,9 @@ class Renderer:
             if html is not None:
                 await page.set_content(html, wait_until="load", timeout=20000)
             else:
-                await page.goto(url, wait_until="domcontentloaded", timeout=25000)
+                response = await page.goto(url, wait_until="domcontentloaded", timeout=25000)
+                if response is not None and response.status >= 400:
+                    raise SourceHttpError(response.status)
                 try:
                     await page.wait_for_load_state("networkidle", timeout=5000)
                 except Exception:

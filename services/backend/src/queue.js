@@ -1,6 +1,7 @@
 // Kolejka zadań (BullMQ/Redis): ponawianie z backoffem, równoległość konfigurowalna.
 // REDIS_URL=memory: prosta kolejka w pamięci o tym samym zachowaniu (dev bez Redisa).
 import { Queue, UnrecoverableError, Worker } from 'bullmq';
+import Redis from 'ioredis';
 import { config } from './config.js';
 import { one } from './db.js';
 import { log } from './log.js';
@@ -39,7 +40,49 @@ function memoryQueue() {
 }
 
 const connection = config.redis ? { ...config.redis, maxRetriesPerRequest: null } : null;
-export const scanQueue = connection ? new Queue('scan', { connection, defaultJobOptions: JOB_OPTS }) : memoryQueue();
+export let scanQueue = null;
+let queueReady = false;
+
+// Ten sam błąd Redisa logowany najwyżej raz na 30 s – bez zalewania dysku logami.
+const lastLogged = new Map();
+function logThrottled(msg, err) {
+  const key = `${msg}:${err.message}`;
+  const now = Date.now();
+  if (now - (lastLogged.get(key) ?? 0) < 30000) return;
+  lastLogged.set(key, now);
+  log.error(msg, { err: err.message });
+}
+
+// Fail-fast: brak połączenia z Redisem przy starcie kończy proces czytelnym błędem.
+export async function initQueue() {
+  if (!connection) {
+    scanQueue = memoryQueue();
+    queueReady = true;
+    return;
+  }
+  const probe = new Redis({ ...config.redis, lazyConnect: true, connectTimeout: 5000, maxRetriesPerRequest: 1, retryStrategy: () => null });
+  probe.on('error', () => {});
+  try {
+    await probe.connect();
+    await probe.ping();
+  } catch (err) {
+    throw new Error(`Redis niedostępny (${config.redis.host}:${config.redis.port}): ${err.message}`);
+  } finally {
+    probe.disconnect();
+  }
+  scanQueue = new Queue('scan', { connection, defaultJobOptions: JOB_OPTS });
+  scanQueue.on('error', (err) => logThrottled('queue error', err));
+  queueReady = true;
+}
+
+export async function queueHealth() {
+  if (!scanQueue || !queueReady) return { ok: false };
+  try {
+    return { ok: true, mode: connection ? 'redis' : 'memory', ...(await scanQueue.getJobCounts('waiting', 'active', 'failed', 'completed')) };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+}
 
 export async function enqueue(data, trigger = 'manual') {
   const row = await one(
@@ -58,6 +101,6 @@ export function startWorker() {
   }
   const worker = new Worker('scan', processScan, { connection, concurrency: config.concurrency });
   worker.on('failed', (job, err) => log.warn('scan job failed', { jobId: job?.data?.scanJobId, attempt: job?.attemptsMade, err: err.message }));
-  worker.on('error', (err) => log.error('worker error', { err: err.message }));
+  worker.on('error', (err) => logThrottled('worker error', err));
   return worker;
 }

@@ -7,10 +7,20 @@ import httpx
 import pytest
 
 BASE = os.getenv("AUDIT_BACKEND", "http://127.0.0.1:4000/api")
+# Po wprowadzeniu roli administratora (B05) operacje konfiguracyjne wymagają sesji.
+# Testy, które je wykonują, logują się hasłem z AUDIT_ADMIN_PASSWORD; test B05 wysyła żądanie bez sesji.
+ADMIN_PASSWORD = os.getenv("AUDIT_ADMIN_PASSWORD")
+_session = httpx.Client(timeout=120)
 
 
-def call(method, path, **kwargs):
-    return httpx.request(method, BASE + path, timeout=120, **kwargs)
+def call(method, path, *, auth=True, **kwargs):
+    client = _session if auth else httpx
+    response = client.request(method, BASE + path, **({} if auth else {"timeout": 120}), **kwargs)
+    if auth and response.status_code == 401 and ADMIN_PASSWORD and not path.startswith("/auth/"):
+        login = _session.post(BASE + "/auth/login", json={"password": ADMIN_PASSWORD})
+        assert login.status_code == 200, login.text
+        response = _session.request(method, BASE + path, **kwargs)
+    return response
 
 
 def upload(text, **meta):
@@ -190,7 +200,7 @@ def test_source_crud_isolated():
 
 def test_unauthenticated_settings_write_is_denied():
     current = call("GET", "/settings").json()["threshold"]
-    response = call("PATCH", "/settings", json={"threshold": current})
+    response = call("PATCH", "/settings", json={"threshold": current}, auth=False)
     assert response.status_code in (401, 403), response.text
 
 

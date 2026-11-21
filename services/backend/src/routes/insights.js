@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { getThreshold, one, q } from '../db.js';
 import { emit } from '../realtime.js';
 import { analyzer } from '../services.js';
+import { requireAdmin } from '../auth.js';
 import { parse, riskSql } from '../validate.js';
 
 const r = Router();
@@ -63,7 +64,7 @@ r.get('/settings', async (_req, res) => {
   res.json(Object.fromEntries(rows.map((x) => [x.key, x.value])));
 });
 
-r.patch('/settings', async (req, res) => {
+r.patch('/settings', requireAdmin, async (req, res) => {
   const b = parse(z.object({ threshold: z.number().int().min(0).max(100) }), req.body);
   await q("INSERT INTO settings (key, value, updated_at) VALUES ('threshold', $1, now()) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()",
     [JSON.stringify(b.threshold)]);

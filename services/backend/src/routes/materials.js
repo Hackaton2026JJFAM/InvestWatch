@@ -4,6 +4,7 @@ import { getThreshold, one, q, tx } from '../db.js';
 import { emit } from '../realtime.js';
 import { analyzer } from '../services.js';
 import { findSimilar } from '../similarity.js';
+import { requireAdmin } from '../auth.js';
 import { parse, riskSql } from '../validate.js';
 
 const r = Router();
@@ -75,12 +76,15 @@ r.patch('/materials/:id/status', async (req, res) => {
   const { status } = parse(z.object({ status: z.enum(STATUSES) }), req.body);
   const row = await one('UPDATE materials SET status = $2 WHERE id = $1 RETURNING id, status', [id, status]);
   if (!row) return res.status(404).json({ error: 'Nie znaleziono materiału' });
-  if (status !== 'NEW') await q("UPDATE alerts SET status = $2, read = TRUE WHERE material_id = $1 AND status = 'NEW'", [id, status === 'DISMISSED' ? 'DISMISSED' : 'REVIEWED']);
+  if (status !== 'NEW') {
+    const changed = await q("UPDATE alerts SET status = $2, read = TRUE WHERE material_id = $1 AND status = 'NEW' RETURNING id", [id, status === 'DISMISSED' ? 'DISMISSED' : 'REVIEWED']);
+    if (changed.length) emit('alert:update', { materialId: id, alerts: changed.map((a) => a.id) });
+  }
   emit('material:status', row);
   res.json(row);
 });
 
-r.delete('/materials/:id', async (req, res) => {
+r.delete('/materials/:id', requireAdmin, async (req, res) => {
   const { id } = parse(idParam, req.params);
   const row = await one('DELETE FROM materials WHERE id = $1 RETURNING id', [id]);
   if (!row) return res.status(404).json({ error: 'Nie znaleziono materiału' });
