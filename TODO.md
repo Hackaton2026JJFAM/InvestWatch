@@ -24,7 +24,9 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [x] `DELETE /api/materials/:id`
 
 ## Następne kroki (priorytet)
-- [ ] (!) Pierwsze uruchomienie `docker compose up --build` i test całego stosu (odłożone – brak Dockera; sprawdzić też Valkey + BullMQ i healthchecki)
+- [x] `docker compose up --build` na Windows (Docker 29.9, WSL2): wszystkie healthchecki zielone, Valkey + BullMQ, Chromium w kontenerze, seed 18 próbek, kalibracja 11/0/1/6, backend `npm test` 12/12 przez nginx, WebSocket i toasty, konsola bez błędów, wzbogacanie z kontenera; ~400 MB RAM całego stosu
+- [x] Poprawka: nginx przekazuje `Host` z portem (`$http_host`) – bez tego kontrola Origin odrzucała WebSocket
+- [ ] Test Compose na macOS (Apple Silicon) – obrazy mają wariant arm64, uruchomienia nie wykonano
 - [x] Błędy audytu B01–B20 poprawione (B05 częściowo: rola administratora) – [stan po poprawkach](docs/AUDIT_REPORT.md#11-stan-po-poprawkach-21112026-po-audycie)
 - [x] Ponowne testy audytowe: Node 8/8, HTTP+wizualne+scoring 63/63, backend+workflow+kontrolowane 59/59, Chromium 12/12 (0 zdarzeń konsoli), publiczne 5/5
 - [ ] (!) Ustawić `ADMIN_PASSWORD` na demo i przekazać zespołowi (nie commitować)
