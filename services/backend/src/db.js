@@ -92,6 +92,7 @@ const MIGRATIONS = [
           likes = NULLIF(raw->'layout'->'video'->'meta'->>'like_count', '')::bigint,
           followers = NULLIF(raw->'layout'->'video'->'meta'->>'channel_follower_count', '')::bigint
     WHERE views IS NULL AND jsonb_typeof(raw->'layout'->'video'->'meta') = 'object'`,
+  'CREATE INDEX IF NOT EXISTS materials_lang ON materials (lang)',
   // tagi ze spacjami (opisowe tagi YouTube) nie są hashtagami – usuwane z zapisanych materiałów
   "UPDATE materials SET tags = ARRAY(SELECT t FROM unnest(tags) t WHERE t !~ '[[:space:]]') WHERE EXISTS (SELECT 1 FROM unnest(tags) t WHERE t ~ '[[:space:]]')",
   `CREATE TABLE IF NOT EXISTS watch_queries (
@@ -99,6 +100,7 @@ const MIGRATIONS = [
      min_views BIGINT NOT NULL DEFAULT 10000, max_per_run INT NOT NULL DEFAULT 10, enabled BOOLEAN NOT NULL DEFAULT TRUE,
      last_run_at TIMESTAMPTZ, last_found INT, last_queued INT, last_error TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
      UNIQUE (platform, kind, query))`,
+  'ALTER TABLE watch_queries ADD COLUMN IF NOT EXISTS polish BOOLEAN NOT NULL DEFAULT TRUE',
 ];
 
 export async function migrate() {

@@ -14,7 +14,7 @@ Materiały można dodawać jako adres URL, HTML, tekst albo **obraz reklamy** (P
 
 **Oszustwa i finfluencerzy:** każdy materiał (strona, post, wideo po transkrypcji i OCR) dostaje profil publikującego: podejrzenie oszustwa, płatna promocja, doradca, edukacja albo informacja. Do tego sygnały z cytatami (presja czasu, WhatsApp/Telegram, bot AI, „zacznij od 250 zł”, wizerunek znanych osób) i ocena realizmu obietnic przeliczona na rok („2% dziennie” ≈ 730% rocznie). Oficjalne strony firm i strony własne usługodawców nie są traktowane jak podmiot trzeci, a zadeklarowana licencja doradcy obniża M3 do „do weryfikacji”.
 
-**Monitoring popularnych treści:** strona „Monitoring wideo” pokazuje popularne tagi i wyszukuje kandydatów: YouTube po hashtagu, frazie (po wyświetleniach) lub kanale, TikTok po profilu. Ma próg wyświetleń, a zapisane zapytania uruchamia według harmonogramu, więc system działa profilaktycznie, a nie tylko na zgłoszenia. Wyniki można filtrować po zasięgu, tagu, typie publikującego i rodzaju materiału, a sortowanie „priorytet” to ryzyko × zasięg.
+**Monitoring popularnych treści:** strona „Monitoring wideo” pokazuje popularne polskie hashtagi i frazy-przynęty oszustów („darmowa kasa”, „szybki zarobek”, „gwarantowany zysk”…). Wyszukuje kandydatów po #hashtagu lub frazie na YouTube, TikToku, Instagramie, X i Facebooku (YouTube natywnie z regionem PL, pozostałe przez publiczny indeks wyszukiwarki, bo strony tagów platform wymagają logowania), a także po profilu twórcy (YouTube, TikTok). Domyślnie tylko treści po polsku. Ma próg wyświetleń, a zapisane zapytania uruchamia według harmonogramu, więc system działa profilaktycznie, a nie tylko na zgłoszenia. Wyniki można filtrować po zasięgu, tagu, typie publikującego i rodzaju materiału, a sortowanie „priorytet” to ryzyko × zasięg.
 
 **Rynek:** strona „Rezerwy giełd (PoR)” pokazuje raport Proof of Reserves OKX (pokrycie per aktywo, alert przy pokryciu < 1:1 lub braku nowego raportu > 45 dni; to deklaracja giełdy, nie audyt). Karta podmiotu ma panel „Zachowanie w kryzysach (GPW)”: kurs spółki wobec WIG w okresie krachu COVID-19 lub wybuchu wojny w Ukrainie (maks. spadek, dni do odrobienia strat, beta, zmienność) z archiwum notowań gpw.pl.
 
@@ -81,6 +81,7 @@ Wideo: model Whisper `small` zajmuje ~0,5 GB (wolumen `whisper`, pobierany przy 
 | `SCRAPER_COOKIES_FILE` | – | Opcjonalny plik cookies (format Netscape) dla materiałów wymagających logowania |
 | `WATCH_CRON` | `15 */3 * * *` | Uruchamianie zapisanych zapytań monitoringu wideo |
 | `WORKER_CONCURRENCY`, `VIDEO_WORKER_CONCURRENCY` | 2, 1 | Równoległość torów kolejki: strony / wideo (Whisper) – zwiększaj razem z `--scale scraper=N` |
+| `SOCIAL_SEARCH_INTERVAL` | 6 | Minimalny odstęp (s) między zapytaniami do wyszukiwarki przy hashtagach TikTok/Instagram/X/Facebook |
 | `VIDEO_REFRESH_DAYS` | 7 | Wideo przeanalizowane w tym okresie nie jest pobierane ponownie |
 | `RESERVES_CRON` | `30 6 * * *` | Odczyt raportu Proof of Reserves (OKX); działa przy `ENRICH_AUTO=true` |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | –, `gemma3:4b` | LLM do podsumowań |

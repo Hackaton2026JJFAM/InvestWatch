@@ -24,6 +24,7 @@ r.get('/materials', async (req, res) => {
     min_followers: z.coerce.number().int().min(0).optional(), tag: z.string().max(60).optional(),
     profile: z.enum(['podejrzenie_oszustwa', 'płatna_promocja', 'doradca_finansowy', 'edukacja', 'informacja']).optional(),
     media: z.enum(['video', 'image', 'web']).optional(), watch: z.coerce.number().int().positive().optional(),
+    lang: z.enum(['pl', 'other']).optional(),
     sort: z.enum(['score', 'fetched_at', 'title', 'views', 'priority']).default('fetched_at'), dir: z.enum(['asc', 'desc']).default('desc'),
     page: z.coerce.number().int().min(1).default(1), size: z.coerce.number().int().min(1).max(200).default(50),
   }), req.query);
@@ -45,6 +46,8 @@ r.get('/materials', async (req, res) => {
   if (f.tag) add('? = ANY(m.tags)', f.tag.toLowerCase().replace(/^#+/, ''));
   if (f.profile) add('m.profile_type = ?', f.profile);
   if (f.watch) add('m.watch_id = ?', f.watch);
+  if (f.lang === 'pl') where.push("m.lang = 'pl'");
+  if (f.lang === 'other') where.push("coalesce(m.lang, '') <> 'pl'");
   if (f.media === 'video') where.push("m.raw->'layout' ? 'video'");
   if (f.media === 'image') where.push("m.raw->'layout'->>'engine' = 'ocr'");
   if (f.media === 'web') where.push("NOT (m.raw->'layout' ? 'video') AND coalesce(m.raw->'layout'->>'engine', '') <> 'ocr'");

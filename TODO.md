@@ -59,7 +59,12 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [x] Monitoring wideo (strona „Monitoring wideo”): chmura popularnych tagów (z bazy + zestaw finansowy), wyszukiwanie kandydatów (YouTube: hashtag, fraza sortowana po wyświetleniach, kanał; TikTok: profil) z progiem wyświetleń – najpierw same metadane, transkrypcja i OCR tylko dla treści powyżej progu; „Monitoruj stale” = zapisane zapytania uruchamiane wg `WATCH_CRON`
 - [x] Wyniki: filtry typ publikującego, rodzaj (wideo/obraz/strona), zasięg (≥ 1 tys. … ≥ 1 mln), tag, „tylko powyżej progu”; sortowanie po zasięgu i priorytecie (ryzyko × log zasięgu)
 - [x] Skalowalność: osobny tor kolejki dla wideo (`VIDEO_WORKER_CONCURRENCY`), priorytet wg wyświetleń, pomijanie filmów przeanalizowanych w ostatnich 7 dniach przed pobraniem, indeksy (zasięg, tagi GIN, profil, URL); skalowanie poziome: `docker compose up -d --scale scraper=N`
-- [ ] TikTok: tagi i wyszukiwarka wymagają zalogowania (API aplikacji) – dziś monitoring profili; Instagram/Facebook – plik cookies analityka (`SCRAPER_COOKIES_FILE`)
+- [x] Hashtag (#) i fraza na **YouTube, TikToku, Instagramie, X i Facebooku**: YouTube natywnie (region PL: `hl=pl&gl=PL`), pozostałe przez publiczny indeks wyszukiwarki (DuckDuckGo HTML, region PL, `"#tag" site:platforma`) – strony tagów platform wymagają logowania; zasięg i autor dociągane z metadanych posta (yt-dlp) i oEmbed (X, TikTok); profile twórców: YouTube i TikTok
+- [x] Polskie treści: rozpoznawanie języka kandydatów i materiałów, przełącznik „tylko polskie” w monitoringu (domyślnie), filtr „Język” w wynikach
+- [x] Frazy-przynęty oszustów PL („darmowa kasa”, „szybki zarobek”, „zarabiaj 1000 zł dziennie”, „gwarantowany zysk”, „bot inwestycyjny zarabia”, „zacznij od 250 zł”, …) – klikalne wyszukiwanie i pakiety „Monitoruj stale” jednym kliknięciem na wybranych platformach; polskie hashtagi finansowe (#darmowakasa, #pasywnydochod, #szybkizarobek, #kryptopolska, …)
+- [x] Posty bez wideo (np. wpis na X) analizowane jako tekst (oEmbed) zamiast błędu „No video”
+- [ ] Wyszukiwarka ogranicza częste zapytania (odpowiedź 202) – zapytania co ≥ 6 s, bufor 30 min, przy ograniczeniu czytelny komunikat i ponowienie w kolejnym przebiegu; przy dużej liczbie zapytań w monitoringu rozważyć oficjalne API wyszukiwania (np. Brave Search API, klucz) lub plik cookies analityka
+- [ ] Instagram: zasięg (wyświetlenia) bez logowania niedostępny – tylko polubienia/opis; Facebook: metadane ograniczone
 - [ ] Rejestr licencjonowanych doradców inwestycyjnych KNF – dziś licencja „zadeklarowana, do weryfikacji” (numer wyciągany z treści)
 
 ## Poprawki po testach zespołu (21.11.2026)

@@ -11,19 +11,26 @@ import { emit } from './realtime.js';
 import { scraper } from './services.js';
 
 /** Kandydaci z platformy z oznaczeniem, czy już są w bazie / w kolejce. */
-export async function discoverCandidates({ platform, kind, query, sort = 'views', limit = 20, minViews = 0 }) {
-  const r = await scraper.discoverVideo({ platform, kind, query, sort, limit });
+export async function discoverCandidates({ platform, kind, query, sort = 'views', limit = 20, minViews = 0, polish = true }) {
+  const r = await scraper.discoverVideo({ platform, kind, query, sort, limit, polish });
   const urls = r.items.map((i) => i.url);
   const known = new Set((await q(
     `SELECT url FROM materials WHERE url = ANY($1) OR final_url = ANY($1)
      UNION SELECT url FROM scan_jobs WHERE url = ANY($1) AND status IN ('queued', 'running')`, [urls])).map((x) => x.url));
-  const items = r.items.map((i) => ({ ...i, known: known.has(i.url), passes: !i.live && (i.views ?? (minViews ? -1 : 0)) >= minViews }));
+  // zasięg nieznany (posty znalezione przez wyszukiwarkę, platformy bez publicznych licznikach) nie odrzuca –
+  // inaczej Instagram/X/Facebook nigdy nie przeszłyby progu; język: przy „tylko polskie” odrzucamy treści rozpoznane jako obce
+  const items = r.items.map((i) => {
+    const reachOk = i.views == null ? platform !== 'youtube' || !minViews : i.views >= minViews;
+    const langOk = !polish || i.lang === 'pl' || (i.lang == null && platform !== 'youtube');
+    return { ...i, known: known.has(i.url), reach_known: i.views != null, passes: !i.live && reachOk && langOk };
+  });
   return { ...r, items };
 }
 
 export async function runWatch(w) {
   try {
-    const r = await discoverCandidates({ platform: w.platform, kind: w.kind, query: w.query, sort: w.sort, limit: Math.min(50, w.max_per_run * 3), minViews: Number(w.min_views) });
+    const r = await discoverCandidates({ platform: w.platform, kind: w.kind, query: w.query, sort: w.sort, limit: Math.min(50, w.max_per_run * 3),
+      minViews: Number(w.min_views), polish: w.polish !== false });
     const picked = r.items.filter((i) => i.passes && !i.known).sort((a, b) => (b.views ?? 0) - (a.views ?? 0)).slice(0, w.max_per_run);
     for (const i of picked) {
       await enqueue({ kind: 'url', url: i.url, watchId: w.id, title: i.title }, 'watch', { priority: priorityFor(i.views) });

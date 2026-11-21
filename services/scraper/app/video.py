@@ -15,6 +15,8 @@ from __future__ import annotations
 import io
 import logging
 import os
+
+import httpx
 import re
 import shutil
 import tempfile
@@ -63,6 +65,10 @@ VIDEO_EXT = re.compile(r"\.(mp4|m4v|webm|mov|mkv|avi|mpeg|mpg|3gp)$", re.I)
 
 class VideoUnavailable(RuntimeError):
     """Brak narzędzi (whisper/ffmpeg) albo materiału nie da się pobrać."""
+
+
+class NoVideoInPost(RuntimeError):
+    """Post bez wideo (np. wpis tekstowy na X) – analizujemy jego tekst."""
 
 
 class VideoRejected(ValueError):
@@ -143,6 +149,8 @@ def download(url: str, workdir: str) -> tuple[str, dict]:
     except DownloadError as exc:
         msg = str(exc)
         low = msg.lower()
+        if "no video could be found" in low or "there's no video" in low or "no video in" in low or "does not contain a video" in low:
+            raise NoVideoInPost(msg) from exc
         if "login" in low or "log in" in low or "cookies" in low or "sign in" in low or "private" in low:
             raise VideoUnavailable("Platforma wymaga zalogowania lub materiał jest prywatny – wgraj plik wideo ręcznie") from exc
         if "unsupported url" in low:
@@ -410,11 +418,12 @@ def process_url(url: str) -> dict:
 
 # ---------------------------------------------------------------------------- wyszukiwanie popularnych wideo
 # Proaktywny monitoring: lista kandydatów (same metadane – bez pobierania filmów), filtrowana po zasięgu.
-# Obsługiwane źródła bez logowania: YouTube (fraza, hashtag, kanał), TikTok (profil).
+# YouTube natywnie (fraza, hashtag, kanał – region PL), TikTok profil natywnie; hashtag/fraza na TikToku,
+# Instagramie, X i Facebooku – przez publiczny indeks wyszukiwarki (app/social.py).
 DISCOVER_SOURCES = {
-    ("youtube", "search"): lambda q, n, sort: (f"https://www.youtube.com/results?search_query={quote_plus(q)}&sp={YT_SORT[sort]}"
-                                               if sort in YT_SORT else f"ytsearch{n}:{q}"),
-    ("youtube", "hashtag"): lambda q, n, sort: f"https://www.youtube.com/hashtag/{quote_plus(q.lstrip('#'))}",
+    ("youtube", "search"): lambda q, n, sort: (f"https://www.youtube.com/results?search_query={quote_plus(q)}&hl=pl&gl=PL"
+                                               + (f"&sp={YT_SORT[sort]}" if sort in YT_SORT else "")),
+    ("youtube", "hashtag"): lambda q, n, sort: f"https://www.youtube.com/hashtag/{quote_plus(q.lstrip('#'))}?hl=pl&gl=PL",
     # TikTok: strony tagów wymagają zalogowania (API aplikacji) – monitorujemy profile finfluencerów
     ("tiktok", "profile"): lambda q, n, sort: q if q.startswith("http") else f"https://www.tiktok.com/@{q.lstrip('@')}",
     ("youtube", "profile"): lambda q, n, sort: q if q.startswith("http") else f"https://www.youtube.com/@{q.lstrip('@')}/videos",
@@ -431,7 +440,17 @@ def _host_platform(url: str) -> str | None:
     return None
 
 
-def discover(platform: str, kind: str, query: str, limit: int = 20, sort: str = "relevance") -> dict:
+def discover(platform: str, kind: str, query: str, limit: int = 20, sort: str = "relevance", polish: bool = True) -> dict:
+    from . import social
+    if platform in social.SITES and kind in ("hashtag", "search"):
+        try:
+            return social.discover(platform, kind, query, limit, polish)
+        except social.SearchThrottled as exc:
+            raise VideoUnavailable(str(exc)) from exc
+        except ValueError as exc:
+            raise VideoRejected(str(exc)) from exc
+        except httpx.HTTPError as exc:
+            raise VideoUnavailable(f"Wyszukiwarka niedostępna: {type(exc).__name__}") from exc
     try:
         import yt_dlp
         from yt_dlp.utils import DownloadError
@@ -482,5 +501,6 @@ def discover(platform: str, kind: str, query: str, limit: int = 20, sort: str = 
             "views": e.get("view_count"), "likes": e.get("like_count"), "followers": e.get("channel_follower_count"),
             "duration": e.get("duration"), "published": e.get("timestamp") or e.get("upload_date"),
             "live": e.get("live_status") in ("is_live", "is_upcoming"),
+            "lang": "pl" if social.is_polish(f"{e.get('title') or ''} {e.get('channel') or ''} {e.get('description') or ''}") else None,
         })
     return {"platform": platform, "kind": kind, "query": query, "source": target, "count": len(entries), "items": entries[:limit]}

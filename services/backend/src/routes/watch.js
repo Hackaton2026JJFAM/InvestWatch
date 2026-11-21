@@ -4,18 +4,22 @@ import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { one, q } from '../db.js';
 import { enqueue, priorityFor } from '../queue.js';
-import { normTag, PRESET_TAGS } from '../reach.js';
+import { normTag, PL_SCAM_PHRASES, PRESET_TAGS, WATCH_PRESETS } from '../reach.js';
 import { parse } from '../validate.js';
 import { discoverCandidates, getWatch, runWatch } from '../watch.js';
 
 const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
+const PLATFORMS = ['youtube', 'tiktok', 'instagram', 'x', 'facebook'];
+// profil twórcy natywnie: YouTube (kanał) i TikTok; hashtag/fraza – wszystkie platformy
+const KIND_OK = (p, k) => k !== 'profile' || ['youtube', 'tiktok'].includes(p);
 const searchSchema = z.object({
-  platform: z.enum(['youtube', 'tiktok']),
+  platform: z.enum(PLATFORMS),
   kind: z.enum(['search', 'hashtag', 'profile']),
   query: z.string().trim().min(1).max(200),
   sort: z.enum(['relevance', 'views', 'date']).default('views'),
-}).refine((b) => !(b.platform === 'tiktok' && b.kind !== 'profile'), 'TikTok: dostępny monitoring profili (tagi wymagają zalogowania)');
+  polish: z.boolean().default(true),
+}).refine((b) => KIND_OK(b.platform, b.kind), 'Monitoring profilu: YouTube (kanał) i TikTok; na Instagramie, X i Facebooku – hashtag lub fraza');
 
 // Popularne tagi: z bazy (liczba materiałów, suma wyświetleń, średnie ryzyko) + zestaw startowy tagów finansowych
 r.get('/tags/popular', async (req, res) => {
@@ -27,7 +31,8 @@ r.get('/tags/popular', async (req, res) => {
        JOIN LATERAL (SELECT score FROM analyses WHERE material_id = m.id ORDER BY created_at DESC LIMIT 1) a ON TRUE
       WHERE m.fetched_at > now() - make_interval(days => $1)
       GROUP BY t ORDER BY count(*) DESC, sum(m.views) DESC NULLS LAST LIMIT 40`, [days]);
-  res.json({ days, tags: rows, presets: PRESET_TAGS });
+  res.json({ days, tags: rows, presets: PRESET_TAGS, phrases: PL_SCAM_PHRASES,
+    packs: Object.fromEntries(Object.entries(WATCH_PRESETS).map(([k, v]) => [k, { label: v.label, kind: v.kind, count: v.items.length }])) });
 });
 
 // Podgląd kandydatów (bez kolejkowania) – analityk zaznacza, co analizować
@@ -58,10 +63,33 @@ r.post('/watch', requireAdmin, async (req, res) => {
   })), req.body);
   const query = b.kind === 'hashtag' ? normTag(b.query) : b.query;
   const row = await one(
-    `INSERT INTO watch_queries (platform, kind, query, sort, min_views, max_per_run) VALUES ($1, $2, $3, $4, $5, $6)
-     ON CONFLICT (platform, kind, query) DO UPDATE SET sort = EXCLUDED.sort, min_views = EXCLUDED.min_views, max_per_run = EXCLUDED.max_per_run, enabled = TRUE
-     RETURNING *`, [b.platform, b.kind, query, b.sort, b.min_views, b.max_per_run]);
+    `INSERT INTO watch_queries (platform, kind, query, sort, min_views, max_per_run, polish) VALUES ($1, $2, $3, $4, $5, $6, $7)
+     ON CONFLICT (platform, kind, query) DO UPDATE SET sort = EXCLUDED.sort, min_views = EXCLUDED.min_views, max_per_run = EXCLUDED.max_per_run,
+       polish = EXCLUDED.polish, enabled = TRUE
+     RETURNING *`, [b.platform, b.kind, query, b.sort, b.min_views, b.max_per_run, b.polish]);
   res.status(201).json(row);
+});
+
+// Pakiet zapytań jednym kliknięciem: np. wszystkie frazy-przynęty PL na wybranych platformach
+r.post('/watch/preset', requireAdmin, async (req, res) => {
+  const b = parse(z.object({
+    preset: z.enum(Object.keys(WATCH_PRESETS)),
+    platforms: z.array(z.enum(PLATFORMS)).min(1).max(5),
+    min_views: z.coerce.number().int().min(0).default(0),
+    max_per_run: z.coerce.number().int().min(1).max(30).default(5),
+  }), req.body);
+  const p = WATCH_PRESETS[b.preset];
+  let created = 0;
+  for (const platform of b.platforms) {
+    for (const item of p.items) {
+      const query = p.kind === 'hashtag' ? normTag(item) : item;
+      const row = await one(
+        `INSERT INTO watch_queries (platform, kind, query, sort, min_views, max_per_run, polish) VALUES ($1, $2, $3, 'views', $4, $5, TRUE)
+         ON CONFLICT (platform, kind, query) DO NOTHING RETURNING id`, [platform, p.kind, query, b.min_views, b.max_per_run]);
+      if (row) created++;
+    }
+  }
+  res.status(201).json({ created, preset: b.preset });
 });
 
 r.patch('/watch/:id', requireAdmin, async (req, res) => {

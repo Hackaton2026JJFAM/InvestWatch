@@ -367,8 +367,29 @@ async def scrape_video(req: VideoReq):
         try:
             data = await asyncio.to_thread(video.process_url, url)
             return _video_material(data, url, req.title, req.author, req.platform)
+        except video.NoVideoInPost:
+            return await _post_text_material(url, req)
         except Exception as exc:
             raise _video_error(exc)
+
+
+async def _post_text_material(url: str, req) -> dict:
+    """Post bez wideo (wpis X, zdjęcie z podpisem): tekst z metadanych / oEmbed -> materiał tekstowy."""
+    from . import social
+    platform = req.platform or video.platform_of(url) or platform_for(url)
+    meta = await asyncio.to_thread(social._meta, url, platform)
+    text = normalize_text(meta.get("text") or "")
+    if not text.strip():
+        raise HTTPException(422, "Post nie zawiera wideo, a jego tekstu nie udało się pobrać bez logowania")
+    return {
+        "url": url, "final_url": url, "fetched_at": _now(), "title": req.title or text[:120], "author": req.author or meta.get("author"),
+        "publisher": None, "published_at": None, "lang": "pl" if social.is_polish(text) else None, "platform": platform,
+        "social_handle": None, "content_text": text, "full_text": text, "content_hash": content_hash(text),
+        "links": [{"text": u, "href": u if u.startswith("http") else f"https://{u}"} for u in sorted(set(URL_RE.findall(text.lower())))][:50],
+        "layout": {"engine": "none", "reason": "post_text"},
+        "video_meta": {"view_count": meta.get("views"), "like_count": meta.get("likes"), "channel_follower_count": meta.get("followers")},
+        "scraper_version": VERSION,
+    }
 
 
 @app.post("/scrape/video/file")
@@ -402,18 +423,19 @@ async def scrape_video_file(request: Request, url: str = Query(default="upload:/
 
 
 class VideoDiscoverReq(BaseModel):
-    platform: str = Field(pattern=r"^(youtube|tiktok)$")
+    platform: str = Field(pattern=r"^(youtube|tiktok|instagram|x|facebook)$")
     kind: str = Field(pattern=r"^(search|hashtag|profile)$")
     query: str = Field(min_length=1, max_length=200)
     limit: int = Field(default=20, ge=1, le=50)
     sort: str = Field(default="relevance", pattern=r"^(relevance|views|date)$")
+    polish: bool = True
 
 
 @app.post("/discover/video")
 async def discover_video(req: VideoDiscoverReq):
     """Kandydaci do analizy (tylko metadane: wyświetlenia, autor, czas) – bez pobierania filmów."""
     try:
-        return await asyncio.to_thread(video.discover, req.platform, req.kind, req.query, req.limit, req.sort)
+        return await asyncio.to_thread(video.discover, req.platform, req.kind, req.query, req.limit, req.sort, req.polish)
     except Exception as exc:
         raise _video_error(exc)
 

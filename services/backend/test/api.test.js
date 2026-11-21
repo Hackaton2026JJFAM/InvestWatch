@@ -142,4 +142,17 @@ describe('Wzbogacanie podmiotów', () => {
     const r = await fetch(`${API}/scans/video`, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: 'to nie jest wideo' });
     assert.equal(r.status, 415);
   });
+
+  test('monitoring: frazy-przynęty PL, pakiety i walidacja platform', async (t) => {
+    if (!up) return t.skip('backend nie działa');
+    const tags = await get('/tags/popular');
+    assert.equal(tags.status, 200);
+    assert.ok(tags.body.phrases.includes('darmowa kasa'));
+    assert.ok(tags.body.packs.pl_scam.count >= 10);
+    // profil na Instagramie nie jest obsługiwany (tylko hashtag/fraza) – walidacja przed wywołaniem scrapera
+    assert.equal((await send('POST', '/discover/video', { platform: 'instagram', kind: 'profile', query: 'x' })).status, 400);
+    assert.equal((await send('POST', '/discover/video', { platform: 'myspace', kind: 'hashtag', query: 'x' })).status, 400);
+    const list = await get('/materials?lang=pl&media=video&min_views=0');
+    assert.equal(list.status, 200);
+  });
 });

@@ -41,6 +41,7 @@ export default function Results() {
           <label className="f">Typ<select value={f.profile ?? ''} onChange={(e) => set('profile', e.target.value)}><option value="">wszystkie</option>{Object.entries(PROFILE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></label>
           <label className="f">Rodzaj<select value={f.media ?? ''} onChange={(e) => set('media', e.target.value)}><option value="">wszystkie</option><option value="video">wideo</option><option value="image">obraz (OCR)</option><option value="web">strona / tekst</option></select></label>
           <label className="f">Zasięg<select value={f.min_views ?? ''} onChange={(e) => set('min_views', e.target.value)}>{VIEWS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+          <label className="f">Język<select value={f.lang ?? ''} onChange={(e) => set('lang', e.target.value)}><option value="">wszystkie</option><option value="pl">polski</option><option value="other">inne</option></select></label>
           <label className="f">Tag<input placeholder="#kryptowaluty" value={f.tag ?? ''} onChange={(e) => set('tag', e.target.value.replace(/^#/, ''))} style={{ width: 130 }} /></label>
           <label className="f">Sortuj<select value={f.sort ?? 'fetched_at'} onChange={(e) => set('sort', e.target.value)}><option value="fetched_at">najnowsze</option><option value="score">wynik</option><option value="views">zasięg</option><option value="priority">priorytet (ryzyko × zasięg)</option></select></label>
         </div>

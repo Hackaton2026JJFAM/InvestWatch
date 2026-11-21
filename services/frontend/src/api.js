@@ -6,7 +6,7 @@ export const setLoginHandler = (fn) => { loginHandler = fn; };
 export const setAdminState = (value) => { isAdmin = Boolean(value); };
 
 // Akcje administracyjne – okno logowania przed wysłaniem (bez zbędnego 401 w konsoli)
-const ADMIN_ACTION = /^(PATCH \/settings|(POST|PATCH|DELETE) \/sources|POST \/seed|DELETE \/materials\/|POST \/watch$|(PATCH|DELETE) \/watch\/)/;
+const ADMIN_ACTION = /^(PATCH \/settings|(POST|PATCH|DELETE) \/sources|POST \/seed|DELETE \/materials\/|POST \/watch(?:\/preset)?$|(PATCH|DELETE) \/watch\/)/;
 
 async function request(method, path, body, retried = false) {
   if (!isAdmin && !retried && loginHandler && ADMIN_ACTION.test(`${method} ${path}`)) {
