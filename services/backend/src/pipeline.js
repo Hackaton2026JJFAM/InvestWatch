@@ -15,6 +15,10 @@ async function fetchMaterial(data) {
     const meta = Object.fromEntries(Object.entries({ title: data.title, author: data.author, platform: data.platform }).filter(([, v]) => v));
     return scraper.html(data.html, data.url, meta);
   }
+  if (data.kind === 'image') {
+    const meta = Object.fromEntries(Object.entries({ title: data.title, author: data.author, platform: data.platform }).filter(([, v]) => v));
+    return scraper.image({ image: data.image, url: data.url, ...meta });
+  }
   return scraper.text({ text: data.text, url: data.url, title: data.title, author: data.author, platform: data.platform });
 }
 

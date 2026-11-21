@@ -7,6 +7,7 @@ POST /discover      wyszukiwanie podstron z materiałami inwestycyjnymi w obręb
 """
 from __future__ import annotations
 
+import asyncio
 import datetime as dt
 import hashlib
 import json
@@ -19,6 +20,7 @@ from pydantic import BaseModel, Field, HttpUrl
 
 from .extract import content_hash, discover_links, extract, normalize_text, platform_for
 from .net import UnsafeUrl, fetch, validate_url
+from . import ocr
 from .render import Renderer, SourceHttpError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -46,6 +48,14 @@ class HtmlReq(BaseModel):
     html: str = Field(min_length=1, max_length=5_000_000)
     url: str = Field(default="about:sample", max_length=2048)
     render: bool = True
+    title: str | None = Field(default=None, max_length=500)
+    author: str | None = Field(default=None, max_length=200)
+    platform: str | None = Field(default=None, max_length=30)
+
+
+class ImageReq(BaseModel):
+    image: str = Field(min_length=20, max_length=14_500_000, description="base64 lub data URL (PNG/JPEG/WebP)")
+    url: str = Field(default="about:image", max_length=2048)
     title: str | None = Field(default=None, max_length=500)
     author: str | None = Field(default=None, max_length=200)
     platform: str | None = Field(default=None, max_length=30)
@@ -95,7 +105,7 @@ def _material(url: str, final_url: str, html: str, layout: dict) -> dict:
 
 @app.get("/health")
 async def health():
-    return {"ok": True, "playwright": renderer.available, "version": VERSION}
+    return {"ok": True, "playwright": renderer.available, "ocr": ocr.available(), "version": VERSION}
 
 
 @app.post("/scrape")
@@ -161,6 +171,29 @@ async def scrape_text(req: TextReq):
         "platform": req.platform or platform_for(req.url), "social_handle": None,
         "content_text": text, "full_text": text, "content_hash": content_hash(text),
         "links": [], "layout": {"engine": "none", "reason": "text_only"}, "scraper_version": VERSION,
+    }
+
+
+@app.post("/scrape/image")
+async def scrape_image(req: ImageReq):
+    """Zrzut/grafika reklamy -> OCR -> materiał z blokami (pozycja, wysokość liter, kontrast)."""
+    try:
+        raw = ocr.decode_image(req.image)
+        data = await asyncio.to_thread(ocr.ocr_image, raw)
+    except ocr.OcrUnavailable as exc:
+        raise HTTPException(501, str(exc))
+    except ValueError as exc:
+        raise HTTPException(422, f"Niepoprawny obraz: {exc}")
+    except Exception as exc:  # uszkodzony plik / nieobsługiwany format
+        raise HTTPException(422, f"Nie udało się odczytać obrazu: {type(exc).__name__}")
+    if not data["content_text"].strip():
+        raise HTTPException(422, "Nie rozpoznano tekstu na obrazie")
+    text = data["content_text"]
+    return {
+        "url": req.url, "final_url": req.url, "fetched_at": _now(), "title": req.title, "author": req.author,
+        "publisher": None, "published_at": None, "lang": None, "platform": req.platform or platform_for(req.url),
+        "social_handle": None, "content_hash": content_hash(text), "layout_hash": layout_hash(data["layout"]),
+        "scraper_version": VERSION, **data,
     }
 
 

@@ -141,3 +141,23 @@ def test_short_single_word_name_requires_proper_noun():
     from app.registry import get_registry
     reg = get_registry()
     assert not any(f["name"].startswith("Solid") for f in reg.find_in_text("We deliver solid returns and a solid plan."))
+
+
+def test_ocr_image_layout_runs_visual_rules():
+    blocks = [
+        {"text": "Zarabiaj nawet 20% rocznie na CFD!", "font_size": 48, "contrast": 15, "x": 40, "y": 40, "w": 900, "h": 60},
+        {"text": "Załóż konto w kilka minut i odbierz bonus.", "font_size": 24, "contrast": 15, "x": 40, "y": 140, "w": 800, "h": 30},
+        {"text": "CFD są złożonymi instrumentami i wiążą się z ryzykiem utraty środków.", "font_size": 7, "contrast": 1.8,
+         "x": 40, "y": 700, "w": 600, "h": 10, "in_footer": True, "in_fine_print": True},
+    ]
+    text = "\n".join(b["text"] for b in blocks)
+    from app.main import Material  # przez model API – uzupełnia domyślne pola bloków (visible itd.)
+    m = Material(url="upload://reklama.png", content_text=text, full_text=text,
+                 layout={"engine": "ocr", "viewports": {"desktop": {"width": 1366, "height": 768, "page_height": 768, "screenshot_height": 768, "blocks": blocks}}})
+    r = analyze_material(m.model_dump())
+    st = {f["rule_id"]: f["status"] for f in r["findings"]}
+    assert st["4"] == "fail"          # czcionka ostrzeżenia 7 px
+    assert st["5"] == "fail"          # kontrast 1,8:1
+    assert st["6"] == "fail"          # tylko w stopce / drobnym druku
+    assert st["7"] == "na" and st["8"] == "not_checked"
+    assert any(h["kind"] == "risk" for h in r["doc"]["highlights"])

@@ -1,5 +1,5 @@
 import { Fragment, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { Empty, Evidence, fmtDate, MAT_STATUS, MODULES, ModuleChips, Panel, pct, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
@@ -61,6 +61,7 @@ export default function Material() {
   const { id } = useParams();
   const { tick, toast } = useLive();
   const [tab, setTab] = useState(TABS[0]);
+  const nav = useNavigate();
   const { data, error, reload } = useData(`/materials/${id}`, tick);
   if (error) return <Empty>{error.message}</Empty>;
   if (!data) return <Empty>Ładowanie…</Empty>;
@@ -68,6 +69,13 @@ export default function Material() {
   const r = a?.result ?? {};
   const byModule = (mod) => findings.filter((f) => f.module === mod);
   const setStatus = (status) => api.patch(`/materials/${id}/status`, { status }).then(reload);
+  // usunięcie materiału (operacja administratora – okno logowania pojawi się automatycznie)
+  const remove = () => {
+    if (!window.confirm(`Usunąć materiał „${m.title || m.url}” wraz z analizami i alertami? Tej operacji nie można cofnąć.`)) return;
+    api.del(`/materials/${id}`)
+      .then(() => { toast({ kind: 'info', title: 'Usunięto materiał', text: m.title || m.url }); nav('/materials'); })
+      .catch((err) => { if (err.auth !== 'cancelled') toast({ kind: 'alert', title: 'Nie usunięto materiału', text: err.message }); });
+  };
   const reanalyze = () => api.post(`/materials/${id}/reanalyze`).then(() => { toast({ title: 'Ponowna analiza zakończona', text: m.title }); reload(); });
   const label = (gt) => api.patch(`/materials/${id}/label`, { ground_truth: gt }).then(reload);
 
@@ -83,6 +91,7 @@ export default function Material() {
             <button key={s} className={`btn ${s === 'ESCALATED' ? 'primary' : ''}`} disabled={m.status === s} onClick={() => setStatus(s)}>{MAT_STATUS[s]}</button>
           ))}
           <button className="btn" onClick={reanalyze}>Analizuj ponownie</button>
+          <button className="btn danger" onClick={remove}>Usuń</button>
         </div>
       </div>
 
@@ -126,7 +135,8 @@ export default function Material() {
 
       {tab === 'Reguły zgodności (M2)' && (
         <Panel title="18 reguł UKNF – informacja o ryzyku" meta={`render: ${m.layout_engine}`}>
-          {m.layout_engine !== 'playwright' && <div className="notice" style={{ marginBottom: 8 }}>Materiał tekstowy – reguły wizualne 4–8 wymagają renderu strony i nie zostały ocenione.</div>}
+          {m.layout_engine === 'ocr' && <div className="notice" style={{ marginBottom: 8 }}>Obraz reklamy (OCR) – reguły 4–6 ocenione na podstawie wysokości liter, kontrastu i położenia tekstu na obrazie; reguły 7–8 nie dotyczą obrazu statycznego.</div>}
+          {!['playwright', 'ocr'].includes(m.layout_engine) && <div className="notice" style={{ marginBottom: 8 }}>Materiał tekstowy – reguły wizualne 4–8 wymagają renderu strony i nie zostały ocenione.</div>}
           <FindingsTable findings={byModule('m2')} />
         </Panel>
       )}
@@ -162,7 +172,7 @@ export default function Material() {
 
       {tab === 'Materiał' && (
         <div className="grid g2">
-          <Panel title="Zrzut ekranu (desktop)" meta="ramki: czerwona = ostrzeżenie o ryzyku, niebieska = obietnica zysku">
+          <Panel title={m.layout_engine === 'ocr' ? 'Obraz reklamy (OCR)' : 'Zrzut ekranu (desktop)'} meta="ramki: czerwona = ostrzeżenie o ryzyku, niebieska = obietnica zysku">
             {m.screenshot ? <AnnotatedShot src={m.screenshot} vp={m.viewports?.desktop} boxes={r.doc?.highlights ?? []} /> : <Empty>Brak zrzutu (materiał tekstowy).</Empty>}
             {Object.keys(m.viewports ?? {}).length > 0 && (
               <p className="small muted">Viewporty: {Object.entries(m.viewports).map(([k, v]) => `${k} ${v.width}×${v.height} (${v.blocks} bloków)`).join(' · ')}</p>

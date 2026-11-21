@@ -29,11 +29,12 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Test Compose na macOS (Apple Silicon) – obrazy mają wariant arm64, uruchomienia nie wykonano
 - [x] Błędy audytu B01–B20 poprawione (B05 częściowo: rola administratora) – [stan po poprawkach](docs/AUDIT_REPORT.md#11-stan-po-poprawkach-21112026-po-audycie)
 - [x] Ponowne testy audytowe: Node 8/8, HTTP+wizualne+scoring 63/63, backend+workflow+kontrolowane 59/59, Chromium 12/12 (0 zdarzeń konsoli), publiczne 5/5
-- [ ] (!) Ustawić `ADMIN_PASSWORD` na demo i przekazać zespołowi (nie commitować)
-- [ ] (!) Na hackathonie: wczytać próbki od UKNF (pendrive) przez „Import wielu plików”, oznaczyć je i przeliczyć kalibrację
+- [x] Silne `ADMIN_PASSWORD` (24 znaki, losowe) ustawione w lokalnym `.env` – [ ] przekazać zespołowi bezpiecznym kanałem (nie commitować)
+- [ ] (!) Na hackathonie: wczytać próbki od UKNF (pendrive) przez „Import wielu plików” (HTML, tekst, JSON, CSV z URL, **obrazy przez OCR**), oznaczyć je i przeliczyć kalibrację
 - [x] Konsola bez ostrzeżeń WebSocket (jedno połączenie Socket.io na aplikację)
-- [ ] Import obrazów/zrzutów reklam (OCR) – formaty dziś pomijane przy imporcie
-- [ ] Przycisk „Usuń materiał” w UI (endpoint już jest)
+- [x] Import obrazów reklam (OCR: Tesseract pol+eng w kontenerze scrapera) – PNG/JPG/WebP do 10 MB; tekst z pozycją, wysokością liter i kontrastem, więc reguły 4–6 działają na obrazach; 2. przebieg OCR wyłapuje blady drobny druk; próbka demo nr 19
+- [ ] OCR lokalnie na Windows (dev) – dziś tylko w Dockerze; lokalnie obraz kończy się czytelnym błędem 501
+- [x] Przycisk „Usuń” na karcie materiału (z potwierdzeniem; operacja administratora)
 
 ## Should
 - [x] Adapter KRS (api-krs.ms.gov.pl, bez klucza; limitów nie publikuje – bufor 6 h, kolejka 1 podmiot/2 s): kapitał, adres, NIP/REGON, zarząd, prokurenci, wspólnicy → `persons`, `person_links`. **Dane osób zanonimizowane w publicznym API** – brak łączenia osób między spółkami

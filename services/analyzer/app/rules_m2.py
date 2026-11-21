@@ -371,6 +371,8 @@ def r6(c: Ctx) -> Finding:
 def r7(c: Ctx) -> Finding:
     if not c.doc.has_layout:
         return F("7", NOT_CHECKED, "Brak renderu strony.")
+    if c.doc.is_image:
+        return F("7", NA, "Obraz statyczny – brak elementów do rozwinięcia; widoczność oceniają reguły 4–6.")
     all_rb = c.risk_blocks.get("desktop", [])
     visible = _vis(all_rb)
     risk_links = [l for l in c.doc.links if T.has(T.RISK, l.get("text", ""))]
@@ -388,6 +390,8 @@ def r7(c: Ctx) -> Finding:
 def r8(c: Ctx) -> Finding:
     if not c.doc.has_layout:
         return F("8", NOT_CHECKED, "Brak renderu strony.")
+    if c.doc.is_image:
+        return F("8", NOT_CHECKED, "Obraz w jednym rozmiarze – responsywności nie da się ocenić.")
     desk = _vis(c.risk_blocks.get("desktop", []))
     if not desk:
         return F("8", NA, "Brak widocznego ostrzeżenia na desktopie.")

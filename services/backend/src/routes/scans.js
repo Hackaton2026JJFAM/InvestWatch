@@ -23,14 +23,18 @@ r.post('/scans/upload', async (req, res) => {
   const body = parse(z.object({
     html: z.string().max(5_000_000).optional(),
     text: z.string().max(500_000).optional(),
+    // obraz reklamy (PNG/JPEG/WebP) jako data URL lub base64, do 10 MB – analiza przez OCR
+    image: z.string().max(14_500_000).regex(/^(data:image\/(png|jpeg|jpg|webp|gif|bmp|tiff);base64,)?[A-Za-z0-9+/=\s]+$/, 'Obraz: data URL lub base64').optional(),
     url: z.string().max(2048).optional(),
     title: z.string().max(500).optional(),
     author: z.string().max(200).optional(),
     platform: z.enum(['web', 'facebook', 'instagram', 'tiktok', 'youtube', 'x', 'linkedin', 'telegram']).optional(),
     ground_truth: z.boolean().optional(),
-  }).refine((b) => b.html || b.text, 'Podaj html albo text'), req.body);
+  }).refine((b) => b.html || b.text || b.image, 'Podaj html, text albo image'), req.body);
   const url = body.url || `upload://${Date.now()}`;
-  const job = body.html
+  const job = body.image
+    ? await enqueue({ kind: 'image', image: body.image, url, title: body.title, author: body.author, platform: body.platform, groundTruth: body.ground_truth }, 'upload')
+    : body.html
     ? await enqueue({ kind: 'html', html: body.html, url, title: body.title, author: body.author, platform: body.platform, groundTruth: body.ground_truth }, 'upload')
     : await enqueue({ kind: 'text', text: body.text, url, title: body.title, author: body.author, platform: body.platform, groundTruth: body.ground_truth }, 'upload');
   res.status(202).json(job);

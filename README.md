@@ -8,6 +8,8 @@ System monitorowania reklam i ofert inwestycyjnych dla UKNF (HackNation 2026). P
 
 Wzbogacanie danych podmiotów: **KRS** (kapitał, adres, NIP/REGON, zarząd, prokurenci, wspólnicy), **GLEIF** (kody LEI), **lista ostrzeżeń publicznych KNF** (669 wpisów) i **rejestr MiCA ESMA** (409 autoryzowanych CASP, 217 podmiotów bez licencji). Trafienia z list są przesłankami M1/M3 (dopasowanie po domenie, KRS, NIP lub nazwie). Numer KRS nie jest wymagany – dla polskich spółek z kodem LEI system odczytuje go z GLEIF. Strona **Rejestry** pozwala sprawdzić dowolny podmiot (odpis KRS aktualny lub pełny z historią, rekord LEI ze strukturą grupy), a karta podmiotu pokazuje wszystkie dane z rejestrów z wyszukiwarką.
 
+Materiały można dodawać jako adres URL, HTML, tekst albo **obraz reklamy** (PNG/JPG/WebP, OCR Tesseract w kontenerze scrapera). Tekst z obrazu dostaje pozycję, wysokość liter i kontrast, więc reguły wizualne (rozmiar czcionki ostrzeżenia, kontrast, stopka) działają także na grafikach.
+
 Każdy wynik ma przesłanki: `rule_id`, podstawę prawną, uzasadnienie i cytowany fragment. Wynik to sygnał do weryfikacji, nie stwierdzenie naruszenia.
 
 ## Quick Start
@@ -17,7 +19,7 @@ cp .env.example .env        # ustaw POSTGRES_PASSWORD i ADMIN_PASSWORD
 docker compose up -d --build
 ```
 
-Dashboard: http://localhost:8080 (domyślnie tylko z tego komputera, `WEB_BIND`). Przy pierwszym starcie ładowanych jest 18 oznaczonych próbek demo (`data/samples`) i fikcyjne podmioty DEMO. Wyłącza to `SEED_DEMO=false`.
+Dashboard: http://localhost:8080 (domyślnie tylko z tego komputera, `WEB_BIND`). Przy pierwszym starcie ładowanych jest 19 oznaczonych próbek demo (w tym grafika reklamy do OCR) (`data/samples`) i fikcyjne podmioty DEMO. Wyłącza to `SEED_DEMO=false`.
 
 Przeglądanie i import materiałów nie wymagają logowania. Zmiana progu, zarządzanie źródłami, ładowanie próbek i usuwanie materiałów wymagają hasła administratora (`ADMIN_PASSWORD`).
 
@@ -44,7 +46,7 @@ Bez Ollamy podsumowanie powstaje z szablonu na podstawie tych samych przesłanek
 |---|---|---|---|
 | `frontend` | React 19 + Vite, Recharts, Socket.io, nginx | 80 → `WEB_PORT` | Dashboard, proxy `/api` i `/socket.io` |
 | `backend` | Node 22, Express 5, BullMQ, node-cron, zod | 4000 | API, kolejka z ponawianiem, harmonogram, WebSocket, zapis do bazy |
-| `scraper` | Python, FastAPI, Playwright, BeautifulSoup | 8001 | Pobieranie, render 3 viewportów, ekstrakcja treści i metadanych, ochrona SSRF, rotacja UA/proxy |
+| `scraper` | Python, FastAPI, Playwright, BeautifulSoup, Tesseract | 8001 | Pobieranie, render 3 viewportów, OCR obrazów, ekstrakcja treści i metadanych, ochrona SSRF, rotacja UA/proxy |
 | `analyzer` | Python, FastAPI, scikit-learn, RapidFuzz | 8002 | Moduły 1–3, klasyfikator zdań, scoring, rejestr KNF, podsumowanie |
 | `postgres` | PostgreSQL 16 (pg_trgm, unaccent) | 5432 | Materiały, analizy, przesłanki, alerty, podmioty |
 | `redis` | Valkey 8 (BSD, protokół Redis) | 6379 | Kolejka zadań |

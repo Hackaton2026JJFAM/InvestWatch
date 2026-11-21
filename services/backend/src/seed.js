@@ -7,6 +7,8 @@ import { one } from './db.js';
 import { log } from './log.js';
 import { enqueue } from './queue.js';
 
+const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp']);
+
 export async function seedSamples({ force = false } = {}) {
   if (!force) {
     const row = await one('SELECT count(*)::int AS n FROM materials');
@@ -22,6 +24,15 @@ export async function seedSamples({ force = false } = {}) {
   let queued = 0;
   for (const [file, meta] of Object.entries(labels)) {
     if (file.startsWith('_')) continue;
+    const ext = path.extname(file).toLowerCase();
+    if (IMAGE_EXT.has(ext)) {
+      // grafika reklamy – OCR w scraperze (wymaga Tesseracta: obraz Docker; w dev bez niego zadanie zakończy się błędem 501)
+      const b64 = (await fs.readFile(path.join(config.samplesDir, file))).toString('base64');
+      await enqueue({ kind: 'image', image: `data:image/${ext === '.jpg' ? 'jpeg' : ext.slice(1)};base64,${b64}`, url: meta.url ?? `upload://${file}`,
+        title: meta.title, platform: meta.platform, groundTruth: meta.ground_truth }, 'seed');
+      queued++;
+      continue;
+    }
     const raw = await fs.readFile(path.join(config.samplesDir, file), 'utf8');
     if (file.endsWith('.json')) {
       const d = JSON.parse(raw);

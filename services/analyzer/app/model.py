@@ -41,7 +41,12 @@ class Doc:
 
     @property
     def has_layout(self) -> bool:
-        return self.layout.get("engine") == "playwright" and bool(self.layout.get("viewports"))
+        return self.layout.get("engine") in ("playwright", "ocr") and bool(self.layout.get("viewports"))
+
+    @property
+    def is_image(self) -> bool:
+        """Materiał z OCR obrazu – jeden statyczny kadr (brak warstw i innych rozmiarów ekranu)."""
+        return self.layout.get("engine") == "ocr"
 
     def blocks(self, viewport: str = "desktop") -> list[dict]:
         return (self.layout.get("viewports", {}).get(viewport) or {}).get("blocks", [])

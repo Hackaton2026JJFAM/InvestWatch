@@ -6,6 +6,7 @@ Wymaga działających serwisów: scraper (8001) i analyzer (8002).
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import sys
 from pathlib import Path
@@ -31,6 +32,16 @@ def main() -> None:
     with httpx.Client(timeout=120) as c:
         for name, meta in labels.items():
             if name.startswith("_"):
+                continue
+            if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+                # grafika reklamy – OCR w scraperze; bez Tesseracta (np. lokalnie na Windows) próbka jest pomijana
+                b64 = base64.b64encode((root / name).read_bytes()).decode()
+                r = c.post(f"{args.scraper}/scrape/image", json={"image": b64, "url": meta.get("url", f"upload://{name}")})
+                if r.status_code == 501:
+                    print(f"POMINIĘTO {name}: {r.json().get('detail')}")
+                    continue
+                res = c.post(f"{args.analyzer}/analyze", json=r.json()).json()
+                rows.append((name, meta["ground_truth"], res))
                 continue
             raw = (root / name).read_text(encoding="utf-8")
             if name.endswith(".json"):

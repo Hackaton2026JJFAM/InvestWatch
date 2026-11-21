@@ -5,7 +5,8 @@ export class UpstreamError extends Error {
   constructor(service, status, detail) {
     super(`${service}: ${detail || `HTTP ${status}`}`);
     this.status = status;
-    this.retryable = status >= 500 || status === 0;
+    // 501 = funkcja niedostępna w tym wdrożeniu (np. OCR bez Tesseracta) – ponawianie nic nie da
+    this.retryable = (status >= 500 && status !== 501) || status === 0;
   }
 }
 
@@ -34,6 +35,7 @@ export const scraper = {
   url: (url) => call(config.scraperUrl, 'scraper', '/scrape', { body: { url, render: true } }),
   html: (html, url, meta = {}) => call(config.scraperUrl, 'scraper', '/scrape/html', { body: { html, url, ...meta } }),
   text: (payload) => call(config.scraperUrl, 'scraper', '/scrape/text', { body: payload }),
+  image: (payload) => call(config.scraperUrl, 'scraper', '/scrape/image', { body: payload, timeoutMs: 120000 }),
   discover: (url, limit = 10) => call(config.scraperUrl, 'scraper', '/discover', { body: { url, limit } }),
   health: () => call(config.scraperUrl, 'scraper', '/health', { method: 'GET', timeoutMs: 3000 }),
 };

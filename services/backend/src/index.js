@@ -18,7 +18,7 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(helmet());
-app.use(express.json({ limit: '6mb' }));
+app.use(express.json({ limit: '16mb' })); // obrazy reklam do 10 MB (base64)
 
 // Liveness: proces odpowiada.
 app.get('/api/live', (_req, res) => res.json({ ok: true }));

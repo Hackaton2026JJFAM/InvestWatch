@@ -69,5 +69,11 @@
  },
  "18_instagram_oznaczony.json": {
   "ground_truth": false
+ },
+ "19_grafika_cfd_ocr.png": {
+  "ground_truth": true,
+  "url": "upload://19_grafika_cfd_ocr.png",
+  "platform": "instagram",
+  "title": "Grafika reklamy CFD (OCR)"
  }
 }
