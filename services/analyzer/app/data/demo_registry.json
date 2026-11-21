@@ -1,0 +1,23 @@
+{
+  "note": "Fikcyjne podmioty DEMO używane w przykładowych materiałach. Nie istnieją w rzeczywistości.",
+  "firms": [
+    {
+      "name": "Dom Maklerski Vistula Capital S.A.",
+      "aliases": ["Vistula Capital"],
+      "category": "dom_maklerski",
+      "country": "PL",
+      "license_date": "2015-03-02",
+      "scope": "1, 2, 4, 5",
+      "domains": ["vistula-capital.example"]
+    },
+    {
+      "name": "TFI Nadwiślańskie S.A.",
+      "aliases": ["Nadwiślańskie TFI"],
+      "category": "tfi",
+      "country": "PL",
+      "license_date": "2011-09-14",
+      "scope": "zarządzanie funduszami",
+      "domains": ["tfi-nadwislanskie.example"]
+    }
+  ]
+}

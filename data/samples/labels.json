@@ -1,0 +1,73 @@
+{
+ "_opis": "Materiały DEMO z etykietą ground_truth (true = materiał powinien zostać oznaczony jako ryzykowny). Podmioty i domeny są fikcyjne. Służą do panelu kalibracji (FP/FN).",
+ "01_vistula_zgodna.html": {
+  "ground_truth": false,
+  "url": "https://vistula-capital.example/rachunek"
+ },
+ "02_vistula_cfd_ryzyko_w_stopce.html": {
+  "ground_truth": true,
+  "url": "https://vistula-capital.example/cfd"
+ },
+ "03_vistula_ryzyko_zwiniete.html": {
+  "ground_truth": true,
+  "url": "https://vistula-capital.example/forex"
+ },
+ "04_tfi_wyniki_historyczne_zle.html": {
+  "ground_truth": true,
+  "url": "https://tfi-nadwislanskie.example/fundusz-akcji"
+ },
+ "05_tfi_wyniki_historyczne_ok.html": {
+  "ground_truth": false,
+  "url": "https://tfi-nadwislanskie.example/fundusz-obligacji"
+ },
+ "06_aprobata_knf.html": {
+  "ground_truth": true,
+  "url": "https://baltyk-invest.example/obligacje"
+ },
+ "07_gwarantowany_zysk.html": {
+  "ground_truth": true,
+  "url": "https://zlota-przystan.example/"
+ },
+ "08_finfluencer_blog_bez_oznaczenia.html": {
+  "ground_truth": true,
+  "url": "https://kuba-inwestuje.example/2000-zl-miesiecznie"
+ },
+ "09_finfluencer_oznaczony.html": {
+  "ground_truth": false,
+  "url": "https://ania-o-finansach.example/etf"
+ },
+ "10_shadow_advisory_family_office.html": {
+  "ground_truth": true,
+  "url": "https://aurum-family-office.example/"
+ },
+ "11_edukacja_blog.html": {
+  "ground_truth": false,
+  "url": "https://wiedza-finansowa.example/obligacje"
+ },
+ "12_ike_podatek.html": {
+  "ground_truth": true,
+  "url": "https://vistula-capital.example/ike"
+ },
+ "13_ryzyko_po_angielsku.html": {
+  "ground_truth": true,
+  "url": "https://vistula-capital.example/krypto"
+ },
+ "14_porownanie_bez_zrodla.html": {
+  "ground_truth": true,
+  "url": "https://vistula-capital.example/portfel"
+ },
+ "15_ucinane_na_telefonie.html": {
+  "ground_truth": true,
+  "url": "https://vistula-capital.example/indeksy"
+ },
+ "16_prognoza_z_ostrzezeniem.html": {
+  "ground_truth": false,
+  "url": "https://vistula-capital.example/perspektywy"
+ },
+ "17_tiktok_krypto.json": {
+  "ground_truth": true
+ },
+ "18_instagram_oznaczony.json": {
+  "ground_truth": false
+ }
+}
