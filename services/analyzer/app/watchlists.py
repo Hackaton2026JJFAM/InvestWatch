@@ -43,6 +43,11 @@ def entry_names(raw_names: list[str]) -> list[str]:
     return [n for n in out if n]
 
 
+def person_key(name: str) -> str:
+    """Pełne imię i nazwisko bez znaków diakrytycznych, człony posortowane."""
+    return " ".join(sorted(t for t in re.sub(r"[^\w\s]", " ", fold(name)).split() if len(t) >= 2))
+
+
 def identifiers(text: str) -> dict:
     return {
         "krs": sorted(set(KRS_IN_TEXT.findall(text))),
@@ -85,6 +90,28 @@ class Watchlists:
                 for e in d[kind]:
                     names = [n for n in {e["name"], e.get("commercial_name") or ""} if n]
                     self._add(f"esma_{kind}", e["name"], names, e["domains"], [], [], {**e, "source_url": d["url"]})
+        sanc = DATA / "eu_sanctions.json"
+        if sanc.exists():
+            d = json.loads(sanc.read_text(encoding="utf-8"))
+            self.meta["eu_sanctions"] = {"source": d["source"], "url": d["url"], "fetched_at": d["fetched_at"], "count": len(d["entries"])}
+            for e in d["entries"]:
+                data = {k: e.get(k) for k in ("type", "ref", "programme", "listed", "regulation", "birth_dates", "citizenships")}
+                data["aliases"] = e["names"][:8]
+                data["source_url"] = e.get("url") or d["url"]
+                if e.get("type") == "person":
+                    self._add_person(e["names"], data)
+                else:
+                    self._add("eu_sanctions", e["names"][0], e["names"], [], [], [], data)
+
+    def _add_person(self, names: list[str], data: dict) -> None:
+        """Osoba z listy sankcji: dopasowanie wyłącznie pełnego imienia i nazwiska (min. 2 człony)."""
+        cores = []
+        for n in names:
+            tokens = [t for t in re.sub(r"[^\w\s]", " ", fold(n)).split() if len(t) >= 2]
+            if len(tokens) >= 2:
+                cores.append(" ".join(tokens))
+        if cores:
+            self.entries.append(Entry("eu_sanctions", names[0], cores, [], [], [], {**data, "person": True}))
 
     def _add(self, lst, name, names, domains, krs, nip, data) -> None:
         cores = []
@@ -111,14 +138,14 @@ class Watchlists:
                 how = "KRS"
             elif nip and set(nip) & set(e.nip):
                 how = "NIP"
-            elif name_core and name_core in e.cores:
+            elif name_core and (name_core in e.cores or (e.data.get("person") and person_key(name) in {person_key(c) for c in e.cores})):
                 how = "nazwa"
             # w treści tylko nazwy wielowyrazowe albo dłuższe (krótkie, np. „bridge”, „circle”, to zwykłe słowa)
             elif any(f" {c} " in folded for c in e.cores if " " in c or len(c) >= 7):
                 how = "nazwa w treści"
             if how and (e.list, e.name) not in hits:
                 hits[(e.list, e.name)] = {"list": e.list, "name": e.name, "matched_by": how, "domains": e.domains, **e.data}
-        order = {"knf_warnings": 0, "esma_ncasp": 1, "esma_casp": 2}
+        order = {"knf_warnings": 0, "eu_sanctions": 1, "esma_ncasp": 2, "esma_casp": 3}
         return sorted(hits.values(), key=lambda h: (order[h["list"]], h["matched_by"] != "domena"))
 
 

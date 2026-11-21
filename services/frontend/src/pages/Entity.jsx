@@ -2,6 +2,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { axisProps, barCursor, ChartGrid, ChartTooltip, useChartColors } from '../components/charts.jsx';
 import { api } from '../api.js';
 import DataTree from '../components/DataTree.jsx';
 import { GleifRelations, GleifSummary, KrsSummary } from '../components/Registry.jsx';
@@ -45,7 +46,7 @@ function RegistryPanel({ entity, registry }) {
     <Panel title="Dane rejestrowe" meta={k ? `KRS · ${fmtDate(k.checked_at)}` : 'KRS: nie pobrano'}>
       {d ? <KrsSummary d={d} source={registry.gleif?.data?.krs_source} />
         : k?.status === 'not_found' ? <div className="notice">Nie znaleziono numeru KRS {k.data?.krs} w rejestrze przedsiębiorców ani stowarzyszeń.</div>
-        : <p className="small muted">Brak odczytu KRS. Podaj numer KRS albo użyj „Wzbogać dane” – dla spółek z kodem LEI numer KRS zostanie odczytany z GLEIF. Dowolny podmiot sprawdzisz też na stronie <Link to="/registries">Rejestry</Link>.</p>}
+        : <p className="small muted">Brak odczytu KRS. Podaj numer KRS albo użyj „Wzbogać dane” – dla spółek z kodem LEI numer KRS zostanie odczytany z GLEIF. Dowolny podmiot sprawdzisz też w <Link to="/search?tab=external">wyszukiwarce (KRS, LEI)</Link>.</p>}
       {knf && (
         <>
           <h3 style={{ marginTop: 14 }}>Rejestr firm inwestycyjnych KNF</h3>
@@ -86,11 +87,20 @@ function LicensePanel({ entity, registry }) {
 function WarningsPanel({ registry }) {
   const knf = registry.knf_warnings?.data?.hits ?? [];
   const ncasp = registry.esma_mica?.data?.ncasp ?? [];
+  const sanctions = registry.eu_sanctions?.data?.hits ?? [];
   const checked = registry.knf_warnings;
   return (
     <Panel title="Ostrzeżenia publiczne" meta={checked ? fmtDate(checked.checked_at) : 'nie sprawdzono'}>
       {!checked && <p className="small muted">Użyj „Wzbogać dane”, aby sprawdzić listę ostrzeżeń KNF i rejestr ESMA.</p>}
-      {checked && !knf.length && !ncasp.length && <div className="notice">Nie znaleziono na liście ostrzeżeń publicznych KNF ani w rejestrze podmiotów niezgodnych z MiCA.</div>}
+      {checked && !knf.length && !ncasp.length && !sanctions.length && <div className="notice">Nie znaleziono na liście ostrzeżeń publicznych KNF, w rejestrze podmiotów niezgodnych z MiCA ani na liście sankcji UE.</div>}
+      {sanctions.map((h, i) => (
+        <div key={`s${i}`} className="evidence" style={{ borderLeftColor: 'var(--mid)', background: 'var(--mid-bg)' }}>
+          <span className="where">Lista sankcji UE · {h.person ? 'osoba' : 'podmiot'} · wymaga weryfikacji</span>
+          <div><b>{h.name}</b> – program {h.programme ?? '–'}{h.ref ? ` · ${h.ref}` : ''}</div>
+          <div className="small">{[h.birth_dates?.length ? `ur. ${h.birth_dates.join(', ')}` : null, h.citizenships?.length ? `obywatelstwo ${h.citizenships.join(', ')}` : null].filter(Boolean).join(' · ') || 'brak danych identyfikujących'}</div>
+          <SourceLink url={h.source_url} label="akt prawny" />
+        </div>
+      ))}
       {knf.map((h, i) => (
         <div key={`k${i}`} className="evidence" style={{ borderLeftColor: 'var(--high)', background: 'var(--high-bg)' }}>
           <span className="where">Lista ostrzeżeń KNF · dopasowanie: {h.matched_by}</span>
@@ -106,7 +116,7 @@ function WarningsPanel({ registry }) {
           <div className="small">{h.reason}</div>
         </div>
       ))}
-      {(knf.length > 0 || ncasp.length > 0) && <p className="small muted" style={{ marginBottom: 0 }}>Dopasowanie po nazwie wymaga potwierdzenia; po domenie, KRS lub NIP jest mocniejsze. To sygnał do weryfikacji, nie wyrok.</p>}
+      {(knf.length > 0 || ncasp.length > 0 || sanctions.length > 0) && <p className="small muted" style={{ marginBottom: 0 }}>Dopasowanie po nazwie wymaga potwierdzenia; po domenie, KRS lub NIP jest mocniejsze. To sygnał do weryfikacji, nie wyrok.</p>}
     </Panel>
   );
 }
@@ -128,13 +138,14 @@ function PersonsPanel({ persons, registry }) {
 }
 
 function HistoryPanel({ entity, timeline, registry }) {
+  const c = useChartColors();
   const d = registry.krs?.data;
   return (
     <Panel title="Historia podmiotu" meta={`w InvestWatch od ${fmtDate(entity.created_at)}`}>
       {d && <p className="small" style={{ marginTop: 0 }}>Rejestracja w KRS: <b>{d.registered_at ?? '–'}</b> · ostatni wpis: <b>{d.last_entry_at ?? '–'}</b></p>}
       {timeline.length ? (
         <ResponsiveContainer width="100%" height={150}>
-          <BarChart data={timeline} margin={{ left: -20 }}><XAxis dataKey="month" fontSize={11} /><YAxis allowDecimals={false} fontSize={11} /><Tooltip /><Bar dataKey="n" name="Wykryte materiały" fill="#1d5fa8" /></BarChart>
+          <BarChart data={timeline} margin={{ left: -18, right: 8, top: 6 }}><ChartGrid c={c} /><XAxis dataKey="month" {...axisProps(c)} /><YAxis allowDecimals={false} {...axisProps(c)} axisLine={false} width={40} /><Tooltip cursor={barCursor(c)} content={<ChartTooltip />} /><Bar dataKey="n" name="Wykryte materiały" fill={c.s1} radius={[4, 4, 0, 0]} maxBarSize={36} /></BarChart>
         </ResponsiveContainer>
       ) : <Empty />}
     </Panel>

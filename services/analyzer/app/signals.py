@@ -44,6 +44,17 @@ def run(doc: Doc, m3_classification: str) -> dict:
             f"{ncasp[0]['name']} figuruje w rejestrze ESMA podmiotów świadczących usługi kryptoaktywów bez zezwolenia"
             f" ({ncasp[0].get('authority') or ncasp[0].get('country')}).", [_hit_ev(h) for h in ncasp[:3]]))
 
+    sanctions = [h for h in hits if h["list"] == "eu_sanctions"]
+    if sanctions:
+        # sama zgodność nazwy nie potwierdza tożsamości – zawsze „wymaga weryfikacji”, nigdy naruszenie
+        h = sanctions[0]
+        who = "osoba" if h.get("person") else "podmiot"
+        findings.append(Finding(
+            "m1", "M1.8", "Zgodność z listą sankcji UE", WARN, 45, h.get("regulation") or "skonsolidowana lista sankcji finansowych UE",
+            f"W materiale występuje {who} o nazwie zgodnej z wpisem na liście sankcji UE ({h['name']}, program {h.get('programme') or '–'}). "
+            "Wymaga weryfikacji tożsamości (data urodzenia, obywatelstwo) – zgodność nazwy nie jest dowodem.",
+            [_hit_ev(x) for x in sanctions[:3]]))
+
     crypto = T.has(T.INSTRUMENTS["Kryptowaluty"], doc.text)
     if crypto:
         casp = [h for h in hits if h["list"] == "esma_casp"]

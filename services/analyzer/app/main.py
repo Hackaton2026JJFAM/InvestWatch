@@ -17,7 +17,7 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-from . import enrich, m1, m3, rules_m2, signals
+from . import enrich, m1, m3, reserves, rules_m2, signals
 from .classifier import get_classifier, simhash
 from .model import Doc
 from .registry import get_registry
@@ -257,3 +257,14 @@ def watchlists_check(name: str | None = Query(default=None, max_length=300), dom
 @app.get("/watchlists/meta")
 def watchlists_meta():
     return get_watchlists().meta
+
+
+# ---------------------------------------------------------------------------- proof of reserves
+@app.get("/reserves/okx")
+def reserves_okx(force: bool = False):
+    try:
+        return reserves.okx_report(force=force)
+    except reserves.ReportUnavailable as exc:
+        raise HTTPException(502, str(exc))
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"Raport niedostępny: {type(exc).__name__}")

@@ -108,6 +108,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--knf-html")
     ap.add_argument("--skip-esma", action="store_true")
+    ap.add_argument("--skip-sanctions", action="store_true")
+    ap.add_argument("--sanctions-csv", help="lokalny plik CSV listy sankcji UE")
     args = ap.parse_args()
     now = dt.datetime.now(dt.timezone.utc).isoformat()
 
@@ -130,6 +132,42 @@ def main() -> None:
                 "source": "ESMA – tymczasowy rejestr MiCA (CASP i podmioty niezgodne)", "url": ESMA_PAGE, "fetched_at": now,
                 "casp": lists["casp"], "ncasp": lists["ncasp"],
             }, ensure_ascii=False, indent=1), encoding="utf-8")
+
+        if not args.skip_sanctions:
+            raw = Path(args.sanctions_csv).read_bytes() if args.sanctions_csv else client.get(EU_SANCTIONS_URL, timeout=120).content
+            entries = parse_eu_sanctions(raw.decode("utf-8-sig", errors="replace"))
+            (DATA / "eu_sanctions.json").write_text(json.dumps({
+                "source": "Komisja Europejska – skonsolidowana lista sankcji finansowych UE", "url": EU_SANCTIONS_PAGE,
+                "fetched_at": now, "sha256": hashlib.sha256(raw).hexdigest(), "entries": entries,
+            }, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+            print(f"Sankcje UE: {len(entries)} osób i podmiotów")
+
+
+EU_SANCTIONS_URL = "https://webgate.ec.europa.eu/fsd/fsf/public/files/csvFullSanctionsList_1_1/content?token=dG9rZW4tMjAxNw"
+EU_SANCTIONS_PAGE = "https://data.europa.eu/data/datasets/consolidated-list-of-persons-groups-and-entities-subject-to-eu-financial-sanctions"
+
+
+def parse_eu_sanctions(text: str) -> list[dict]:
+    """CSV (1 wiersz = 1 alias/adres/data) -> 1 rekord na osobę/podmiot z wszystkimi wariantami nazwy."""
+    grouped: dict[str, dict] = {}
+    for r in csv.DictReader(io.StringIO(text), delimiter=";"):
+        lid = r.get("Entity_LogicalId")
+        if not lid:
+            continue
+        e = grouped.setdefault(lid, {
+            "id": lid, "ref": r.get("Entity_EU_ReferenceNumber") or None,
+            "type": r.get("Entity_SubjectType_ClassificationCode") or None,  # person | enterprise
+            "programme": r.get("Entity_Regulation_Programme") or None,
+            "listed": r.get("Entity_Regulation_PublicationDate") or None,
+            "regulation": r.get("Entity_Regulation_NumberTitle") or None,
+            "url": r.get("Entity_Regulation_PublicationUrl") or None,
+            "names": [], "birth_dates": [], "citizenships": [],
+        })
+        for key, field in (("names", "NameAlias_WholeName"), ("birth_dates", "BirthDate_BirthDate"), ("citizenships", "Citizenship_CountryIso2Code")):
+            v = (r.get(field) or "").strip()
+            if v and v not in e[key]:
+                e[key].append(v)
+    return [e for e in grouped.values() if e["names"]]
 
 
 if __name__ == "__main__":

@@ -100,8 +100,12 @@ r.get('/search', async (req, res) => {
   const out = {};
   if (type === 'all' || type === 'entities') {
     out.entities = await q(
-      `SELECT id, name, kind, registry_status, similarity(name_norm, lower(unaccent($1))) AS sim FROM entities
-        WHERE name_norm % lower(unaccent($1)) OR name_norm ILIKE '%' || lower(unaccent($1)) || '%' ORDER BY sim DESC LIMIT 20`, [term]);
+      `SELECT id, name, kind, registry_status, krs, lei, country,
+              CASE WHEN krs = $1 OR lei = upper($1) OR nip = $1 THEN 1 ELSE similarity(name_norm, lower(unaccent($1))) END AS sim
+         FROM entities
+        WHERE krs = $1 OR lei = upper($1) OR nip = $1
+           OR name_norm % lower(unaccent($1)) OR name_norm ILIKE '%' || lower(unaccent($1)) || '%'
+        ORDER BY sim DESC LIMIT 20`, [term]);
   }
   if (type === 'all' || type === 'materials') {
     out.materials = await q(
@@ -158,6 +162,25 @@ r.post('/entities/:id/enrich', async (req, res) => {
 });
 
 r.get('/watchlists', async (_req, res) => res.json(await analyzer.watchMeta()));
+
+// Utworzenie karty podmiotu z wyszukiwarki rejestrów (KRS/LEI) i wzbogacenie danych.
+r.post('/entities', async (req, res) => {
+  const b = parse(z.object({
+    name: z.string().trim().min(2).max(300),
+    krs: z.string().regex(/^[0-9]{10}$/, 'KRS: 10 cyfr').optional(),
+    lei: z.string().regex(/^[A-Z0-9]{18}[0-9]{2}$/, 'Niepoprawny LEI').optional(),
+    country: z.string().max(60).optional(),
+  }), req.body);
+  const existing = await one('SELECT id FROM entities WHERE ($1::text IS NOT NULL AND krs = $1) OR ($2::text IS NOT NULL AND lei = $2) LIMIT 1', [b.krs ?? null, b.lei ?? null]);
+  if (existing) return res.json({ id: existing.id, created: false });
+  const normName = b.name.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l').replace(/\s+/g, ' ').trim();
+  const row = await one(
+    `INSERT INTO entities (name, name_norm, kind, country, krs, lei) VALUES ($1, $2, 'company', $3, $4, $5)
+     ON CONFLICT (name_norm, kind) DO UPDATE SET krs = COALESCE(entities.krs, EXCLUDED.krs), lei = COALESCE(entities.lei, EXCLUDED.lei)
+     RETURNING id`, [b.name, normName, b.country ?? null, b.krs ?? null, b.lei ?? null]);
+  enrichEntity(row.id, { krs: b.krs ?? null, lei: b.lei ?? null }).catch(() => {});
+  res.status(201).json({ id: row.id, created: true });
+});
 
 // Rejestry na żądanie (bez zapisu): KRS po numerze, GLEIF po nazwie/LEI – pełne dane do wglądu analityka.
 r.get('/registries/krs/:krs', async (req, res) => {

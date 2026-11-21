@@ -131,6 +131,8 @@ export async function enrichEntity(entityId, { krs = null, lei = null } = {}) {
       await record(t, entityId, 'knf_warnings', by('knf_warnings').length ? 'found' : 'not_found', { hits: by('knf_warnings'), meta: out.watchlists.meta.knf_warnings });
       await record(t, entityId, 'esma_mica', by('esma_ncasp').length || by('esma_casp').length ? 'found' : 'not_found',
         { casp: by('esma_casp'), ncasp: by('esma_ncasp'), meta: out.watchlists.meta.esma_mica });
+      await record(t, entityId, 'eu_sanctions', by('eu_sanctions').length ? 'found' : 'not_found',
+        { hits: by('eu_sanctions'), meta: out.watchlists.meta.eu_sanctions, verification: 'wymaga weryfikacji' });
     }
     await t.q('UPDATE entities SET enriched_at = now() WHERE id = $1', [entityId]);
   });

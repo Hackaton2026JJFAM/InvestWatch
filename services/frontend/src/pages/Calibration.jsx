@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts';
+import { Line, LineChart, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts';
+import { axisProps, ChartGrid, ChartTooltip, cursorStyle, Legend, useChartColors } from '../components/charts.jsx';
 import { api } from '../api.js';
 import { Empty, Panel, pct, StatCard } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
@@ -21,6 +22,7 @@ function confusion(items, t) {
 
 export default function Calibration() {
   const { tick, setThreshold, toast } = useLive();
+  const col = useChartColors();
   const { data, error } = useData('/calibration', tick);
   const [t, setT] = useState(null);
   useEffect(() => { if (data && t === null) setT(data.current); }, [data, t]);
@@ -31,7 +33,7 @@ export default function Calibration() {
   const save = () => api.patch('/settings', { threshold: t })
     .then((s) => { setThreshold(s.threshold); toast({ title: 'Zapisano próg', text: `Nowy próg ryzyka: ${s.threshold}` }); })
     .catch((err) => { if (err.auth !== 'cancelled') toast({ kind: 'alert', title: 'Nie zapisano progu', text: err.message }); });
-  const points = data.items.map((i) => ({ ...i, y: i.ground_truth === null ? 0.5 : i.ground_truth ? 1 : 0 }));
+  const points = data.items.map((i, k) => ({ ...i, yj: (i.ground_truth === null ? 1 : i.ground_truth ? 2 : 0) + ((k % 5) - 2) * 0.07 }));
   const cur = confusion(data.items, data.current);
 
   return (
@@ -62,32 +64,38 @@ export default function Calibration() {
         </div>
       </div>
       <div className="grid g2" style={{ marginTop: 16 }}>
-        <Panel title="Wpływ progu: FP / FN i liczba alertów">
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={data.curve} margin={{ left: -20, right: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e6ef" />
-              <XAxis dataKey="threshold" fontSize={11} />
-              <YAxis allowDecimals={false} fontSize={11} />
-              <Tooltip />
-              <Legend />
-              <ReferenceLine x={Math.round(t / 5) * 5} stroke="#1d5fa8" strokeDasharray="4 4" label={{ value: `próg ${t}`, fontSize: 11 }} />
-              <Line dataKey="flagged" name="Alerty" stroke="#1d5fa8" dot={false} strokeWidth={2} />
-              <Line dataKey="fp" name="False Positive" stroke="#c62828" dot={false} strokeWidth={2} />
-              <Line dataKey="fn" name="False Negative" stroke="#b45f06" dot={false} strokeWidth={2} />
+        <Panel title="Wpływ progu na decyzje" meta="krok 5 punktów">
+          <Legend items={[{ label: 'Alerty (powyżej progu)', color: col.s1 }, { label: 'False Positive', color: col.s2 }, { label: 'False Negative', color: col.s3 }]} />
+          <ResponsiveContainer width="100%" height={270}>
+            <LineChart data={data.curve} margin={{ left: -18, right: 12, top: 14 }}>
+              <ChartGrid c={col} />
+              <XAxis dataKey="threshold" {...axisProps(col)} />
+              <YAxis allowDecimals={false} {...axisProps(col)} axisLine={false} width={40} />
+              <Tooltip cursor={cursorStyle(col)} content={<ChartTooltip labelFormatter={(l) => `próg ${l}`} />} />
+              <ReferenceLine x={Math.round(t / 5) * 5} stroke={col.axis} strokeDasharray="4 4" label={{ value: `próg ${t}`, fontSize: 11, fill: col.text, position: 'top' }} />
+              <Line type="monotone" dataKey="flagged" name="Alerty" stroke={col.s1} dot={false} strokeWidth={2} activeDot={{ r: 4, stroke: col.surface, strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="fp" name="False Positive" stroke={col.s2} dot={false} strokeWidth={2} activeDot={{ r: 4, stroke: col.surface, strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="fn" name="False Negative" stroke={col.s3} dot={false} strokeWidth={2} activeDot={{ r: 4, stroke: col.surface, strokeWidth: 2 }} />
             </LineChart>
           </ResponsiveContainer>
         </Panel>
-        <Panel title="Rozkład wyników (1 = ryzykowny wg etykiety, 0 = poprawny, 0,5 = bez etykiety)">
-          <ResponsiveContainer width="100%" height={280}>
-            <ScatterChart margin={{ left: -20, right: 10 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e6ef" />
-              <XAxis type="number" dataKey="score" domain={[0, 100]} name="wynik" fontSize={11} />
-              <YAxis type="number" dataKey="y" domain={[-0.2, 1.2]} ticks={[0, 0.5, 1]} fontSize={11} />
-              <ZAxis range={[60, 60]} />
-              <Tooltip formatter={(v, n) => [v, n]} labelFormatter={() => ''} content={({ payload }) => payload?.[0] ? <div className="panel small">{payload[0].payload.title}<br />wynik {Math.round(payload[0].payload.score)}</div> : null} />
-              <ReferenceLine x={t} stroke="#1d5fa8" strokeDasharray="4 4" />
-              <Scatter data={points.filter((p) => p.score >= t)} fill="#c62828" name="powyżej progu" />
-              <Scatter data={points.filter((p) => p.score < t)} fill="#2e7d32" name="poniżej progu" />
+        <Panel title="Rozkład wyników względem etykiet" meta="każdy punkt = materiał">
+          <Legend items={[{ label: `Powyżej progu (≥ ${t})`, color: col.s2 }, { label: 'Poniżej progu', color: col.s1 }]} />
+          <ResponsiveContainer width="100%" height={270}>
+            <ScatterChart margin={{ left: 8, right: 12, top: 14 }}>
+              <ChartGrid c={col} vertical />
+              <XAxis type="number" dataKey="score" domain={[0, 100]} name="wynik" {...axisProps(col)} />
+              <YAxis type="number" dataKey="yj" domain={[-0.5, 2.5]} ticks={[0, 1, 2]} width={92} {...axisProps(col)} axisLine={false}
+                tickFormatter={(v) => ({ 0: 'Poprawny', 1: 'Bez etykiety', 2: 'Ryzykowny' })[v] ?? ''} />
+              <ZAxis range={[70, 70]} />
+              <Tooltip cursor={cursorStyle(col)} content={({ active, payload }) => (active && payload?.[0] ? (
+                <div className="chart-tip"><div className="t">{payload[0].payload.title}</div>
+                  <div className="r"><span className="k">wynik</span><span className="v">{Math.round(payload[0].payload.score)}</span></div>
+                  <div className="r"><span className="k">etykieta</span><span className="v">{payload[0].payload.ground_truth === null ? 'brak' : payload[0].payload.ground_truth ? 'ryzykowny' : 'poprawny'}</span></div>
+                </div>) : null)} />
+              <ReferenceLine x={t} stroke={col.axis} strokeDasharray="4 4" />
+              <Scatter data={points.filter((p) => p.score >= t)} fill={col.s2} stroke={col.surface} strokeWidth={2} name="powyżej progu" />
+              <Scatter data={points.filter((p) => p.score < t)} fill={col.s1} stroke={col.surface} strokeWidth={2} name="poniżej progu" />
             </ScatterChart>
           </ResponsiveContainer>
         </Panel>

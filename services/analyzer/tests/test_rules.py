@@ -161,3 +161,15 @@ def test_ocr_image_layout_runs_visual_rules():
     assert st["6"] == "fail"          # tylko w stopce / drobnym druku
     assert st["7"] == "na" and st["8"] == "not_checked"
     assert any(h["kind"] == "risk" for h in r["doc"]["highlights"])
+
+
+def test_eu_sanctions_name_is_verification_signal_only():
+    r = run("Wywiad: Saddam Hussein Al-Tikriti poleca inwestowanie w złoto.")
+    f = r["by_rule"]["M1.8"]
+    assert f["status"] == "warn"            # nigdy „fail” – zgodność nazwy nie potwierdza tożsamości
+    assert any(h["list"] == "eu_sanctions" for h in r["watchlists"])
+
+
+def test_single_word_or_partial_name_does_not_hit_sanctions():
+    r = run("Hussein i Saddam to popularne imiona. Inwestowanie wiąże się z ryzykiem.")
+    assert "M1.8" not in r["by_rule"]

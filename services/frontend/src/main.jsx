@@ -1,8 +1,9 @@
 import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { AdminLogin, useAdmin } from './components/AdminAuth.jsx';
 import { LiveProvider, useLive } from './live.jsx';
+import { applyTheme, readTheme, ThemeToggle } from './theme.jsx';
 const Alerts = lazy(() => import('./pages/Alerts.jsx'));
 const Calibration = lazy(() => import('./pages/Calibration.jsx'));
 const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
@@ -12,8 +13,9 @@ const Material = lazy(() => import('./pages/Material.jsx'));
 const Results = lazy(() => import('./pages/Results.jsx'));
 const Scan = lazy(() => import('./pages/Scan.jsx'));
 const Search = lazy(() => import('./pages/Search.jsx'));
-const Registries = lazy(() => import('./pages/Registries.jsx'));
 import './styles.css';
+
+applyTheme(readTheme()); // przed pierwszym renderem – bez mignięcia jasnego motywu
 
 function Shell() {
   const { connected, unread, threshold, toasts } = useLive();
@@ -30,8 +32,7 @@ function Shell() {
           <NavLink to="/materials">Wyniki analiz</NavLink>
           <NavLink to="/alerts">Alerty {unread > 0 && <span className="badge">{unread}</span>}</NavLink>
           <NavLink to="/entities">Podmioty</NavLink>
-          <NavLink to="/search">Wyszukiwarka</NavLink>
-          <NavLink to="/registries">Rejestry (KRS, LEI)</NavLink>
+          <NavLink to="/search">Wyszukiwarka (KRS, LEI)</NavLink>
           <NavLink to="/calibration">Kalibracja</NavLink>
           <NavLink to="/scan">Skanowanie i źródła</NavLink>
         </nav>
@@ -41,6 +42,7 @@ function Shell() {
           <div style={{ marginTop: 6 }}>
             {admin.admin ? <>Administrator · <button className="linkbtn" onClick={admin.logout}>wyloguj</button></> : admin.enabled ? 'Tryb analityka' : 'Operacje admin. wyłączone'}
           </div>
+          <ThemeToggle />
           <div style={{ marginTop: 10 }}>Wyniki są sygnałem do weryfikacji, nie stwierdzeniem naruszenia.</div>
         </div>
       </aside>
@@ -54,7 +56,7 @@ function Shell() {
           <Route path="/entities" element={<Entities />} />
           <Route path="/entities/:id" element={<Entity />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/registries" element={<Registries />} />
+          <Route path="/registries" element={<Navigate to="/search?tab=external" replace />} />
           <Route path="/calibration" element={<Calibration />} />
           <Route path="/scan" element={<Scan />} />
           <Route path="*" element={<div className="empty">Nie znaleziono strony</div>} />
