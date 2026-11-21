@@ -28,7 +28,15 @@ export default function Results() {
       <div className="page-head"><div><h1>Wyniki analiz</h1><p>Filtrowanie po dacie, źródle, module i poziomie ryzyka</p></div></div>
       <Panel>
         <div className="filters">
-          <input placeholder="Szukaj w tytule lub URL…" value={text} onChange={(e) => setText(e.target.value)} style={{ minWidth: 240 }} />
+          <label className="f f-search">
+            <span>Szukaj po tytule lub URL</span>
+            <input
+              type="search"
+              placeholder="Wpisz frazę…"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+            />
+          </label>
           <label className="f">Od<input type="date" value={f.from ?? ''} onChange={(e) => set('from', e.target.value)} /></label>
           <label className="f">Do<input type="date" value={f.to ?? ''} onChange={(e) => set('to', e.target.value)} /></label>
           <label className="f">Źródło<select value={f.platform ?? ''} onChange={(e) => set('platform', e.target.value)}><option value="">wszystkie</option>{PLATFORMS.map((p) => <option key={p}>{p}</option>)}</select></label>

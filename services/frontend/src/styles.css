@@ -191,6 +191,11 @@ input, select, textarea { font: inherit; font-size: .9rem; padding: 7px 10px; bo
 textarea { width: 100%; min-height: 120px; }
 .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
 label.f { display: flex; flex-direction: column; gap: 3px; font-size: .75rem; color: var(--muted); }
+label.f-search { flex: 1 1 260px; max-width: 360px; }
+label.f-search input { width: 100%; min-width: 0; height: 36px; }
+@media (max-width: 760px) {
+  label.f-search { flex-basis: 100%; max-width: none; }
+}
 
 .muted { color: var(--muted); }
 .small { font-size: .8rem; }
