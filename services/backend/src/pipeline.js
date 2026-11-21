@@ -82,7 +82,15 @@ export async function processScan(job) {
   }
 
   const threshold = await getThreshold();
-  const saved = await tx(async (t) => {
+  let saved;
+  try {
+    saved = await save();
+  } catch (err) {
+    return fail(jobId, err, job);
+  }
+
+  async function save() {
+    return tx(async (t) => {
     const m = await t.one(
       `INSERT INTO materials (source_id, url, final_url, title, author, published_at, lang, platform, content_text, content_hash, raw, ground_truth)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING id, fetched_at`,
@@ -112,7 +120,8 @@ export async function processScan(job) {
     }
     await t.q("UPDATE scan_jobs SET status = 'done', material_id = $2, finished_at = now() WHERE id = $1", [jobId, m.id]);
     return { materialId: m.id, analysisId: a.id, alert };
-  });
+    });
+  }
 
   // Podsumowanie poza transakcją – wolny LLM nie blokuje zapisu wyników.
   analyzer.summary(result)
@@ -132,7 +141,7 @@ async function fail(jobId, err, job) {
   await q('UPDATE scan_jobs SET status = $2, error = $3, finished_at = CASE WHEN $2 = \'failed\' THEN now() END WHERE id = $1',
     [jobId, final ? 'failed' : 'queued', err.message.slice(0, 500)]);
   emit('scan:update', { id: jobId, status: final ? 'failed' : 'retrying', error: err.message });
-  if (err instanceof UpstreamError && !err.retryable) throw new UnrecoverableError(err.message);
+  if (final) throw new UnrecoverableError(err.message);
   throw err;
 }
 

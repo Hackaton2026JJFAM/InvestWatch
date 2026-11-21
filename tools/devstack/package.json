@@ -1,0 +1,12 @@
+{
+  "name": "investwatch-devstack",
+  "private": true,
+  "type": "module",
+  "description": "Lokalny stos deweloperski bez Dockera: wbudowany PostgreSQL",
+  "scripts": {
+    "db": "node start-db.mjs"
+  },
+  "dependencies": {
+    "embedded-postgres": "16.15.0-beta.19"
+  }
+}

@@ -70,7 +70,8 @@ class Registry:
                 continue
             distinctive = re.sub(r"\s+", " ", GENERIC.sub(" ", core)).strip()
             self.firms.append(Firm(
-                name=raw["name"], core=core, distinctive=distinctive if len(distinctive) >= 3 else core,
+                # nazwa złożona wyłącznie ze słów ogólnych (np. „Dom Maklerski INC”) nie jest wyszukiwana w treści
+                name=raw["name"], core=core, distinctive=distinctive if len(distinctive) >= 3 else "",
                 category=raw.get("category", "unknown"), country=raw.get("country"), supervisor=raw.get("supervisor"),
                 license_date=raw.get("license_date"), scope=raw.get("scope"), demo=demo, domains=raw.get("domains", []),
                 former_names=raw.get("former_names", []) if i == 0 else [],
@@ -105,7 +106,7 @@ class Registry:
         folded = re.sub(r"\s+", " ", folded)
         hits: dict[str, dict] = {}
         for firm in self.firms:
-            for variant in {firm.core, firm.distinctive}:
+            for variant in ({firm.core, firm.distinctive} if firm.distinctive else ()):
                 if len(variant) < 4 and " " not in variant:
                     continue  # zbyt krótkie nazwy dają fałszywe trafienia
                 if f" {variant} " in folded and firm.name not in hits:

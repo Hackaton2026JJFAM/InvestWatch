@@ -59,6 +59,18 @@ Bez Ollamy podsumowanie powstaje z szablonu na podstawie tych samych przesłanek
 | `OLLAMA_URL`, `OLLAMA_MODEL` | –, `gemma3:4b` | LLM do podsumowań |
 | `SEED_DEMO` | true | Załadowanie próbek przy pustej bazie |
 
+## Uruchomienie bez Dockera (dev)
+
+Wbudowany PostgreSQL z npm, kolejka w pamięci (`REDIS_URL=memory`). Każde polecenie w osobnym terminalu:
+
+```bash
+cd tools/devstack && npm install && node start-db.mjs                    # PostgreSQL :5433
+cd services/scraper && ../../.venv/Scripts/python -m uvicorn app.main:app --port 8001
+cd services/analyzer && ../../.venv/Scripts/python -m uvicorn app.main:app --port 8002
+cd services/backend && DATABASE_URL=postgres://investwatch:investwatch@localhost:5433/investwatch REDIS_URL=memory SAMPLES_DIR=../../data/samples node src/index.js
+cd services/frontend && npx vite                                         # http://localhost:5173
+```
+
 ## Rozwój i testy
 
 ```bash
