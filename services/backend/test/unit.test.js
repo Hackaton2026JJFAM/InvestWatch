@@ -98,3 +98,30 @@ test('weryfikacja: wynik po odrzuceniu przesłanek liczony jak w analizatorze (n
   const pts = summaryPoints({ findings }, ['M1.3']);
   assert.deepEqual(pts.map((p) => [p.rule_id, p.rejected]), [['M1.1', false], ['M1.3', true], ['3', false]]);
 });
+
+test('weryfikacja: odrzucenie pojedynczego sygnału oszustwa przelicza M1.10, wynik i profil', async () => {
+  const { withoutRejected, summaryPoints, isKnownKey } = await import('../src/review.js');
+  const signals = [{ key: 'gwarancja', label: 'Gwarancja zysku / brak ryzyka', weight: 35 },
+    { key: 'lista_ostrzezen', label: 'Podmiot z listy ostrzeżeń KNF/ESMA', weight: 45 },
+    { key: 'presja_czasu', label: 'Presja czasu', weight: 20 }];
+  const result = {
+    score: 70, module_scores: { m1: 70 },
+    findings: [{ module: 'm1', rule_id: 'M1.10', status: 'fail', severity: 77, title: 'Sygnały oszustwa inwestycyjnego', explanation: '',
+      evidence: signals.map((s) => ({ text: s.label, where: s.label, signal: s.key, weight: s.weight })) }],
+    profile: { primary: 'podejrzenie_oszustwa', scam_score: 77, signals, paid: true },
+  };
+  assert.ok(isKnownKey(result, 'M1.10:gwarancja') && !isKnownKey(result, 'M1.10:nic') && !isKnownKey(result, 'M9.9'));
+  // bez gwarancji: 1-(0.55*0.8) = 56 -> nadal FAIL, ale słabszy
+  const one = withoutRejected(result, ['M1.10:gwarancja']);
+  assert.equal(one.findings[0].severity, 56);
+  assert.equal(one.findings[0].evidence.length, 2);
+  // bez gwarancji i listy ostrzeżeń: zostaje jeden słaby sygnał -> przesłanka odpada, profil = płatna promocja
+  const two = withoutRejected(result, ['M1.10:gwarancja', 'M1.10:lista_ostrzezen']);
+  assert.equal(two.findings.length, 0);
+  assert.equal(two.score, 0);
+  assert.equal(two.profile.primary, 'płatna_promocja');
+  assert.equal(two.profile.scam_score, 20);
+  const pts = summaryPoints(result, ['M1.10:gwarancja']);
+  assert.deepEqual(pts[0].elements.map((e) => [e.key, e.rejected]),
+    [['M1.10:gwarancja', true], ['M1.10:lista_ostrzezen', false], ['M1.10:presja_czasu', false]]);
+});

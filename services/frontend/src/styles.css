@@ -293,4 +293,8 @@ input, select, textarea { color-scheme: inherit; }
 .review-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: var(--surface-2); }
 .review-item input { margin-top: 3px; }
 .review-item.off { opacity: .55; }
+.review-sub { display: grid; gap: 4px; margin-top: 6px; padding-left: 4px; border-left: 2px solid var(--border); }
+.review-el { display: flex; gap: 8px; align-items: flex-start; padding: 4px 8px; cursor: pointer; font-size: .9rem; }
+.review-el input { margin-top: 3px; }
+.review-el.off { opacity: .5; text-decoration: line-through; }
 .review-item.off b, .review-item.off > span { text-decoration: line-through; text-decoration-color: var(--muted); }

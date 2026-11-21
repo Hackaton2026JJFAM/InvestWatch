@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { saveReach } from '../reach.js';
-import { summaryPoints, withoutRejected } from '../review.js';
+import { isKnownKey, KEY_RX, summaryPoints, withoutRejected } from '../review.js';
 import { z } from 'zod';
 import { getThreshold, one, q, tx } from '../db.js';
 import { emit } from '../realtime.js';
@@ -11,9 +11,19 @@ import { parse, riskLevel, aboveSql, riskSql } from '../validate.js';
 
 const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
-const STATUSES = ['NEW', 'REVIEWED', 'ESCALATED', 'DISMISSED'];
+const STATUSES = ['NEW', 'IN_REVIEW', 'REVIEWED', 'ESCALATED', 'DISMISSED'];
+const PROFILES = ['podejrzenie_oszustwa', 'płatna_promocja', 'autoreklama', 'doradca_finansowy', 'edukacja', 'informacja'];
 const LATEST = 'JOIN LATERAL (SELECT * FROM analyses WHERE material_id = m.id ORDER BY created_at DESC LIMIT 1) a ON TRUE';
 const rejectedOf = async (materialId) => (await q('SELECT rule_id FROM finding_reviews WHERE material_id = $1 AND decision = \'rejected\'', [materialId])).map((x) => x.rule_id);
+
+// wynik i profil po weryfikacji analityka (ręcznie ustawiony profil ma pierwszeństwo)
+async function storeReview(db, id, result, rejected) {
+  const reviewed = rejected.length ? withoutRejected(result, rejected) : null;
+  const p = (reviewed ?? result).profile;
+  await db.q('UPDATE materials SET reviewed_score = $2, profile_type = COALESCE(profile_manual, $3), scam_score = $4 WHERE id = $1',
+    [id, reviewed ? reviewed.score : null, p?.primary ?? null, p?.scam_score ?? null]);
+  return reviewed;
+}
 
 r.get('/materials', async (req, res) => {
   const f = parse(z.object({
@@ -24,7 +34,7 @@ r.get('/materials', async (req, res) => {
     // zasięg / popularność i profil publikującego
     above: z.enum(['1', 'true']).optional(), min_views: z.coerce.number().int().min(0).optional(),
     min_followers: z.coerce.number().int().min(0).optional(), tag: z.string().max(60).optional(),
-    profile: z.enum(['podejrzenie_oszustwa', 'płatna_promocja', 'doradca_finansowy', 'edukacja', 'informacja']).optional(),
+    profile: z.enum(PROFILES).optional(),
     media: z.enum(['video', 'image', 'web']).optional(), watch: z.coerce.number().int().positive().optional(),
     lang: z.enum(['pl', 'other']).optional(),
     sort: z.enum(['score', 'fetched_at', 'title', 'views', 'priority']).default('fetched_at'), dir: z.enum(['asc', 'desc']).default('desc'),
@@ -111,7 +121,11 @@ r.patch('/materials/:id/status', async (req, res) => {
   const { status } = parse(z.object({ status: z.enum(STATUSES) }), req.body);
   const row = await one('UPDATE materials SET status = $2 WHERE id = $1 RETURNING id, status', [id, status]);
   if (!row) return res.status(404).json({ error: 'Nie znaleziono materiału' });
-  if (status !== 'NEW') {
+  if (status === 'IN_REVIEW') {
+    // w trakcie weryfikacji: alert przeczytany, ale nadal otwarty
+    const changed = await q("UPDATE alerts SET read = TRUE WHERE material_id = $1 AND status = 'NEW' AND NOT read RETURNING id", [id]);
+    if (changed.length) emit('alert:update', { materialId: id, alerts: changed.map((x) => x.id) });
+  } else if (status !== 'NEW') {
     const changed = await q("UPDATE alerts SET status = $2, read = TRUE WHERE material_id = $1 AND status = 'NEW' RETURNING id", [id, status === 'DISMISSED' ? 'DISMISSED' : 'REVIEWED']);
     if (changed.length) emit('alert:update', { materialId: id, alerts: changed.map((a) => a.id) });
   }
@@ -155,9 +169,7 @@ r.post('/materials/:id/reanalyze', async (req, res) => {
   });
   if (result.doc?.simhash) await q('UPDATE materials SET simhash = $2 WHERE id = $1', [id, result.doc.simhash]);
   // odrzucenia analityka obowiązują także po ponownej analizie
-  const rejected = await rejectedOf(id);
-  const reviewed = rejected.length ? withoutRejected(result, rejected) : null;
-  await q('UPDATE materials SET reviewed_score = $2 WHERE id = $1', [id, reviewed ? reviewed.score : null]);
+  const reviewed = await storeReview({ q }, id, result, await rejectedOf(id));
   const s = await analyzer.summary(reviewed ?? result).catch(() => null);
   if (s) await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   res.json(a);
@@ -188,11 +200,11 @@ r.get('/summary/:materialId', async (req, res) => {
 // Odrzucenie wybranych punktów podsumowania (pełny zestaw odrzuconych reguł; pusta lista = przywrócenie wszystkich)
 r.put('/materials/:id/review', async (req, res) => {
   const { id } = parse(idParam, req.params);
-  const b = parse(z.object({ rejected: z.array(z.string().regex(/^[\w.]{1,12}$/)).max(60), note: z.string().max(500).optional() }), req.body);
+  const b = parse(z.object({ rejected: z.array(z.string().regex(KEY_RX)).max(120), note: z.string().max(500).optional() }), req.body);
   const a = await one('SELECT id, score, result FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [id]);
   if (!a) return res.status(404).json({ error: 'Brak analizy' });
-  const known = new Set(a.result.findings.map((f) => f.rule_id));
-  const rejected = [...new Set(b.rejected)].filter((r0) => known.has(r0));
+  // klucz „reguła” = cała przesłanka, „reguła:element” = pojedynczy sygnał/fragment
+  const rejected = [...new Set(b.rejected)].filter((k) => isKnownKey(a.result, k));
   const reviewed = rejected.length ? withoutRejected(a.result, rejected) : null;
   const s = await analyzer.summary(reviewed ?? a.result).catch(() => null);
   await tx(async (t) => {
@@ -201,12 +213,26 @@ r.put('/materials/:id/review', async (req, res) => {
       await t.q(`INSERT INTO finding_reviews (material_id, rule_id, note) VALUES ($1, $2, $3)
                  ON CONFLICT (material_id, rule_id) DO UPDATE SET note = COALESCE(EXCLUDED.note, finding_reviews.note)`, [id, rule, b.note ?? null]);
     }
-    await t.q('UPDATE materials SET reviewed_score = $2 WHERE id = $1', [id, reviewed ? reviewed.score : null]);
+    await storeReview(t, id, a.result, rejected);
     if (s) await t.q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   });
   emit('material:status', { id });
   res.json({ rejected, reviewed_score: reviewed ? reviewed.score : null, score: Number(a.score), summary: s?.summary ?? null,
-    points: summaryPoints(a.result, rejected) });
+    points: summaryPoints(a.result, rejected), profile: reviewed?.profile?.primary ?? a.result.profile?.primary ?? null });
+});
+
+// Ręczne oznaczenie profilu treści (np. „autoreklama”); null = powrót do klasyfikacji automatycznej
+r.put('/materials/:id/profile', async (req, res) => {
+  const { id } = parse(idParam, req.params);
+  const { profile } = parse(z.object({ profile: z.enum(PROFILES).nullable() }), req.body);
+  const a = await one('SELECT result FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [id]);
+  const row = await one('UPDATE materials SET profile_manual = $2 WHERE id = $1 RETURNING id', [id, profile]);
+  if (!row) return res.status(404).json({ error: 'Nie znaleziono materiału' });
+  if (a) await storeReview({ q }, id, a.result, await rejectedOf(id));
+  else await q('UPDATE materials SET profile_type = COALESCE(profile_manual, profile_type) WHERE id = $1', [id]);
+  const m = await one('SELECT id, profile_type, profile_manual FROM materials WHERE id = $1', [id]);
+  emit('material:status', { id });
+  res.json(m);
 });
 
 export default r;

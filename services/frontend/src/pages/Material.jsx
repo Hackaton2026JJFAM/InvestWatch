@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, ProfileChip, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
+import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, PROFILE, ProfileChip, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { REG } from './Entities.jsx';
 import { useLive } from '../live.jsx';
@@ -21,7 +21,9 @@ function FindingsTable({ findings, rejected }) {
             <td className="mono"><b>{f.rule_id}</b></td>
             <td style={{ minWidth: 160 }}>{f.title}</td>
             <td><StatusChip status={f.status} />{rejected?.has(f.rule_id) && <div className="small muted">odrzucone przez analityka</div>}</td>
-            <td style={{ minWidth: 320 }}>{f.explanation}<Evidence items={(f.evidence ?? []).slice(0, 3)} /></td>
+            <td style={{ minWidth: 320 }}>{f.explanation}<Evidence items={(f.evidence ?? []).filter((e, i) => !rejected?.has(`${f.rule_id}:${e.signal ?? i}`)).slice(0, 3)} />
+              {(f.evidence ?? []).some((e, i) => rejected?.has(`${f.rule_id}:${e.signal ?? i}`)) && (
+                <div className="small muted">odrzucone elementy: {(f.evidence ?? []).filter((e, i) => rejected?.has(`${f.rule_id}:${e.signal ?? i}`)).map((e) => e.where || e.text.slice(0, 40)).join('; ')}</div>)}</td>
             <td className="small muted" style={{ minWidth: 140 }}>{f.legal_basis ?? '–'}</td>
           </tr>))}
         </tbody>
@@ -88,16 +90,32 @@ function VideoPanel({ video }) {
 const RET = (c) => `${c.claim}${c.period ? ` ${c.period}` : ''}${c.annual_pct != null ? ` → ≈ ${Math.round(c.annual_pct)}% rocznie` : ''}`;
 
 // Profil publikującego: płatna promocja / podejrzenie oszustwa / doradca + realizm obietnic zysku.
-function ProfilePanel({ r, m }) {
+function ProfilePanel({ r, m, onChange }) {
+  const { toast } = useLive();
   const p = r.profile;
   if (!p) return <Panel title="Profil publikującego"><Empty>Brak profilu – przeanalizuj materiał ponownie.</Empty></Panel>;
   const lic = r.m3?.license;
+  const setProfile = (v) => api.put(`/materials/${m.id}/profile`, { profile: v || null })
+    .then((x) => { toast({ kind: 'info', title: 'Oznaczenie treści', text: v ? `Ustawiono: ${PROFILE[v].label}` : `Przywrócono klasyfikację automatyczną (${PROFILE[x.profile_type]?.label ?? '–'})` }); onChange?.(); })
+    .catch((e) => toast({ kind: 'error', title: 'Oznaczenie treści', text: e.message }));
+  const effective = m.profile_type ?? p.primary;
+  const choose = (
+    <label className="small">Oznacz jako{' '}
+      <select value={m.profile_manual ?? ''} onChange={(e) => setProfile(e.target.value)} aria-label="Ręczne oznaczenie typu treści">
+        <option value="">automatycznie ({PROFILE[p.primary]?.label ?? p.primary})</option>
+        {Object.entries(PROFILE).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+      </select>
+    </label>
+  );
   return (
-    <Panel title="Profil publikującego i wiarygodność oferty" meta="sygnały do weryfikacji, nie ocena prawna">
+    <Panel title="Profil publikującego i wiarygodność oferty" meta="sygnały do weryfikacji, nie ocena prawna" actions={choose}>
       <div className="btn-row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
-        <ProfileChip type={p.primary} />
+        <ProfileChip type={effective} />
+        {m.profile_manual && <span className="chip neutral">oznaczone ręcznie</span>}
+        {!m.profile_manual && effective !== p.primary && <span className="chip neutral">po weryfikacji analityka</span>}
         {p.tags.map((t) => <span key={t} className="chip neutral">{t}</span>)}
         <span className={`chip ${p.scam_score >= 55 ? 'high' : p.scam_score >= 30 ? 'mid' : 'low'}`}>sygnały oszustwa: {p.scam_score}/100</span>
+        {m.scam_score != null && Number(m.scam_score) !== p.scam_score && <span className="chip neutral">po weryfikacji: {Math.round(m.scam_score)}/100</span>}
       </div>
       <dl className="kv" style={{ marginBottom: 10 }}>
         <dt>Publikujący</dt><dd>{r.m1?.publisher?.name ?? <i>nieustalone</i>} <span className="small muted">({{ firma: 'sama firma', podmiot_trzeci: 'podmiot trzeci', 'własne_usługi': 'strona własna usługodawcy', nieustalone: 'nieustalone' }[r.m1?.publisher?.type] ?? '–'})</span></dd>
@@ -144,7 +162,11 @@ function Summary({ materialId, analysis, tick, onReviewed }) {
   const [saving, setSaving] = useState(false);
   const points = data?.points ?? [];
   const rejected = points.filter((p) => p.rejected);
-  const startEdit = () => { setDraft(new Set(rejected.map((p) => p.rule_id))); setEditing(true); };
+  const rejectedEls = points.flatMap((p) => (p.rejected ? [] : (p.elements ?? []).filter((e) => e.rejected).map((e) => ({ ...e, point: p }))));
+  const startEdit = () => {
+    setDraft(new Set([...rejected.map((p) => p.rule_id), ...points.flatMap((p) => (p.elements ?? []).filter((e) => e.rejected).map((e) => e.key))]));
+    setEditing(true);
+  };
   const toggle = (rule) => setDraft((s) => { const n = new Set(s); n.has(rule) ? n.delete(rule) : n.add(rule); return n; });
   const save = async () => {
     setSaving(true);
@@ -166,16 +188,32 @@ function Summary({ materialId, analysis, tick, onReviewed }) {
     <Panel title="Podsumowanie AI" meta={data ? `silnik: ${data.engine}${data.reviewed_score != null ? ` · po weryfikacji ${Math.round(data.reviewed_score)}/100` : ''}` : ''} actions={actions}>
       {editing ? (
         <>
-          <div className="notice" style={{ marginBottom: 10 }}>Odznacz punkty, które po weryfikacji nie są zasadne. Odrzucone nie liczą się do wyniku po weryfikacji ani do podsumowania; decyzja obowiązuje także po ponownej analizie.</div>
+          <div className="notice" style={{ marginBottom: 10 }}>Odznacz punkty albo pojedyncze elementy (sygnały, fragmenty transkrypcji), które zostały źle rozpoznane. Ocena przelicza się od razu po zapisaniu; odrzucone nie liczą się do wyniku po weryfikacji ani do podsumowania, a decyzja obowiązuje także po ponownej analizie.</div>
           <div className="review-list">
             {points.map((p) => {
               const on = !draft.has(p.rule_id);
               return (
-                <label key={p.rule_id} className={`review-item ${on ? '' : 'off'}`}>
-                  <input type="checkbox" checked={on} onChange={() => toggle(p.rule_id)} />
-                  <span><span className="mono"><b>[{p.rule_id}]</b></span> {p.title} <StatusChip status={p.status} />
-                    <div className="small muted">{p.explanation}</div></span>
-                </label>
+                <div key={p.rule_id} className={`review-item ${on ? '' : 'off'}`}>
+                  <input id={`rv-${p.rule_id}`} type="checkbox" checked={on} onChange={() => toggle(p.rule_id)} />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <label htmlFor={`rv-${p.rule_id}`} style={{ cursor: 'pointer' }}><span className="mono"><b>[{p.rule_id}]</b></span> {p.title} <StatusChip status={p.status} /></label>
+                    <div className="small muted">{p.explanation}</div>
+                    {p.elements?.length > 0 && (
+                      <div className="review-sub">
+                        {p.elements.map((e) => {
+                          const eon = on && !draft.has(e.key);
+                          return (
+                            <label key={e.key} className={`review-el ${eon ? '' : 'off'}`}>
+                              <input type="checkbox" disabled={!on} checked={eon} onChange={() => toggle(e.key)} />
+                              <span><b>{e.where}</b>{e.weight ? <span className="muted"> · waga {e.weight}</span> : null}
+                                <div className="small muted">„{(e.text ?? '').slice(0, 200)}”</div></span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -186,6 +224,9 @@ function Summary({ materialId, analysis, tick, onReviewed }) {
           <div className="summary-text">{data?.summary ?? 'Generowanie…'}</div>
           {rejected.length > 0 && (
             <p className="small muted" style={{ marginBottom: 0 }}>Odrzucone przez analityka ({rejected.length}): {rejected.map((p) => `[${p.rule_id}] ${p.title}`).join('; ')}</p>
+          )}
+          {rejectedEls.length > 0 && (
+            <p className="small muted" style={{ marginBottom: 0 }}>Odrzucone elementy ({rejectedEls.length}): {rejectedEls.map((e) => `[${e.point.rule_id}] ${e.where}`).join('; ')}</p>
           )}
         </>
       )}
@@ -225,7 +266,7 @@ export default function Material() {
         </div>
         <div className="btn-row">
           <span className="small muted">Status: <b>{MAT_STATUS[m.status]}</b> · zmień na:</span>
-          {[['REVIEWED', 'Zweryfikowany'], ['ESCALATED', 'Eskaluj'], ['DISMISSED', 'Odrzuć']].map(([s, label]) => (
+          {[['IN_REVIEW', 'W trakcie weryfikacji'], ['REVIEWED', 'Zweryfikowany'], ['ESCALATED', 'Eskaluj'], ['DISMISSED', 'Odrzuć']].map(([s, label]) => (
             <button key={s} className={`btn ${m.status === s ? 'selected' : ''}`} aria-pressed={m.status === s} disabled={m.status === s}
               title={m.status === s ? 'Obecny status' : `Zmień status na „${MAT_STATUS[s]}”`} onClick={() => setStatus(s)}>{m.status === s ? `✓ ${MAT_STATUS[s]}` : label}</button>
           ))}
@@ -302,7 +343,7 @@ export default function Material() {
         </div>
       )}
       {tab === 'Finfluencerzy (M1)' && (
-        <div style={{ marginTop: 12 }}><ProfilePanel r={r} m={m} /></div>
+        <div style={{ marginTop: 12 }}><ProfilePanel r={r} m={m} onChange={reload} /></div>
       )}
 
       {tab === 'Shadow Advisory (M3)' && (

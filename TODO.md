@@ -67,6 +67,11 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Instagram: zasięg (wyświetlenia) bez logowania niedostępny – tylko polubienia/opis; Facebook: metadane ograniczone
 - [ ] Rejestr licencjonowanych doradców inwestycyjnych KNF – dziś licencja „zadeklarowana, do weryfikacji” (numer wyciągany z treści)
 
+## Weryfikacja analityka – iteracja 2
+- [x] Odrzucanie pojedynczych elementów punktu (sygnał oszustwa, fragment transkrypcji/tekstu), nie tylko całych punktów: M1.10 przeliczany od razu z pozostałych sygnałów (ten sam wzór i progi co analizator), odrzucenie wszystkich fragmentów = odrzucenie punktu, odrzucenie M1.9 usuwa też sygnał „nierealne zyski”; profil i wynik sygnałów po weryfikacji zapisywane w materiale
+- [x] Oznaczenie „Autoreklama (własna reklama)”: automatycznie, gdy firma reklamuje samą siebie albo usługodawca – własne usługi; ręczna zmiana typu treści w profilu (ma pierwszeństwo przed klasyfikacją, także po ponownej analizie)
+- [x] Status materiału „W trakcie weryfikacji” (alert oznaczany jako przeczytany, ale pozostaje otwarty)
+
 ## Monitoring – iteracja 3
 - [x] „Wyszukaj kandydatów” bez wyboru platformy: jedno zapytanie przeszukuje YouTube, TikTok, Instagram, X i Facebook naraz (kolumna „Platforma”, błędy pojedynczych platform pokazywane osobno); „Monitoruj stale” zapisuje zapytanie dla wszystkich platform
 - [x] Stała aktualizacja hashtagów wg popularności (`TAGS_CRON`, domyślnie co godzinę): ranking z polskich materiałów (zasięg × liczba × średnie ryzyko, trend 7 dni vs poprzednie 7), czołówka (`TAG_AUTO_WATCH`=8) automatycznie monitorowana na wszystkich platformach, tagi, które wypadły z czołówki – automatycznie wstrzymywane; tagi ogólne i oznaczenia współpracy (#reklama, #współpraca, #fyp…) wykluczone; stała lista tagów usunięta z UI (tylko zimny start przy pustej bazie)

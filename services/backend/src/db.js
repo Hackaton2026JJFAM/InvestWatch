@@ -110,6 +110,7 @@ const MIGRATIONS = [
      material_id INT NOT NULL REFERENCES materials(id) ON DELETE CASCADE, rule_id TEXT NOT NULL, decision TEXT NOT NULL DEFAULT 'rejected',
      note TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (material_id, rule_id))`,
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS reviewed_score NUMERIC',
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS profile_manual TEXT',
   // uzupełnienie dla materiałów sprzed rankingu tagów: język z ostatniej analizy, hashtagi z tytułu i treści
   `UPDATE materials m SET lang = x.lang FROM (SELECT DISTINCT ON (material_id) material_id, result->'doc'->>'lang' AS lang
      FROM analyses ORDER BY material_id, created_at DESC) x WHERE x.material_id = m.id AND m.lang IS NULL AND x.lang IS NOT NULL`,

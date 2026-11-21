@@ -139,7 +139,8 @@ def analyze_material(m: dict) -> dict:
     f2 = rules_m2.run(doc)
     r3 = m3.run(doc)
     sig = signals.run(doc, r3["classification"])
-    prof = profile.run(doc, r3["classification"], sig["hits"])
+    advertised = any(f.rule_id == "M1.1" and f.status != "na" for f in r1["findings"])
+    prof = profile.run(doc, r3["classification"], sig["hits"], r1["publisher"]["type"], advertised)
     extra = sig["findings"] + prof["findings"]
     by_module = {"m1": r1["findings"] + [f for f in extra if f.module == "m1"], "m2": f2,
                  "m3": r3["findings"] + [f for f in extra if f.module == "m3"]}

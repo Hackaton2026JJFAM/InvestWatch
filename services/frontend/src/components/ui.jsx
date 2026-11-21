@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 export const RISK_CLASS = { wysokie: 'high', 'średnie': 'mid', niskie: 'low' };
 export const STATUS_LABEL = { fail: 'niespełnione', warn: 'do weryfikacji', pass: 'spełnione', na: 'nie dotyczy', not_checked: 'nie oceniono' };
 export const MODULES = { m1: 'M1 Finfluencerzy', m2: 'M2 Ryzyko/zgodność', m3: 'M3 Shadow Advisory' };
-export const MAT_STATUS = { NEW: 'Nowy', REVIEWED: 'Zweryfikowany', ESCALATED: 'Eskalowany', DISMISSED: 'Odrzucony' };
+export const MAT_STATUS = { NEW: 'Nowy', IN_REVIEW: 'W trakcie weryfikacji', REVIEWED: 'Zweryfikowany', ESCALATED: 'Eskalowany', DISMISSED: 'Odrzucony' };
 
 // Poziom ryzyka w stałej skali 0–100: 0–29 niskie, 30–69 średnie, 70–100 wysokie.
 // Próg alertów (kalibracja) jest osobny – decyduje o alercie i widoku „powyżej progu”.
@@ -18,6 +18,7 @@ export function riskOf(score, _threshold) {
 export const PROFILE = {
   podejrzenie_oszustwa: { label: 'Podejrzenie oszustwa', tone: 'high' },
   płatna_promocja: { label: 'Płatna promocja', tone: 'mid' },
+  autoreklama: { label: 'Autoreklama (własna reklama)', tone: 'brand' },
   doradca_finansowy: { label: 'Doradca / oferta doradcza', tone: 'info' },
   edukacja: { label: 'Edukacja', tone: 'low' },
   informacja: { label: 'Informacja', tone: 'neutral' },

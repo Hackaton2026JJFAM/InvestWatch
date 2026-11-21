@@ -40,7 +40,7 @@ export const WATCH_PRESETS = {
 export async function saveReach(t, materialId, material, result, watchId = null) {
   const r = reachOf(material);
   await t.q(
-    `UPDATE materials SET views = $2, likes = $3, followers = $4, tags = $5, profile_type = $6, scam_score = $7,
+    `UPDATE materials SET views = $2, likes = $3, followers = $4, tags = $5, profile_type = COALESCE(profile_manual, $6), scam_score = $7,
             watch_id = COALESCE($8, watch_id), lang = COALESCE(lang, $9) WHERE id = $1`,
     [materialId, r.views, r.likes, r.followers, r.tags, result?.profile?.primary ?? null, result?.profile?.scam_score ?? null, watchId,
       result?.doc?.lang ?? null],

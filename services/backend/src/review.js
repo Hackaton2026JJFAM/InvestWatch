@@ -1,6 +1,10 @@
-// Weryfikacja analityka: odrzucenie wybranych punktów podsumowania (przesłanek). Odrzucone przesłanki
-// nie liczą się do „wyniku po weryfikacji” ani do podsumowania; decyzje są trwałe między ponownymi
-// analizami (klucz: materiał + reguła). Wynik klasyfikatora pozostaje niezmieniony w historii analiz.
+// Weryfikacja analityka: odrzucenie wybranych punktów podsumowania (przesłanek) albo pojedynczych elementów
+// punktu (źle rozpoznany sygnał/fragment, np. z transkrypcji). Odrzucone nie liczą się do „wyniku po
+// weryfikacji” ani do podsumowania; decyzje są trwałe między ponownymi analizami (klucz: materiał + reguła
+// lub materiał + „reguła:element”). Wynik klasyfikatora pozostaje niezmieniony w historii analiz.
+//
+// Klucze: „M1.10” – cała przesłanka; „M1.10:gwarancja” – sygnał (dowód z polem `signal`);
+// „M2.3:1” – fragment nr 1 (dowody bez sygnału). Odrzucenie wszystkich fragmentów = odrzucenie przesłanki.
 
 // ten sam wzór co analyzer/app/scoring.py: noisy-OR wag (fail = waga, warn = połowa), wynik = maks. z modułów
 export function scoreOf(findings) {
@@ -13,20 +17,99 @@ export function scoreOf(findings) {
   return { score: Math.max(0, ...Object.values(modules)), module_scores: modules };
 }
 
-/** Wynik analizy bez odrzuconych przesłanek (do podsumowania i wyniku po weryfikacji). */
-export function withoutRejected(result, rejected) {
-  const set = new Set(rejected);
-  const findings = result.findings.filter((f) => !set.has(f.rule_id));
-  const s = scoreOf(findings);
-  return { ...result, findings, score: s.score, module_scores: { ...result.module_scores, ...s.module_scores },
-    modules: Object.entries(s.module_scores).filter(([, v]) => v >= 20).map(([m]) => m) };
+export const elementKey = (e, i) => String(e?.signal ?? i);
+export const KEY_RX = /^[\w.]{1,12}(?::[\w-]{1,30})?$/;
+
+/** Rozbija listę kluczy na odrzucone całe przesłanki i odrzucone elementy (reguła → zbiór elementów). */
+export function splitRejected(rejected) {
+  const whole = new Set();
+  const parts = new Map();
+  for (const k of rejected ?? []) {
+    const i = k.indexOf(':');
+    if (i < 0) whole.add(k);
+    else {
+      const rule = k.slice(0, i);
+      if (!parts.has(rule)) parts.set(rule, new Set());
+      parts.get(rule).add(k.slice(i + 1));
+    }
+  }
+  return { whole, parts };
 }
 
-/** Punkty podsumowania = przesłanki „niespełnione” i „do weryfikacji”, od najpoważniejszych. */
+/** Czy klucz odnosi się do istniejącej przesłanki / elementu w wyniku analizy. */
+export function isKnownKey(result, key) {
+  const [rule, el] = key.split(':');
+  const f = result.findings.find((x) => x.rule_id === rule);
+  if (!f) return false;
+  return el == null || (f.evidence ?? []).some((e, i) => elementKey(e, i) === el);
+}
+
+const noisyOr = (weights) => Math.round(100 * (1 - weights.reduce((k, w) => k * (1 - w / 100), 1)));
+
+// profil po weryfikacji – te same progi co analyzer/app/profile.py
+function reviewProfile(profile, signals) {
+  if (!profile) return profile;
+  const scam = noisyOr(signals.map((s) => s.weight));
+  let primary = profile.primary;
+  const isScam = scam >= 55 || (signals.length >= 3 && scam >= 45);
+  if (primary === 'podejrzenie_oszustwa' && !isScam) {
+    primary = profile.advisor ? 'doradca_finansowy' : profile.self_ad ? 'autoreklama' : (profile.paid || profile.affiliate) ? 'płatna_promocja'
+      : profile.edu ? 'edukacja' : 'informacja';
+  }
+  return { ...profile, primary, scam_score: scam, signals, reviewed: true };
+}
+
+/** Wynik analizy bez odrzuconych przesłanek/elementów (do podsumowania i wyniku po weryfikacji). */
+export function withoutRejected(result, rejected) {
+  const { whole, parts } = splitRejected(rejected);
+  // sygnały oszustwa: odrzucony sygnał (lub cała obietnica zysku M1.9) obniża wynik sygnałów i M1.10
+  const dropSignals = new Set(parts.get('M1.10') ?? []);
+  if (whole.has('M1.9')) dropSignals.add('nierealne_zyski');
+  const allSignals = result.profile?.signals ?? [];
+  const signals = whole.has('M1.10') ? allSignals.filter((s) => s.key === 'nierealne_zyski' && !dropSignals.has(s.key))
+    : allSignals.filter((s) => !dropSignals.has(s.key));
+
+  const findings = [];
+  for (const f of result.findings) {
+    if (whole.has(f.rule_id)) continue;
+    const drop = parts.get(f.rule_id);
+    const ev = f.evidence ?? [];
+    if (f.rule_id === 'M1.10' && ev.some((e) => e.signal)) {
+      if (!drop && !dropSignals.size) { findings.push(f); continue; }
+      const score = noisyOr(signals.map((s) => s.weight));
+      const strong = signals.filter((s) => s.key !== 'nierealne_zyski');
+      if (!strong.length || !(score >= 45 || strong.length >= 2)) continue;   // jak w analizatorze: za słabe sygnały = brak przesłanki
+      findings.push({ ...f, status: score >= 55 ? 'fail' : 'warn', severity: Math.min(85, score),
+        evidence: ev.filter((e, i) => !dropSignals.has(elementKey(e, i))),
+        explanation: `Wzorce typowe dla oszustw inwestycyjnych: ${strong.map((s) => s.label.toLowerCase()).join(', ')}. `
+          + `Wynik sygnałów po weryfikacji analityka ${score}/100 – do weryfikacji.` });
+      continue;
+    }
+    if (!drop) { findings.push(f); continue; }
+    const kept = ev.filter((e, i) => !drop.has(elementKey(e, i)));
+    if (ev.length && !kept.length) continue;   // wszystkie fragmenty źle rozpoznane = przesłanka odpada
+    findings.push({ ...f, evidence: kept });
+  }
+  const s = scoreOf(findings);
+  return { ...result, findings, score: s.score, module_scores: { ...result.module_scores, ...s.module_scores },
+    modules: Object.entries(s.module_scores).filter(([, v]) => v >= 20).map(([m]) => m),
+    profile: result.profile ? reviewProfile(result.profile, signals) : result.profile };
+}
+
+/** Punkty podsumowania = przesłanki „niespełnione” i „do weryfikacji”, od najpoważniejszych, z elementami. */
 export function summaryPoints(result, rejected) {
-  const set = new Set(rejected);
+  const { whole, parts } = splitRejected(rejected);
   return result.findings.filter((f) => f.status === 'fail' || f.status === 'warn')
     .sort((a, b) => (a.status !== 'fail') - (b.status !== 'fail') || b.severity - a.severity)
-    .map((f) => ({ rule_id: f.rule_id, module: f.module, title: f.title, status: f.status, severity: f.severity,
-      explanation: f.explanation, rejected: set.has(f.rule_id) }));
+    .map((f) => {
+      const ev = f.evidence ?? [];
+      const drop = parts.get(f.rule_id) ?? new Set();
+      // elementy do odrzucania pokazujemy, gdy jest ich kilka albo są to sygnały z wagą
+      const elements = ev.length > 1 || ev.some((e) => e.signal)
+        ? ev.map((e, i) => ({ key: `${f.rule_id}:${elementKey(e, i)}`, text: e.text, where: e.where, weight: e.weight ?? null,
+          rejected: drop.has(elementKey(e, i)) }))
+        : [];
+      return { rule_id: f.rule_id, module: f.module, title: f.title, status: f.status, severity: f.severity,
+        explanation: f.explanation, rejected: whole.has(f.rule_id), elements };
+    });
 }

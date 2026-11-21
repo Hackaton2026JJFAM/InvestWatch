@@ -68,6 +68,22 @@ def test_official_broker_site_is_not_third_party():
     assert r["m1"]["publisher"]["type"] == "firma"
     assert r["by_rule"]["M1.1"]["status"] == "pass"
     assert "M1.3" not in r["by_rule"] and "M1.2" not in r["by_rule"]
+    assert r["profile"]["primary"] == "autoreklama"
+
+
+def test_own_services_page_is_self_promotion():
+    r = run("Nazywam się Jan Kowalski. Oferuję moje szkolenia z budżetu domowego. Zapraszam na kurs online – moje kursy prowadzę od 5 lat.",
+            url="https://jankowalski.pl/kurs")
+    assert r["m1"]["publisher"]["type"] == "własne_usługi"
+    assert r["profile"]["self_ad"] is True
+    assert r["profile"]["primary"] in ("autoreklama", "doradca_finansowy")
+
+
+def test_scam_signals_carry_keys_for_review():
+    r = run("Nasz bot AI zarabia za ciebie 5% dziennie. Zacznij od 250 zł, napisz do mnie na WhatsApp. Zostało tylko 10 miejsc!",
+            platform="tiktok", author="@zarabiaj_teraz")
+    ev = r["by_rule"]["M1.10"]["evidence"]
+    assert all(e.get("signal") and e.get("weight") for e in ev)
 
 
 def test_lookalike_domain_is_not_official():

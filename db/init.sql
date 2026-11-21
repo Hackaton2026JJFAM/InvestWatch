@@ -46,7 +46,7 @@ CREATE TABLE materials (
   content_text  TEXT NOT NULL,
   content_hash  TEXT NOT NULL,
   raw           JSONB,                                -- pełny wynik scrapera (bloki, layout, metadane)
-  status        TEXT NOT NULL DEFAULT 'NEW',          -- NEW | REVIEWED | DISMISSED | ESCALATED
+  status        TEXT NOT NULL DEFAULT 'NEW',          -- NEW | IN_REVIEW | REVIEWED | DISMISSED | ESCALATED
   ground_truth  BOOLEAN,                              -- etykieta testowa do kalibracji (TRUE = ryzykowny)
   simhash       TEXT,                                 -- odcisk treści do wykrywania prawie-duplikatów
   near_duplicate_of INT REFERENCES materials(id) ON DELETE SET NULL,

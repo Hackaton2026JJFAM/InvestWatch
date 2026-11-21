@@ -132,7 +132,7 @@ ADVISOR = T.rx(r"\bsygnal\w* (?:transakcyjn|kupna|sprzedazy|tradingow)\w*", r"\b
                r"\bkanal\w* (?:premium|vip)\b", r"\bmentoring\w*", r"\bkonsultacj\w*", r"\bdoradz\w*", r"\bportfel\w* (?:modelow|dla ciebie)\w*")
 
 
-def run(doc: Doc, m3_classification: str, watch_hits: list[dict]) -> dict:
+def run(doc: Doc, m3_classification: str, watch_hits: list[dict], publisher_type: str | None = None, advertised: bool = False) -> dict:
     from .rules_m2 import promises
     s = doc.sentences
     claims = return_claims(s)
@@ -162,11 +162,15 @@ def run(doc: Doc, m3_classification: str, watch_hits: list[dict]) -> dict:
     affiliate = [x for x in s if T.has(AFFILIATE, x.text)]
     advisor = m3_classification in ("indywidualne_doradztwo", "usługa_doradcza_ogólna") or any(T.has(ADVISOR, x.text) for x in s)
 
+    # autoreklama: firma reklamuje samą siebie (własna strona / własny profil) albo usługodawca – własne usługi
+    self_ad = publisher_type == "własne_usługi" or (publisher_type == "firma" and advertised)
     tags = []
     if scam_score >= 55 or (len(signals) >= 3 and scam_score >= 45):
         primary = "podejrzenie_oszustwa"
     elif advisor:
         primary = "doradca_finansowy"
+    elif self_ad:
+        primary = "autoreklama"
     elif paid or affiliate:
         primary = "płatna_promocja"
     elif m3_classification == "edukacja":
@@ -179,6 +183,8 @@ def run(doc: Doc, m3_classification: str, watch_hits: list[dict]) -> dict:
         tags.append("afiliacja bez oznaczenia")
     if advisor and primary != "doradca_finansowy":
         tags.append("oferta doradcza")
+    if self_ad and primary != "autoreklama":
+        tags.append("autoreklama")
     if unrealistic:
         tags.append("nierealistyczne obietnice")
     elif high:
@@ -205,7 +211,8 @@ def run(doc: Doc, m3_classification: str, watch_hits: list[dict]) -> dict:
         findings.append(Finding(
             "m1", "M1.10", "Sygnały oszustwa inwestycyjnego", FAIL if scam_score >= 55 else WARN, min(85, scam_score), "art. 286 k.k. (sygnał, nie dowód)",
             f"Wzorce typowe dla oszustw inwestycyjnych: {', '.join(x['label'].lower() for x in strong)}. Wynik sygnałów {scam_score}/100 – do weryfikacji.",
-            [ev(e, x["label"]) for x in strong[:4] for e in x["evidence"][:1]]))
+            # każdy sygnał osobno (klucz + waga) – analityk może odrzucić pojedynczy, źle rozpoznany sygnał
+            [ev(e, x["label"], signal=x["key"], weight=x["weight"]) for x in strong[:6] for e in x["evidence"][:1]]))
     if advisor and unrealistic:
         findings.append(Finding(
             "m3", "M3.5", "Doradca z nierealistycznymi obietnicami", FAIL, 50, "art. 76 u.o.i.f.; art. 5 u.p.n.p.r.",
@@ -213,5 +220,6 @@ def run(doc: Doc, m3_classification: str, watch_hits: list[dict]) -> dict:
     return {
         "findings": findings,
         "profile": {"primary": primary, "tags": tags, "scam_score": scam_score, "signals": signals,
-                    "returns": claims[:10], "paid": bool(paid), "affiliate": bool(affiliate), "advisor": advisor},
+                    "returns": claims[:10], "paid": bool(paid), "affiliate": bool(affiliate), "advisor": advisor,
+                    "self_ad": self_ad, "edu": m3_classification == "edukacja"},
     }
