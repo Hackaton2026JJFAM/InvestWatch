@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="12" skipped="0" tests="57" time="19.800" timestamp="2026-11-21T14:20:01.320682+01:00" hostname="MSI-Cyborg-15"><testcase classname="audit_tests.test_http" name="test_health[http://127.0.0.1:8001]" time="0.073" /><testcase classname="audit_tests.test_http" name="test_health[http://127.0.0.1:8002]" time="0.100" /><testcase classname="audit_tests.test_http" name="test_scraper_validation[/scrape-payload0]" time="0.011" /><testcase classname="audit_tests.test_http" name="test_scraper_validation[/scrape/text-payload1]" time="0.013" /><testcase classname="audit_tests.test_http" name="test_scraper_validation[/scrape/html-payload2]" time="0.034" /><testcase classname="audit_tests.test_http" name="test_scraper_validation[/discover-payload3]" time="0.011" /><testcase classname="audit_tests.test_http" name="test_ssrf_is_blocked[http://127.0.0.1/]" time="0.015" /><testcase classname="audit_tests.test_http" name="test_ssrf_is_blocked[http://localhost/]" time="0.018" /><testcase classname="audit_tests.test_http" name="test_ssrf_is_blocked[http://[::1]/]" time="0.011" /><testcase classname="audit_tests.test_http" name="test_ssrf_is_blocked[http://169.254.169.254/latest/meta-data/]" time="0.012" /><testcase classname="audit_tests.test_http" name="test_ssrf_is_blocked[http://10.0.0.1/]" time="0.024" /><testcase classname="audit_tests.test_http" name="test_ssrf_is_blocked[http://user:password@example.com/]" time="0.013" /><testcase classname="audit_tests.test_http" name="test_text_extraction_normalization_and_hash" time="0.031" /><testcase classname="audit_tests.test_http" name="test_html_metadata_noise_and_duplicates" time="0.014" /><testcase classname="audit_tests.test_http" name="test_social_metadata[https://www.facebook.com/audit_synthetic/posts/1-facebook]" time="0.032" /><testcase classname="audit_tests.test_http" name="test_social_metadata[https://www.instagram.com/p/SYNTHETIC-instagram]" time="0.012" /><testcase classname="audit_tests.test_http" name="test_social_metadata[https://www.tiktok.com/@audit_synthetic/video/1-tiktok]" time="0.034" /><testcase classname="audit_tests.test_http" name="test_analyzer_required_fields[payload0]" time="0.011" /><testcase classname="audit_tests.test_http" name="test_analyzer_required_fields[payload1]" time="0.015" /><testcase classname="audit_tests.test_http" name="test_analyzer_required_fields[payload2]" time="0.011" /><testcase classname="audit_tests.test_http" name="test_analyzer_rejects_empty_text" time="0.020"><failure message="AssertionError: assert 200 == 422&#10; +  where 200 = &lt;Response [200 OK]&gt;.status_code&#10; +    where &lt;Response [200 OK]&gt; = post('http://127.0.0.1:8002', '/analyze', {'url': 'x', 'content_text': ''})">def test_analyzer_rejects_empty_text():
+        # Wymagany błąd 4xx zamiast pozornej analizy pustego dokumentu.
+&gt;       assert post(ANA, "/analyze", {"url": "x", "content_text": ""}).status_code == 422
+E       AssertionError: assert 200 == 422
+E        +  where 200 = &lt;Response [200 OK]&gt;.status_code
+E        +    where &lt;Response [200 OK]&gt; = post('http://127.0.0.1:8002', '/analyze', {'url': 'x', 'content_text': ''})
+
+audit_tests\test_http.py:112: AssertionError</failure></testcase><testcase classname="audit_tests.test_http" name="test_nested_invalid_payload_is_4xx[extra0]" time="0.013" /><testcase classname="audit_tests.test_http" name="test_nested_invalid_payload_is_4xx[extra1]" time="0.041"><failure message="AssertionError: Internal Server Error&#10;assert 500 &lt; 500&#10; +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code">extra = {'layout': {'engine': 'playwright', 'viewports': {'desktop': 'bad'}}}
+
+    @pytest.mark.parametrize("extra", [
+        {"links": [None]}, {"layout": {"engine": "playwright", "viewports": {"desktop": "bad"}}},
+    ])
+    def test_nested_invalid_payload_is_4xx(extra):
+        response = post(ANA, "/analyze", {
+            "url": "https://audit.example", "content_text": "Reklama akcji. Zarabiaj 10% rocznie.",
+            **extra,
+        })
+&gt;       assert 400 &lt;= response.status_code &lt; 500, response.text
+E       AssertionError: Internal Server Error
+E       assert 500 &lt; 500
+E        +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code
+
+audit_tests\test_http.py:123: AssertionError</failure></testcase><testcase classname="audit_tests.test_http" name="test_summary_rejects_invalid_result" time="0.021"><failure message="AssertionError: Internal Server Error&#10;assert 500 &lt; 500&#10; +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code">def test_summary_rejects_invalid_result():
+        response = post(ANA, "/summary", {"result": {}})
+&gt;       assert 400 &lt;= response.status_code &lt; 500, response.text
+E       AssertionError: Internal Server Error
+E       assert 500 &lt; 500
+E        +  where 500 = &lt;Response [500 Internal Server Error]&gt;.status_code
+
+audit_tests\test_http.py:128: AssertionError</failure></testcase><testcase classname="audit_tests.test_http" name="test_summary_template" time="0.048" /><testcase classname="audit_tests.test_http" name="test_registry_demo_is_not_official_registration" time="0.033"><failure message="AssertionError: {'name': 'Dom Maklerski Vistula Capital S.A.', 'status': 'registered', 'match': {'name': 'Dom Maklerski Vistula Capital S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}, 'note': None, ...}&#10;assert 'registered' != 'registered'">def test_registry_demo_is_not_official_registration():
+        response = httpx.get(ANA + "/registry/check", params={
+            "name": "Dom Maklerski Vistula Capital S.A."})
+        assert response.status_code == 200
+        data = response.json()
+&gt;       assert data["status"] != "registered", data
+E       AssertionError: {'name': 'Dom Maklerski Vistula Capital S.A.', 'status': 'registered', 'match': {'name': 'Dom Maklerski Vistula Capital S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}, 'note': None, ...}
+E       assert 'registered' != 'registered'
+
+audit_tests\test_http.py:144: AssertionError</failure></testcase><testcase classname="audit_tests.test_http" name="test_m1_identifies_third_party" time="0.044" /><testcase classname="audit_tests.test_http" name="test_m1_domain_suffix_does_not_impersonate_firm" time="0.020"><failure message="AssertionError: {'firms': [{'name': 'DOM MAKLERSKI INC S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}, {'name': 'Dom Maklerski Vistula Capital S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}], 'instruments': ['Akcje', 'ETF'], 'publisher': {'type': 'firma', 'name': 'Dom Maklerski Vistula Capital S.A.', 'platform': 'web'}}&#10;assert 'firma' != 'firma'">def test_m1_domain_suffix_does_not_impersonate_firm():
+        result = analyze(
+            "Dom Maklerski Vistula Capital S.A. Polecam akcje i ETF. Z moim kodem polecającym bonus.",
+            url="https://evilvistula-capital.example/post", author="@audit_synthetic")
+&gt;       assert result["m1"]["publisher"]["type"] != "firma", result["m1"]
+E       AssertionError: {'firms': [{'name': 'DOM MAKLERSKI INC S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}, {'name': 'Dom Maklerski Vistula Capital S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}], 'instruments': ['Akcje', 'ETF'], 'publisher': {'type': 'firma', 'name': 'Dom Maklerski Vistula Capital S.A.', 'platform': 'web'}}
+E       assert 'firma' != 'firma'
+
+audit_tests\test_http.py:160: AssertionError</failure></testcase><testcase classname="audit_tests.test_http" name="test_m2_guarantee" time="0.033" /><testcase classname="audit_tests.test_http" name="test_m2_negated_guarantee_is_not_a_promise" time="0.036"><failure message="AssertionError: {'module': 'm2', 'rule_id': 'G1', 'title': 'Obietnice zysku bez ryzyka', 'status': 'fail', ...}&#10;assert 'fail' != 'fail'">def test_m2_negated_guarantee_is_not_a_promise():
+        result = analyze(
+            "Materiał edukacyjny. Nie obiecujemy gwarantowanego zysku. "
+            "Nie istnieje zysk bez ryzyka. Możesz stracić cały kapitał.")
+&gt;       assert rule(result, "G1")["status"] != "fail", rule(result, "G1")
+E       AssertionError: {'module': 'm2', 'rule_id': 'G1', 'title': 'Obietnice zysku bez ryzyka', 'status': 'fail', ...}
+E       assert 'fail' != 'fail'
+
+audit_tests\test_http.py:173: AssertionError</failure></testcase><testcase classname="audit_tests.test_http" name="test_m2_negative_ad_label_is_not_disclosure" time="0.036"><failure message="AssertionError: {'module': 'm2', 'rule_id': '2', 'title': 'Oznaczenie reklamy', 'status': 'pass', ...}&#10;assert 'pass' != 'pass'">def test_m2_negative_ad_label_is_not_disclosure():
+        result = analyze("To nie jest reklama. Zarabiaj 15% rocznie. Otwórz konto.")
+&gt;       assert rule(result, "2")["status"] != "pass", rule(result, "2")
+E       AssertionError: {'module': 'm2', 'rule_id': '2', 'title': 'Oznaczenie reklamy', 'status': 'pass', ...}
+E       assert 'pass' != 'pass'
+
+audit_tests\test_http.py:178: AssertionError</failure></testcase><testcase classname="audit_tests.test_http" name="test_m2_positive_and_ambiguous_risk" time="0.058"><failure message="AssertionError: {'module': 'm2', 'rule_id': '3', 'title': 'Informacja o ryzyku przy zyskach', 'status': 'pass', ...}&#10;assert 'pass' != 'pass'">def test_m2_positive_and_ambiguous_risk():
+        good = analyze(
+            "Materiał marketingowy. Akcje mogą przynieść zysk. "
+            "Inwestowanie wiąże się z ryzykiem utraty kapitału.")
+        assert rule(good, "3")["status"] == "pass"
+        ambiguous = analyze("Reklama. Zysk 12% rocznie. Nasz zespół lubi ryzykować.")
+&gt;       assert rule(ambiguous, "3")["status"] != "pass", rule(ambiguous, "3")
+E       AssertionError: {'module': 'm2', 'rule_id': '3', 'title': 'Informacja o ryzyku przy zyskach', 'status': 'pass', ...}
+E       assert 'pass' != 'pass'
+
+audit_tests\test_http.py:187: AssertionError</failure></testcase><testcase classname="audit_tests.test_http" name="test_m3_unregistered_advisory" time="0.036" /><testcase classname="audit_tests.test_http" name="test_m3_mentioning_broker_does_not_authorize_advisor" time="0.021"><failure message="AssertionError: {'module': 'm3', 'rule_id': 'M3.1', 'title': 'Doradztwo świadczone przez podmiot z rejestru', 'status': 'warn', ...}&#10;assert 'warn' == 'fail'&#10;  &#10;  - fail&#10;  + warn">def test_m3_mentioning_broker_does_not_authorize_advisor():
+        result = analyze(
+            "Syntetyczna Aurum Advisory Sp. z o.o. Wealth management. "
+            "Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji. "
+            "Pakiet 990 zł/mies. Transakcje wykonasz przez Dom Maklerski Vistula Capital S.A.")
+&gt;       assert rule(result, "M3.1")["status"] == "fail", rule(result, "M3.1")
+E       AssertionError: {'module': 'm3', 'rule_id': 'M3.1', 'title': 'Doradztwo świadczone przez podmiot z rejestru', 'status': 'warn', ...}
+E       assert 'warn' == 'fail'
+E         
+E         - fail
+E         + warn
+
+audit_tests\test_http.py:204: AssertionError</failure></testcase><testcase classname="audit_tests.test_http" name="test_m3_education" time="0.014" /><testcase classname="audit_tests.test_http" name="test_m2_text_rules_explicit_cases[Reklama. Zarabiaj 12% rocznie.-3-fail]" time="0.032" /><testcase classname="audit_tests.test_http" name="test_m2_text_rules_explicit_cases[Reklama. Zarabiaj na akcjach. Your capital is at risk.-10-fail]" time="0.018" /><testcase classname="audit_tests.test_http" name="test_m2_text_rules_explicit_cases[Reklama. Nasze konto maklerskie jest lepsze ni\u017c lokata. Zarabiaj.-11-fail]" time="0.032" /><testcase classname="audit_tests.test_http" name="test_m2_text_rules_explicit_cases[Reklama. Fundusz zarobi\u0142 30% w 2025 r. Inwestowanie wi\u0105\u017ce si\u0119 z ryzykiem.-14-fail]" time="0.027" /><testcase classname="audit_tests.test_http" name="test_m2_text_rules_explicit_cases[Reklama. Prognozujemy wzrost o 20% w przysz\u0142ym roku.-15-fail]" time="0.032" /><testcase classname="audit_tests.test_http" name="test_m2_text_rules_explicit_cases[Reklama. Otw\xf3rz IKE i nie p\u0142a\u0107 podatku Belki.-16-fail]" time="0.046" /><testcase classname="audit_tests.test_http" name="test_m2_text_rules_explicit_cases[Reklama. Produkt zatwierdzony przez KNF. Zarabiaj.-17-fail]" time="0.021" /><testcase classname="audit_tests.test_http" name="test_m2_text_rules_explicit_cases[Reklama. Inwestycja w pe\u0142ni bezpieczna, bo spe\u0142niamy wymogi KNF.-18-fail]" time="0.038" /><testcase classname="audit_tests.test_http" name="test_m2_text_rules_explicit_cases[text8-17-pass]" time="0.033" /><testcase classname="audit_tests.test_http" name="test_advisory_disclaimer_does_not_override_personal_offer" time="0.039" /><testcase classname="audit_tests.test_http" name="test_scoring_is_deterministic_and_bounded" time="0.066" /><testcase classname="audit_tests.test_http" name="test_samples_real_render_and_scoring" time="11.345" /><testcase classname="audit_tests.test_visual" name="test_three_viewports_and_screenshot" time="0.662" /><testcase classname="audit_tests.test_visual" name="test_visual_violation[markup0-4]" time="0.627" /><testcase classname="audit_tests.test_visual" name="test_visual_violation[markup1-5]" time="0.643" /><testcase classname="audit_tests.test_visual" name="test_visual_violation[markup2-6]" time="0.678" /><testcase classname="audit_tests.test_visual" name="test_visual_violation[markup3-7]" time="0.680" /><testcase classname="audit_tests.test_visual" name="test_visual_violation[markup4-8]" time="0.670" /><testcase classname="audit_tests.test_visual" name="test_risk_absent_from_content_text_still_in_full_text" time="0.656" /><testcase classname="audit_tests.test_visual" name="test_mobile_vertical_clipping_is_detected" time="0.670"><failure message="AssertionError: {'module': 'm2', 'rule_id': '8', 'title': 'Responsywność', 'status': 'pass', ...}&#10;assert 'pass' == 'fail'&#10;  &#10;  - fail&#10;  + pass">def test_mobile_vertical_clipping_is_detected():
+        _, result = render_and_analyze(html(style="""
+            @media(max-width:500px){.risk{max-height:1px;overflow:hidden;width:300px}}
+        """))
+&gt;       assert rule(result, "8")["status"] == "fail", rule(result, "8")
+E       AssertionError: {'module': 'm2', 'rule_id': '8', 'title': 'Responsywność', 'status': 'pass', ...}
+E       assert 'pass' == 'fail'
+E         
+E         - fail
+E         + pass
+
+audit_tests\test_visual.py:59: AssertionError</failure></testcase><testcase classname="audit_tests.test_visual" name="test_delayed_javascript_risk_is_extracted" time="0.660"><failure message="AssertionError: assert 'Syntetyczna treść dynamiczna' in 'Materiał marketingowy. Dom Maklerski Vistula Capital S.A.\nAkcje mogą przynieść zysk. Inwestuj.\nInwestowanie wiąże się z ryzykiem utraty całego kapitału.'">def test_delayed_javascript_risk_is_extracted():
+        material, _ = render_and_analyze(html(
+            extra="""&lt;script&gt;document.addEventListener('DOMContentLoaded',()=&gt;{
+            let el=document.createElement('p');el.textContent='Syntetyczna treść dynamiczna';
+            document.querySelector('main').appendChild(el);});&lt;/script&gt;"""))
+&gt;       assert "Syntetyczna treść dynamiczna" in material["content_text"]
+E       AssertionError: assert 'Syntetyczna treść dynamiczna' in 'Materiał marketingowy. Dom Maklerski Vistula Capital S.A.\nAkcje mogą przynieść zysk. Inwestuj.\nInwestowanie wiąże się z ryzykiem utraty całego kapitału.'
+
+audit_tests\test_visual.py:67: AssertionError</failure></testcase><testcase classname="audit_tests.test_visual" name="test_block_positions_match_document" time="0.686"><failure message="AssertionError: [2060, 1402]&#10;assert 1402 &gt; (2060 + 900)">def test_block_positions_match_document():
+        material, _ = render_and_analyze(html(extra=
+            '&lt;p style="margin-top:2000px"&gt;Blok kontrolny po przewinięciu.&lt;/p&gt;'
+            '&lt;p style="margin-top:1000px"&gt;Kolejny blok kontrolny.&lt;/p&gt;'))
+        blocks = material["layout"]["viewports"]["desktop"]["blocks"]
+        positions = [b["y"] for b in blocks if "blok kontrolny" in b["text"].lower()]
+        assert len(positions) == 2
+&gt;       assert positions[1] &gt; positions[0] + 900, positions
+E       AssertionError: [2060, 1402]
+E       assert 1402 &gt; (2060 + 900)
+
+audit_tests\test_visual.py:77: AssertionError</failure></testcase></testsuite></testsuites>

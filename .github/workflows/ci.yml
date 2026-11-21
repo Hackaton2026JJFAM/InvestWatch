@@ -10,12 +10,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
-      - run: pip install -r services/analyzer/requirements-dev.txt
+      - run: python -m pip install -r services/analyzer/requirements-dev.txt pip-audit==2.10.1
       - name: Testy reguł
         working-directory: services/analyzer
         run: python -m pytest -q
       - name: pip-audit
-        run: pip-audit -r services/analyzer/requirements.txt -r services/scraper/requirements.txt
+        run: python -m pip_audit -r services/analyzer/requirements.txt -r services/scraper/requirements.txt
 
   node:
     runs-on: ubuntu-latest

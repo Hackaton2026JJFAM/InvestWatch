@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="5" time="3.655" timestamp="2026-11-21T14:23:41.412798+01:00" hostname="MSI-Cyborg-15"><testcase classname="audit_tests.test_public_scrape" name="test_public_example_com[False]" time="0.191" /><testcase classname="audit_tests.test_public_scrape" name="test_public_example_com[True]" time="1.279" /><testcase classname="audit_tests.test_public_scrape" name="test_source_404_is_not_a_successful_material[False]" time="0.226" /><testcase classname="audit_tests.test_public_scrape" name="test_source_404_is_not_a_successful_material[True]" time="1.520"><failure message="AssertionError: {&quot;title&quot;:&quot;Example Domain&quot;,&quot;author&quot;:null,&quot;publisher&quot;:null,&quot;published_at&quot;:null,&quot;lang&quot;:&quot;en&quot;,&quot;description&quot;:null,&quot;platform&quot;:&quot;web&quot;,&quot;social_handle&quot;:null,&quot;content_text&quot;:&quot;This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.\nهذا النطاق مُخصص للاستخدام في أمثلة التوثيق دون الحاجة إلى إذن. هذه ليست خدمة، يُرجى تجنب الاعتماد عليها لأغراض الاختبار والمراقبة.\n该域名仅用于文档示例,无需获得许可。这并非一项服务,请勿将其用...&#10;[+2 more lines; full report in element text]">render = True
+
+    @pytest.mark.parametrize("render", [False, True])
+    def test_source_404_is_not_a_successful_material(render):
+        response = httpx.post(BASE + "/scrape", json={
+            "url": "https://example.com/investwatch-audit-404", "render": render,
+        }, timeout=90)
+&gt;       assert response.status_code == 502, response.text[:500]
+E       AssertionError: {"title":"Example Domain","author":null,"publisher":null,"published_at":null,"lang":"en","description":null,"platform":"web","social_handle":null,"content_text":"This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.\nهذا النطاق مُخصص للاستخدام في أمثلة التوثيق دون الحاجة إلى إذن. هذه ليست خدمة، يُرجى تجنب الاعتماد عليها لأغراض الاختبار والمراقبة.\n该域名仅用于文档示例,无需获得许可。这并非一项服务,请勿将其用于测试和监控目的。\nL’usa
+E       assert 200 == 502
+E        +  where 200 = &lt;Response [200 OK]&gt;.status_code
+
+audit_tests\test_public_scrape.py:23: AssertionError</failure></testcase><testcase classname="audit_tests.test_public_scrape" name="test_discover_does_not_hide_source_404" time="0.196"><failure message="AssertionError: {&quot;url&quot;:&quot;https://example.com/investwatch-audit-404&quot;,&quot;candidates&quot;:[]}&#10;assert 200 == 502&#10; +  where 200 = &lt;Response [200 OK]&gt;.status_code">def test_discover_does_not_hide_source_404():
+        response = httpx.post(BASE + "/discover", json={
+            "url": "https://example.com/investwatch-audit-404", "limit": 5,
+        }, timeout=90)
+&gt;       assert response.status_code == 502, response.text
+E       AssertionError: {"url":"https://example.com/investwatch-audit-404","candidates":[]}
+E       assert 200 == 502
+E        +  where 200 = &lt;Response [200 OK]&gt;.status_code
+
+audit_tests\test_public_scrape.py:30: AssertionError</failure></testcase></testsuite></testsuites>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="8" time="4.031" timestamp="2026-11-21T14:26:04.748178+01:00" hostname="MSI-Cyborg-15"><testcase classname="audit_tests.test_controlled_scrape" name="test_success[False]" time="0.186" /><testcase classname="audit_tests.test_controlled_scrape" name="test_success[True]" time="1.144" /><testcase classname="audit_tests.test_controlled_scrape" name="test_redirect[False]" time="0.053" /><testcase classname="audit_tests.test_controlled_scrape" name="test_redirect[True]" time="1.116" /><testcase classname="audit_tests.test_controlled_scrape" name="test_real_source_404[False]" time="0.034" /><testcase classname="audit_tests.test_controlled_scrape" name="test_real_source_404[True]" time="1.132"><failure message="AssertionError: {&quot;title&quot;:&quot;Syntetyczny błąd 404&quot;,&quot;author&quot;:null,&quot;publisher&quot;:null,&quot;published_at&quot;:null,&quot;lang&quot;:null,&quot;description&quot;:null,&quot;platform&quot;:&quot;web&quot;,&quot;social_handle&quot;:null,&quot;content_text&quot;:&quot;Brak strony.&quot;,&quot;full_text&quot;:&quot;Syntetyczny błąd 404\nBrak strony.&quot;,&quot;content_hash&quot;:&quot;2ef4b5457da3bd8ce4695cc2698cb4be4141361405fe2c19d8c72&#10;assert 200 == 502&#10; +  where 200 = &lt;Response [200 OK]&gt;.status_code">render = True
+
+    @pytest.mark.parametrize("render", [False, True])
+    def test_real_source_404(render):
+        response = httpx.post(BASE + "/scrape", json={"url": SOURCE + "/404", "render": render}, timeout=30)
+&gt;       assert response.status_code == 502, response.text[:300]
+E       AssertionError: {"title":"Syntetyczny błąd 404","author":null,"publisher":null,"published_at":null,"lang":null,"description":null,"platform":"web","social_handle":null,"content_text":"Brak strony.","full_text":"Syntetyczny błąd 404\nBrak strony.","content_hash":"2ef4b5457da3bd8ce4695cc2698cb4be4141361405fe2c19d8c72
+E       assert 200 == 502
+E        +  where 200 = &lt;Response [200 OK]&gt;.status_code
+
+audit_tests\test_controlled_scrape.py:32: AssertionError</failure></testcase><testcase classname="audit_tests.test_controlled_scrape" name="test_discover_finds_relevant_same_domain_links" time="0.033" /><testcase classname="audit_tests.test_controlled_scrape" name="test_discover_real_source_404" time="0.046"><failure message="AssertionError: {&quot;url&quot;:&quot;http://127.0.0.1:18080/404&quot;,&quot;candidates&quot;:[]}&#10;assert 200 == 502&#10; +  where 200 = &lt;Response [200 OK]&gt;.status_code">def test_discover_real_source_404():
+        response = httpx.post(BASE + "/discover", json={"url": SOURCE + "/404", "limit": 10}, timeout=30)
+&gt;       assert response.status_code == 502, response.text
+E       AssertionError: {"url":"http://127.0.0.1:18080/404","candidates":[]}
+E       assert 200 == 502
+E        +  where 200 = &lt;Response [200 OK]&gt;.status_code
+
+audit_tests\test_controlled_scrape.py:43: AssertionError</failure></testcase></testsuite></testsuites>

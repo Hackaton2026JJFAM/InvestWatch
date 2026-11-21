@@ -1,0 +1,69 @@
+{
+  "elapsed_seconds": 15.17,
+  "states": [
+    {
+      "id": 28,
+      "url": "https://audit.example/outage/6197692ad9874a81a07695a59d581dfd",
+      "source_id": null,
+      "trigger": "upload",
+      "status": "queued",
+      "attempts": 1,
+      "error": "analyzer: serwis niedostępny",
+      "material_id": null,
+      "created_at": "2026-11-21T13:25:46.827Z",
+      "finished_at": null
+    },
+    {
+      "id": 28,
+      "url": "https://audit.example/outage/6197692ad9874a81a07695a59d581dfd",
+      "source_id": null,
+      "trigger": "upload",
+      "status": "queued",
+      "attempts": 2,
+      "error": "analyzer: serwis niedostępny",
+      "material_id": null,
+      "created_at": "2026-11-21T13:25:46.827Z",
+      "finished_at": null
+    },
+    {
+      "id": 28,
+      "url": "https://audit.example/outage/6197692ad9874a81a07695a59d581dfd",
+      "source_id": null,
+      "trigger": "upload",
+      "status": "failed",
+      "attempts": 3,
+      "error": "analyzer: serwis niedostępny",
+      "material_id": null,
+      "created_at": "2026-11-21T13:25:46.827Z",
+      "finished_at": "2026-11-21T13:26:01.905Z"
+    }
+  ],
+  "final": {
+    "id": 28,
+    "url": "https://audit.example/outage/6197692ad9874a81a07695a59d581dfd",
+    "source_id": null,
+    "trigger": "upload",
+    "status": "failed",
+    "attempts": 3,
+    "error": "analyzer: serwis niedostępny",
+    "material_id": null,
+    "created_at": "2026-11-21T13:25:46.827Z",
+    "finished_at": "2026-11-21T13:26:01.905Z"
+  },
+  "health": {
+    "ok": true,
+    "db": true,
+    "scraper": {
+      "ok": true,
+      "playwright": true,
+      "version": "0.1.0"
+    },
+    "analyzer": null,
+    "queue": {
+      "waiting": 0,
+      "active": 0,
+      "failed": 2,
+      "completed": 26
+    }
+  }
+}
