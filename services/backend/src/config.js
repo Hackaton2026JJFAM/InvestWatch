@@ -41,4 +41,6 @@ export const config = {
   adminPassword: env('ADMIN_PASSWORD', ''),
   // Ciasteczko sesji tylko przez HTTPS (ustaw true za reverse proxy z TLS)
   secureCookies: env('SECURE_COOKIES', 'false') === 'true',
+  // Automatyczne wzbogacanie nowych spółek (KRS/GLEIF/listy ostrzeżeń) – wymaga dostępu do internetu
+  enrichAuto: env('ENRICH_AUTO', 'true') === 'true',
 };

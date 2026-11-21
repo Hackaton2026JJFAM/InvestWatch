@@ -34,10 +34,13 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Przycisk „Usuń materiał” w UI (endpoint już jest)
 
 ## Should
-- [ ] Adapter KRS (API KRS – sprawdzić limity): zarząd, wspólnicy, kapitał → `persons`, `person_links`
-- [ ] Adapter GLEIF (LEI) dla podmiotów zagranicznych
-- [ ] Lista ostrzeżeń publicznych KNF jako osobny rejestr (sygnał dla M1/M3)
-- [ ] Rejestr ESMA (MiCA CASP) – licencje giełd krypto
+- [x] Adapter KRS (api-krs.ms.gov.pl, bez klucza; limitów nie publikuje – bufor 6 h, kolejka 1 podmiot/2 s): kapitał, adres, NIP/REGON, zarząd, prokurenci, wspólnicy → `persons`, `person_links`. **Dane osób zanonimizowane w publicznym API** – brak łączenia osób między spółkami
+- [x] Adapter GLEIF (LEI) – wyszukiwanie po nazwie lub LEI, oznaczenie dokładnego dopasowania
+- [x] Lista ostrzeżeń publicznych KNF (669 wpisów, domeny/KRS/NIP) – przesłanki M1.5 i M3.4
+- [x] Rejestr MiCA ESMA: 409 CASP + 217 podmiotów niezgodnych – przesłanki M1.6 (bez licencji) i M1.7 (licencja CASP / brak w rejestrze)
+- [ ] Ostrzeżenia zagranicznych organów nadzoru (strona KNF) i IOSCO I-SCAN jako kolejne listy
+- [ ] Harmonogram odświeżania snapshotów list (dziś: `python -m tools.watchlists_import`)
+- [ ] Graf powiązań osób – wymaga źródła z niezamaskowanymi danymi (np. dostęp instytucjonalny do KRS)
 - [ ] Rozszerzenie zbioru treningowego klasyfikatora (`app/data/sentences.tsv`) albo fine-tune HerBERT
 - [ ] Embeddingi (Ollama `nomic-embed-text`) do grupowania podobnych reklam
 

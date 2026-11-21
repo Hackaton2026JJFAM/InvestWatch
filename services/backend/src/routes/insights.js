@@ -5,6 +5,7 @@ import { getThreshold, one, q } from '../db.js';
 import { emit } from '../realtime.js';
 import { analyzer } from '../services.js';
 import { requireAdmin } from '../auth.js';
+import { enrichEntity, krsCandidates } from '../enrichment.js';
 import { parse, riskSql } from '../validate.js';
 
 const r = Router();
@@ -136,12 +137,27 @@ r.get('/entities/:id', async (req, res) => {
        FROM material_entities me JOIN materials m ON m.id = me.material_id ${LATEST}
       WHERE me.entity_id = $2 ORDER BY m.fetched_at DESC`, [t, id]);
   const persons = await q(
-    'SELECT p.id, p.full_name, pl.role, pl.source_url, pl.verification FROM person_links pl JOIN persons p ON p.id = pl.person_id WHERE pl.entity_id = $1', [id]);
+    'SELECT p.id, p.full_name, p.masked, p.source, pl.role, pl.source_url, pl.verification FROM person_links pl JOIN persons p ON p.id = pl.person_id WHERE pl.entity_id = $1 ORDER BY p.id', [id]);
   const timeline = await q(
     `SELECT to_char(date_trunc('month', m.fetched_at), 'YYYY-MM') AS month, count(*)::int AS n
        FROM material_entities me JOIN materials m ON m.id = me.material_id WHERE me.entity_id = $1 GROUP BY 1 ORDER BY 1`, [id]);
-  res.json({ entity: e, registry, materials, persons, timeline });
+  const krsCandidatesList = await krsCandidates(id);
+  res.json({ entity: e, registry, registries: Object.fromEntries(registry.map((x) => [x.registry, x])), materials, persons, timeline, krsCandidates: krsCandidatesList });
 });
+
+// Wzbogacenie podmiotu (KRS, GLEIF, listy ostrzeżeń KNF, rejestr MiCA). Odczyt danych publicznych – dostępne dla analityka.
+const lastEnrich = new Map();
+r.post('/entities/:id/enrich', async (req, res) => {
+  const { id } = parse(idParam, req.params);
+  const b = parse(z.object({ krs: z.string().regex(/^[0-9]{10}$/, 'KRS: 10 cyfr').optional(), lei: z.string().regex(/^[A-Z0-9]{18}[0-9]{2}$/, 'Niepoprawny LEI').optional() }), req.body);
+  if (!(await one('SELECT id FROM entities WHERE id = $1', [id]))) return res.status(404).json({ error: 'Nie znaleziono podmiotu' });
+  if (Date.now() - (lastEnrich.get(id) ?? 0) < 5000) return res.status(429).json({ error: 'Odczekaj chwilę przed ponownym wzbogaceniem' });
+  lastEnrich.set(id, Date.now());
+  const out = await enrichEntity(id, b);
+  res.json({ krs: out.krsUsed, candidates: out.candidates, errors: out.errors, found: { krs: Boolean(out.krs && !out.krs.notFound), gleif: out.gleif?.length ?? 0, watchlists: out.watchlists?.hits.length ?? 0 } });
+});
+
+r.get('/watchlists', async (_req, res) => res.json(await analyzer.watchMeta()));
 
 r.get('/entities/:id/crisis', async (req, res) => {
   const { id } = parse(idParam, req.params);

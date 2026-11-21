@@ -93,3 +93,37 @@ def test_score_is_independent_of_threshold():
     a = run("Gwarantowany zysk bez ryzyka.")
     b = run("Gwarantowany zysk bez ryzyka.")
     assert a["score"] == b["score"]
+
+
+# ---------------------------------------------------------------- listy referencyjne (KNF, ESMA MiCA)
+def test_knf_warning_by_domain():
+    r = run("Zarabiaj na forex z najlepszą platformą. Załóż konto już dziś.", url="https://www.quomarkets.com/pl/oferta")
+    assert r["by_rule"]["M1.5"]["status"] == "fail"
+    assert any(h["list"] == "knf_warnings" and h["matched_by"] == "domena" for h in r["watchlists"])
+
+
+def test_knf_warning_by_linked_domain():
+    r = analyze_material({"url": "https://blog.example/post", "content_text": "Polecam tę platformę, zarabiam codziennie na CFD.",
+                          "links": [{"text": "Załóż konto", "href": "https://quomarkets.com/register?ref=abc"}], "layout": {"engine": "none"}})
+    assert {f["rule_id"]: f["status"] for f in r["findings"]}["M1.5"] == "fail"
+
+
+def test_crypto_without_casp_licence_is_signal():
+    r = run("Kupuj bitcoin na naszej giełdzie kryptowalut ZetaCoinX. Zarabiaj 20% rocznie.")
+    assert r["by_rule"]["M1.7"]["status"] == "warn"
+
+
+def test_authorised_casp_is_recognised():
+    r = run("Kupuj bitcoin w Bitpanda. Inwestowanie wiąże się z ryzykiem utraty kapitału.")
+    assert r["by_rule"]["M1.7"]["status"] == "pass"
+
+
+def test_identifiers_are_extracted():
+    r = run("Aurum Advisory Sp. z o.o., KRS 0000123456, NIP 123-456-78-90. Wealth management.")
+    assert r["doc"]["identifiers"]["krs"] == ["0000123456"]
+    assert r["doc"]["identifiers"]["nip"] == ["1234567890"]
+
+
+def test_generic_text_has_no_watchlist_hits():
+    r = run("Dom maklerski oferuje akcje i obligacje. Inwestowanie wiąże się z ryzykiem.")
+    assert r["watchlists"] == []

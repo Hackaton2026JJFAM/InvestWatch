@@ -23,6 +23,10 @@ CREATE TABLE entities (
   domain        TEXT,
   registry_status TEXT NOT NULL DEFAULT 'unknown',    -- registered | not_found | unknown
   registry_ref  JSONB,
+  krs           TEXT,
+  nip           TEXT,
+  lei           TEXT,
+  enriched_at   TIMESTAMPTZ,                          -- ostatnie wzbogacenie (KRS/GLEIF/listy ostrzeżeń)
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   UNIQUE (name_norm, kind)
 );
@@ -133,6 +137,8 @@ CREATE TABLE registry_records (
   checked_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE INDEX registry_records_entity ON registry_records (entity_id, registry, checked_at DESC);
+
 CREATE TABLE registry_snapshots (
   id            SERIAL PRIMARY KEY,
   registry      TEXT NOT NULL,
@@ -143,8 +149,9 @@ CREATE TABLE registry_snapshots (
 
 CREATE TABLE persons (
   id            SERIAL PRIMARY KEY,
-  full_name     TEXT NOT NULL,
+  full_name     TEXT NOT NULL,                        -- z KRS: zanonimizowane w publicznym API
   source        TEXT,
+  masked        BOOLEAN NOT NULL DEFAULT FALSE,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

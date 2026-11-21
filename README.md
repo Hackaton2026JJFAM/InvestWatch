@@ -6,6 +6,8 @@ System monitorowania reklam i ofert inwestycyjnych dla UKNF (HackNation 2026). P
 - **M2 Zgodność i informacja o ryzyku**: 18 reguł z załącznika UKNF (art. 44 rozp. 2017/565), w tym reguły wizualne 4–8 mierzone w przeglądarce (czcionka, kontrast WCAG, przesłonięcie, ukrycie, desktop/tablet/telefon).
 - **M3 Shadow Advisory**: oferta indywidualnego doradztwa (art. 76 u.o.i.f.) vs materiał edukacyjny, weryfikacja podmiotu w rejestrze.
 
+Wzbogacanie danych podmiotów: **KRS** (kapitał, adres, NIP/REGON, zarząd, prokurenci, wspólnicy), **GLEIF** (kody LEI), **lista ostrzeżeń publicznych KNF** (669 wpisów) i **rejestr MiCA ESMA** (409 autoryzowanych CASP, 217 podmiotów bez licencji). Trafienia z list są przesłankami M1/M3 (dopasowanie po domenie, KRS, NIP lub nazwie).
+
 Każdy wynik ma przesłanki: `rule_id`, podstawę prawną, uzasadnienie i cytowany fragment. Wynik to sygnał do weryfikacji, nie stwierdzenie naruszenia.
 
 ## Quick Start
@@ -62,6 +64,7 @@ Bez Ollamy podsumowanie powstaje z szablonu na podstawie tych samych przesłanek
 | `SCRAPER_PROXIES` | – | Lista proxy rozdzielona przecinkami |
 | `SCRAPER_ALLOW_PRIVATE` | false | Zezwolenie na adresy prywatne (domyślnie blokada SSRF) |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | –, `gemma3:4b` | LLM do podsumowań |
+| `ENRICH_AUTO` | true | Automatyczne wzbogacanie nowych spółek (KRS, GLEIF, listy) – wymaga internetu z analizatora |
 | `SEED_DEMO` | true | Próbki przy pustej bazie i fikcyjne podmioty DEMO w rejestrze (oznaczone jako DEMO, nigdy jako wpis KNF) |
 
 ## Uruchomienie bez Dockera (dev)
@@ -91,6 +94,7 @@ cd services/backend && npm test                                          # integ
 AUDIT_ADMIN_PASSWORD=... python -m pytest audit_tests -q                 # testy audytowe, opis w audit_tests/README.md
 python -m tools.evaluate --samples ../../data/samples --threshold 45   # wymaga scrapera i analyzera
 python -m tools.knf_import --out app/data/knf_registry.json            # odświeżenie rejestru KNF
+python -m tools.watchlists_import                                      # odświeżenie listy ostrzeżeń KNF i rejestru MiCA ESMA
 ```
 
 Bezpieczeństwo łańcucha dostaw: wersje zależności są przypięte; CI (`.github/workflows/ci.yml`) uruchamia `pip-audit` i `npm audit`; obrazy Node przerywają build przy podatnościach wysokiego ryzyka (`npm audit --audit-level=high`). `GET /api/health` to gotowość całego stosu (503, gdy brakuje bazy, kolejki, scrapera lub analizatora), `GET /api/live` – sam proces. Sekrety są tylko w `.env`, poza repozytorium.
@@ -99,6 +103,8 @@ Architektura: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Proces pracy z asyst
 
 ## Dane i ograniczenia
 
+- Publiczne API KRS anonimizuje imiona, nazwiska i PESEL członków organów – osób nie łączymy między spółkami; każda pozycja ma status „wymaga weryfikacji”.
+- Trafienie na liście ostrzeżeń po samej nazwie to słabszy sygnał (WARN) niż po domenie, KRS lub NIP (FAIL).
 - Rejestr KNF to snapshot publicznych list (domy maklerskie, banki, oddziały i notyfikowane firmy zagraniczne; 752 podmioty). Brak podmiotu w rejestrze nie oznacza nielegalnej działalności.
 - Próbki demo używają fikcyjnych podmiotów i domen `.example`.
 - Treści z platform społecznościowych są pobierane z publicznych metadanych lub importowane ręcznie. System nie obchodzi zabezpieczeń platform.

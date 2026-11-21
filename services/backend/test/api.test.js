@@ -96,3 +96,22 @@ describe('API', () => {
     for (const id of [jobA.material_id, jobB.material_id]) assert.equal((await fetch(`${API}/materials/${id}`, { method: 'DELETE', headers: { cookie: adminCookie } })).status, 204);
   });
 });
+
+describe('Wzbogacanie podmiotów', () => {
+  test('walidacja numeru KRS i wzbogacenie podmiotu demo (LEI + listy ostrzeżeń)', async (t) => {
+    if (!up) return t.skip('backend nie działa');
+    const entities = (await get('/entities')).body;
+    const demo = entities.find((e) => e.registry_status === 'demo');
+    if (!demo) return t.skip('brak podmiotu demo');
+    const bad = await send('POST', `/entities/${demo.id}/enrich`, { krs: '123' });
+    assert.equal(bad.status, 400);
+    let ok = await send('POST', `/entities/${demo.id}/enrich`, {});
+    if (ok.status === 429) { await new Promise((r) => setTimeout(r, 5500)); ok = await send('POST', `/entities/${demo.id}/enrich`, {}); }
+    assert.equal(ok.status, 200, JSON.stringify(ok.body));
+    const { body } = await get(`/entities/${demo.id}`);
+    assert.ok(body.registries.knf_warnings, 'zapisano sprawdzenie listy ostrzeżeń KNF');
+    assert.ok(body.registries.esma_mica, 'zapisano sprawdzenie rejestru MiCA');
+    assert.ok(Array.isArray(body.registry), 'registry pozostaje listą (zgodność wsteczna)');
+    assert.ok(body.entity.enriched_at);
+  });
+});

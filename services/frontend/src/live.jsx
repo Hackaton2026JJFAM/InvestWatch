@@ -48,6 +48,7 @@ export function LiveProvider({ children }) {
       'material:status': () => { refreshCounters(); bump('material:status')(); },
       'material:deleted': () => { refreshCounters(); bump('material:deleted')(); },
       'scan:update': bump('scan:update'),
+      'entity:enriched': (e) => bump('entity:enriched')(e),
       'settings:update': (s) => { setThreshold(s.threshold); bump('settings:update')(s); },
     };
     Object.entries(handlers).forEach(([ev, fn]) => socket.on(ev, fn));

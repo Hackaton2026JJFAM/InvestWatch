@@ -59,6 +59,7 @@ services:
       SEED_DEMO: ${SEED_DEMO:-true}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ENRICH_AUTO: ${ENRICH_AUTO:-true}
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
     volumes:
       - ./data/samples:/app/samples:ro

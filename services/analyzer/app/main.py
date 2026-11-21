@@ -12,14 +12,16 @@ import logging
 import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Query, Request
+import httpx
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-from . import m1, m3, rules_m2
+from . import enrich, m1, m3, rules_m2, signals
 from .classifier import get_classifier, simhash
 from .model import Doc
 from .registry import get_registry
+from .watchlists import get_watchlists
 from .scoring import aggregate
 from .summary import summarize
 
@@ -108,6 +110,7 @@ class Material(BaseModel):
 async def lifespan(_: FastAPI):
     get_registry()      # wczytanie rejestru i trening klasyfikatora przy starcie
     get_classifier()
+    get_watchlists()
     yield
 
 
@@ -130,7 +133,9 @@ def analyze_material(m: dict) -> dict:
     r1 = m1.run(doc)
     f2 = rules_m2.run(doc)
     r3 = m3.run(doc)
-    by_module = {"m1": r1["findings"], "m2": f2, "m3": r3["findings"]}
+    sig = signals.run(doc, r3["classification"])
+    by_module = {"m1": r1["findings"] + [f for f in sig["findings"] if f.module == "m1"], "m2": f2,
+                 "m3": r3["findings"] + [f for f in sig["findings"] if f.module == "m3"]}
     agg = aggregate(by_module)
     findings = [f.to_dict() for fs in by_module.values() for f in fs]
     return {
@@ -138,9 +143,11 @@ def analyze_material(m: dict) -> dict:
         "findings": findings,
         "m1": {"firms": r1["firms"], "instruments": r1["instruments"], "publisher": r1["publisher"]},
         "m3": {"classification": r3["classification"], "entities": r3["entities"]},
+        "watchlists": sig["hits"],
         "ml": {"model": clf.version, "train_size": clf.n_train, **clf.document_profile(doc.sentences)},
         "doc": {"lang": doc.lang, "domain": doc.domain, "sentences": len(doc.sentences), "layout": doc.layout.get("engine"),
-                "simhash": simhash(doc.content_text), "highlights": rules_m2.highlights(doc)},
+                "simhash": simhash(doc.content_text), "highlights": rules_m2.highlights(doc),
+                "identifiers": sig["identifiers"]},
         "analyzer_version": VERSION,
         "elapsed_ms": round((time.perf_counter() - t0) * 1000),
     }
@@ -210,3 +217,37 @@ def registry_check(name: str = Query(min_length=2, max_length=300)):
     else:
         status, note = "not_found", "Brak w lokalnym rejestrze KNF nie oznacza nielegalnej działalności – sygnał do weryfikacji."
     return {"name": name, "status": status, "match": hit, "note": note, "registry": reg.meta}
+
+
+# ---------------------------------------------------------------------------- wzbogacanie danych
+def _upstream(fn, *args, **kw):
+    try:
+        return fn(*args, **kw)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    except enrich.NotFound as exc:
+        raise HTTPException(404, str(exc))
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"Rejestr niedostępny: {type(exc).__name__}")
+
+
+@app.get("/enrich/krs/{number}")
+def enrich_krs(number: str):
+    return _upstream(enrich.krs, number)
+
+
+@app.get("/enrich/gleif")
+def enrich_gleif(name: str | None = Query(default=None, max_length=300), lei: str | None = Query(default=None, max_length=20)):
+    return _upstream(enrich.gleif, name=name, lei=lei)
+
+
+@app.get("/watchlists/check")
+def watchlists_check(name: str | None = Query(default=None, max_length=300), domain: str | None = Query(default=None, max_length=300),
+                     krs: str | None = Query(default=None, pattern=r"^[0-9]{10}$"), nip: str | None = Query(default=None, pattern=r"^[0-9]{10}$")):
+    hits = get_watchlists().check(name=name, domains=[domain] if domain else [], krs=[krs] if krs else [], nip=[nip] if nip else [])
+    return {"hits": hits, "meta": get_watchlists().meta}
+
+
+@app.get("/watchlists/meta")
+def watchlists_meta():
+    return get_watchlists().meta

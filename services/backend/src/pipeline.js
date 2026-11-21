@@ -4,6 +4,7 @@ import { getThreshold, one, q, tx } from './db.js';
 import { log } from './log.js';
 import { analyzer, scraper, UpstreamError } from './services.js';
 import { emit } from './realtime.js';
+import { scheduleEnrichment } from './enrichment.js';
 import { findSimilar, NEAR_DUP_BITS } from './similarity.js';
 
 const normName = (s) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/\s+/g, ' ').trim();
@@ -31,6 +32,8 @@ async function upsertEntity(t, { name, kind, country = null, domain = null, regi
   );
 }
 
+const newEntities = new Set();
+
 async function saveEntities(t, materialId, result) {
   const links = [];
   for (const f of result.m1?.firms ?? []) {
@@ -53,6 +56,7 @@ async function saveEntities(t, materialId, result) {
     await t.q(`INSERT INTO registry_records (entity_id, registry, status, data) VALUES ($1, 'knf', $2, $3)`,
       [e.id, found ? (ent.registry_match.demo ? 'demo' : 'found') : 'not_found', ent.registry_match]);
   }
+  for (const [entityId] of links) newEntities.add(entityId);
   for (const [entityId, role] of links) {
     await t.q('INSERT INTO material_entities (material_id, entity_id, role) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [materialId, entityId, role]);
   }
@@ -139,6 +143,8 @@ export async function processScan(job) {
     .catch((err) => log.warn('summary failed', { analysisId: saved.analysisId, err: err.message }));
 
   const payload = { id: saved.materialId, title: material.title, url: material.url, score: result.score, modules: result.modules, platform: material.platform };
+  for (const id of newEntities) scheduleEnrichment(id);
+  newEntities.clear();
   emit('material:new', payload);
   emit('scan:update', { id: jobId, status: 'done', materialId: saved.materialId });
   if (saved.alert) emit('alert:new', { id: saved.alert.id, materialId: saved.materialId, score: result.score, title: material.title, url: material.url });

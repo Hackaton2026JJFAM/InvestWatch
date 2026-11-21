@@ -43,6 +43,10 @@ export const analyzer = {
   summary: (result) => call(config.analyzerUrl, 'analyzer', '/summary', { body: { result }, timeoutMs: 120000 }),
   rules: () => call(config.analyzerUrl, 'analyzer', '/rules', { method: 'GET' }),
   registrySearch: (q) => call(config.analyzerUrl, 'analyzer', `/registry/search?q=${encodeURIComponent(q)}`, { method: 'GET' }),
+  enrichKrs: (krs) => call(config.analyzerUrl, 'analyzer', `/enrich/krs/${encodeURIComponent(krs)}`, { method: 'GET', timeoutMs: 30000 }),
+  enrichGleif: ({ name, lei }) => call(config.analyzerUrl, 'analyzer', `/enrich/gleif?${new URLSearchParams(lei ? { lei } : { name })}`, { method: 'GET', timeoutMs: 30000 }),
+  watchCheck: (params) => call(config.analyzerUrl, 'analyzer', `/watchlists/check?${new URLSearchParams(Object.entries(params).filter(([, v]) => v))}`, { method: 'GET' }),
+  watchMeta: () => call(config.analyzerUrl, 'analyzer', '/watchlists/meta', { method: 'GET' }),
   registryCheck: (name) => call(config.analyzerUrl, 'analyzer', `/registry/check?name=${encodeURIComponent(name)}`, { method: 'GET' }),
   health: () => call(config.analyzerUrl, 'analyzer', '/health', { method: 'GET', timeoutMs: 3000 }),
 };

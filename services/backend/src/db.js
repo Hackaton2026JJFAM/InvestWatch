@@ -50,6 +50,12 @@ const MIGRATIONS = [
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS layout_hash TEXT',
   'ALTER TABLE materials DROP CONSTRAINT IF EXISTS materials_url_content_hash_key',
   "CREATE UNIQUE INDEX IF NOT EXISTS materials_version_uq ON materials (url, content_hash, coalesce(layout_hash, ''))",
+  'ALTER TABLE entities ADD COLUMN IF NOT EXISTS krs TEXT',
+  'ALTER TABLE entities ADD COLUMN IF NOT EXISTS nip TEXT',
+  'ALTER TABLE entities ADD COLUMN IF NOT EXISTS lei TEXT',
+  'ALTER TABLE entities ADD COLUMN IF NOT EXISTS enriched_at TIMESTAMPTZ',
+  'ALTER TABLE persons ADD COLUMN IF NOT EXISTS masked BOOLEAN NOT NULL DEFAULT FALSE',
+  'CREATE INDEX IF NOT EXISTS registry_records_entity ON registry_records (entity_id, registry, checked_at DESC)',
 ];
 
 export async function migrate() {

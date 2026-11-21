@@ -48,6 +48,17 @@ Statusy przesłanek: `fail`, `warn`, `pass`, `na` (nie dotyczy), `not_checked` (
 
 Wynik modułu to `100 · (1 − Π(1 − wᵢ))`, gdzie `wᵢ` to waga reguły przy statusie `fail` albo połowa wagi przy `warn`. Wynik materiału to maksimum z modułów. Próg z panelu kalibracji zmienia tylko decyzję (alert i kategoria ryzyka), a nie wynik klasyfikatora. Kategorie: wysokie ≥ próg, średnie ≥ 0,6·próg.
 
+## Wzbogacanie danych
+
+| Źródło | Sposób | Dane | Uwagi |
+|---|---|---|---|
+| KRS (`api-krs.ms.gov.pl`) | na żądanie, bufor 6 h | nazwa, forma, KRS/NIP/REGON, rejestracja, kapitał, adres, WWW, zarząd, rada, prokurenci, wspólnicy | dane osób zanonimizowane w publicznym API |
+| GLEIF (`api.gleif.org`) | na żądanie | LEI, nazwa prawna, kraj, status, forma | wyszukiwanie pełnotekstowe po nazwie |
+| Lista ostrzeżeń publicznych KNF | snapshot (`tools/watchlists_import.py`) | nazwa, KRS/NIP/REGON, domeny, podstawa prawna, prokuratura, orzeczenia | dopasowanie: domena > KRS/NIP > nazwa |
+| Rejestr MiCA ESMA (CASPS/NCASP) | snapshot | autoryzowani CASP (usługi, kraj, organ) i podmioty niezgodne | |
+
+Backend wzbogaca nowe spółki w tle (kolejka szeregowa, 1 podmiot/2 s) i na żądanie (`POST /api/entities/:id/enrich`, opcjonalnie z numerem KRS). Wyniki: `registry_records` (historia odczytów), `persons`/`person_links`.
+
 ## Rozbudowa
 
 - Nowa reguła: funkcja w `analyzer/app/rules_m2.py` i wpis w `CATALOG`. Trafia automatycznie do API, bazy i UI.
