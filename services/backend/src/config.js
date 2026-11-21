@@ -39,6 +39,10 @@ export const config = {
   videoConcurrency: Number(env('VIDEO_WORKER_CONCURRENCY', '1')),
   // proaktywne wyszukiwanie popularnych wideo po tagach/frazach
   watchCron: env('WATCH_CRON', '15 */3 * * *'),
+  // stała aktualizacja hashtagów wg popularności (ranking + automatyczny monitoring czołówki)
+  tagsCron: env('TAGS_CRON', '5 * * * *'),
+  tagAutoWatch: Number(env('TAG_AUTO_WATCH', '8')),
+  tagAutoMinViews: Number(env('TAG_AUTO_MIN_VIEWS', '5000')),
   // Dozwolone Origin dla WebSocket poza tym samym hostem (np. https://investwatch.local)
   allowedOrigins: csv(env('ALLOWED_ORIGINS', '')),
   // Hasło administratora (próg, źródła, próbki, usuwanie). Puste = operacje administracyjne wyłączone.

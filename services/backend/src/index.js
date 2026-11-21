@@ -15,6 +15,7 @@ import { startReservesSchedule } from './reserves.js';
 import markets from './routes/markets.js';
 import watch from './routes/watch.js';
 import { startWatchSchedule } from './watch.js';
+import { startTagSchedule } from './tags.js';
 import { seedSamples } from './seed.js';
 import { analyzer, scraper, UpstreamError } from './services.js';
 
@@ -68,6 +69,7 @@ startWorker();
 startScheduler();
 startReservesSchedule();
 startWatchSchedule();
+startTagSchedule();
 server.listen(config.port, () => log.info('backend listening', { port: config.port }));
 if (config.seedDemo) seedSamples().catch((err) => log.warn('seed failed', { err: err.message }));
 

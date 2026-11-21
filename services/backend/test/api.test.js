@@ -155,4 +155,23 @@ describe('Wzbogacanie podmiotów', () => {
     const list = await get('/materials?lang=pl&media=video&min_views=0');
     assert.equal(list.status, 200);
   });
+
+  test('podsumowanie: odrzucenie wybranych punktów obniża wynik po weryfikacji i jest odwracalne', async (t) => {
+    if (!up) return t.skip('backend nie działa');
+    const list = await get('/materials?sort=score&dir=desc&size=1');
+    const m = list.body.items[0];
+    if (!m || !m.score) return t.skip('brak materiału z przesłankami');
+    const sum = await get(`/summary/${m.id}`);
+    assert.equal(sum.status, 200);
+    const first = sum.body.points[0];
+    assert.ok(first, 'są punkty podsumowania');
+    const all = sum.body.points.map((p) => p.rule_id);
+    const rej = await send('PUT', `/materials/${m.id}/review`, { rejected: all });
+    assert.equal(rej.status, 200);
+    assert.equal(rej.body.reviewed_score, 0);
+    assert.ok(rej.body.points.every((p) => p.rejected));
+    const back = await send('PUT', `/materials/${m.id}/review`, { rejected: [] });
+    assert.equal(back.body.reviewed_score, null);
+    assert.equal((await get(`/materials/${m.id}`)).body.rejected.length, 0);
+  });
 });

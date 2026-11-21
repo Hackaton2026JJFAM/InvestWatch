@@ -73,6 +73,9 @@ services:
       WATCH_CRON: ${WATCH_CRON:-15 */3 * * *}
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
       VIDEO_WORKER_CONCURRENCY: ${VIDEO_WORKER_CONCURRENCY:-1}
+      TAGS_CRON: ${TAGS_CRON:-5 * * * *}
+      TAG_AUTO_WATCH: ${TAG_AUTO_WATCH:-8}
+      TAG_AUTO_MIN_VIEWS: ${TAG_AUTO_MIN_VIEWS:-5000}
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
     volumes:
       - ./data/samples:/app/samples:ro

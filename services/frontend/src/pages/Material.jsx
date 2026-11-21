@@ -8,7 +8,7 @@ import { useLive } from '../live.jsx';
 
 const TABS = ['Podsumowanie', 'Reguły zgodności (M2)', 'Finfluencerzy (M1)', 'Shadow Advisory (M3)', 'Materiał', 'Historia'];
 
-function FindingsTable({ findings }) {
+function FindingsTable({ findings, rejected }) {
   const [onlyIssues, setOnlyIssues] = useState(false);
   const rows = onlyIssues ? findings.filter((f) => f.status === 'fail' || f.status === 'warn') : findings;
   return (
@@ -17,10 +17,10 @@ function FindingsTable({ findings }) {
       <div className="table-wrap"><table style={{ marginTop: 8 }}>
         <thead><tr><th>ID</th><th>Reguła</th><th>Wynik</th><th>Uzasadnienie i fragmenty</th><th>Podstawa prawna</th></tr></thead>
         <tbody>{rows.map((f) => (
-          <tr key={f.id ?? f.rule_id}>
+          <tr key={f.id ?? f.rule_id} style={rejected?.has(f.rule_id) ? { opacity: 0.5 } : undefined}>
             <td className="mono"><b>{f.rule_id}</b></td>
             <td style={{ minWidth: 160 }}>{f.title}</td>
-            <td><StatusChip status={f.status} /></td>
+            <td><StatusChip status={f.status} />{rejected?.has(f.rule_id) && <div className="small muted">odrzucone przez analityka</div>}</td>
             <td style={{ minWidth: 320 }}>{f.explanation}<Evidence items={(f.evidence ?? []).slice(0, 3)} /></td>
             <td className="small muted" style={{ minWidth: 140 }}>{f.legal_basis ?? '–'}</td>
           </tr>))}
@@ -129,12 +129,66 @@ function ProfilePanel({ r, m }) {
   );
 }
 
-function Summary({ materialId, analysis, tick }) {
+// Ikona edycji (ołówek) – tryb weryfikacji punktów podsumowania
+const PencilIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+  </svg>
+);
+
+function Summary({ materialId, analysis, tick, onReviewed }) {
+  const { toast } = useLive();
   const { data, reload } = useData(`/summary/${materialId}`, `${tick}-${analysis?.id}`);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(new Set());
+  const [saving, setSaving] = useState(false);
+  const points = data?.points ?? [];
+  const rejected = points.filter((p) => p.rejected);
+  const startEdit = () => { setDraft(new Set(rejected.map((p) => p.rule_id))); setEditing(true); };
+  const toggle = (rule) => setDraft((s) => { const n = new Set(s); n.has(rule) ? n.delete(rule) : n.add(rule); return n; });
+  const save = async () => {
+    setSaving(true);
+    try {
+      const r = await api.put(`/materials/${materialId}/review`, { rejected: [...draft] });
+      toast({ kind: 'info', title: 'Weryfikacja zapisana', text: r.reviewed_score != null ? `Wynik po weryfikacji: ${Math.round(r.reviewed_score)}/100 (klasyfikator: ${Math.round(r.score)})` : 'Przywrócono wszystkie punkty.' });
+      setEditing(false);
+      reload();
+      onReviewed?.();
+    } catch (e) { toast({ kind: 'error', title: 'Weryfikacja', text: e.message }); } finally { setSaving(false); }
+  };
+  const actions = editing
+    ? <span className="btn-row"><button className="btn" onClick={() => setEditing(false)}>Anuluj</button><button className="btn primary" disabled={saving} onClick={save}>{saving ? 'Zapisywanie…' : 'Zapisz'}</button></span>
+    : <span className="btn-row">
+        <button className="icon-btn" title="Edytuj – odrzuć wybrane punkty" aria-label="Edytuj punkty podsumowania" disabled={!points.length} onClick={startEdit}><PencilIcon /></button>
+        <button className="btn" onClick={() => api.get(`/summary/${materialId}?refresh=1`).then(reload)}>Odśwież</button>
+      </span>;
   return (
-    <Panel title="Podsumowanie AI" meta={data ? `silnik: ${data.engine}` : ''} actions={<button className="btn" onClick={() => api.get(`/summary/${materialId}?refresh=1`).then(reload)}>Odśwież</button>}>
-      <div className="notice" style={{ marginBottom: 10 }}>Podsumowanie powstaje wyłącznie z ustrukturyzowanych przesłanek; każde zdanie odwołuje się do reguły [ID]. To sygnał do weryfikacji, nie ocena prawna.</div>
-      <div className="summary-text">{data?.summary ?? 'Generowanie…'}</div>
+    <Panel title="Podsumowanie AI" meta={data ? `silnik: ${data.engine}${data.reviewed_score != null ? ` · po weryfikacji ${Math.round(data.reviewed_score)}/100` : ''}` : ''} actions={actions}>
+      {editing ? (
+        <>
+          <div className="notice" style={{ marginBottom: 10 }}>Odznacz punkty, które po weryfikacji nie są zasadne. Odrzucone nie liczą się do wyniku po weryfikacji ani do podsumowania; decyzja obowiązuje także po ponownej analizie.</div>
+          <div className="review-list">
+            {points.map((p) => {
+              const on = !draft.has(p.rule_id);
+              return (
+                <label key={p.rule_id} className={`review-item ${on ? '' : 'off'}`}>
+                  <input type="checkbox" checked={on} onChange={() => toggle(p.rule_id)} />
+                  <span><span className="mono"><b>[{p.rule_id}]</b></span> {p.title} <StatusChip status={p.status} />
+                    <div className="small muted">{p.explanation}</div></span>
+                </label>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="notice" style={{ marginBottom: 10 }}>Podsumowanie powstaje wyłącznie z ustrukturyzowanych przesłanek; każde zdanie odwołuje się do reguły [ID]. To sygnał do weryfikacji, nie ocena prawna.</div>
+          <div className="summary-text">{data?.summary ?? 'Generowanie…'}</div>
+          {rejected.length > 0 && (
+            <p className="small muted" style={{ marginBottom: 0 }}>Odrzucone przez analityka ({rejected.length}): {rejected.map((p) => `[${p.rule_id}] ${p.title}`).join('; ')}</p>
+          )}
+        </>
+      )}
     </Panel>
   );
 }
@@ -148,6 +202,7 @@ export default function Material() {
   if (error) return <Empty>{error.message}</Empty>;
   if (!data) return <Empty>Ładowanie…</Empty>;
   const { material: m, analysis: a, findings, entities, history, threshold, risk, similar = [] } = data;
+  const rejectedSet = new Set(data.rejected ?? []);
   const r = a?.result ?? {};
   const byModule = (mod) => findings.filter((f) => f.module === mod);
   const setStatus = (status) => api.patch(`/materials/${id}/status`, { status }).then(reload);
@@ -181,7 +236,7 @@ export default function Material() {
       </div>
 
       <div className="grid g4">
-        <div className="panel stat"><span className="label">Wynik punktowy</span><span className="value"><Score score={a?.score} threshold={threshold} /><span className="muted small"> /100</span></span><ScoreBar score={a?.score} threshold={threshold} /></div>
+        <div className="panel stat"><span className="label">Wynik punktowy</span><span className="value"><Score score={a?.score} threshold={threshold} /><span className="muted small"> /100</span></span>{m.reviewed_score != null && <span className="sub">po weryfikacji analityka: <b>{Math.round(m.reviewed_score)}</b>/100</span>}<ScoreBar score={a?.score} threshold={threshold} /></div>
         <div className="panel stat"><span className="label">Poziom ryzyka (skala 0–100)</span><span><RiskBadge risk={risk} />{data.above_threshold && <span className="chip high" style={{ marginLeft: 6 }}>powyżej progu {threshold}</span>}</span><span className="sub">Moduły: <ModuleChips modules={a?.modules} /></span></div>
         <div className="panel stat"><span className="label">Status weryfikacji</span><span className="value" style={{ fontSize: '1.2rem' }}>{MAT_STATUS[m.status]}</span><span className="sub">pobrano {fmtDate(m.fetched_at)}</span></div>
         <div className="panel stat"><span className="label">Wyniki modułów</span>
@@ -195,7 +250,7 @@ export default function Material() {
 
       {tab === 'Podsumowanie' && (
         <div className="grid g2">
-          <Summary materialId={id} analysis={a} tick={tick} />
+          <Summary materialId={id} analysis={a} tick={tick} onReviewed={reload} />
           <Panel title="Wykryte podmioty">
             {entities.length ? <table><tbody>{entities.map((e) => (
               <tr key={`${e.id}-${e.role}`}><td><Link to={`/entities/${e.id}`}>{e.name}</Link></td><td className="small muted">{{ advertised_firm: 'reklamowana firma', publisher: 'publikujący', advisor: 'podmiot doradczy' }[e.role]}</td>
@@ -227,7 +282,7 @@ export default function Material() {
               ? <>Render strony nie powiódł się ({m.layout_reason.replace('playwright_unavailable', 'Playwright niedostępny').replace('render_error', 'błąd renderu')}) – reguły wizualne 4–8 nie zostały ocenione. Użyj „Analizuj ponownie” lub sprawdź status serwisów.</>
               : 'Materiał tekstowy – reguły wizualne 4–8 wymagają renderu strony i nie zostały ocenione.'}</div>}
           {m.consent_hidden > 0 && <div className="small muted" style={{ marginBottom: 8 }}>Przed pomiarem ukryto nakładkę zgody na cookies ({m.consent_hidden}) – nie zasłania ostrzeżeń w ocenie reguły 5.</div>}
-          <FindingsTable findings={byModule('m2')} />
+          <FindingsTable findings={byModule('m2')} rejected={rejectedSet} />
         </Panel>
       )}
 
@@ -243,7 +298,7 @@ export default function Material() {
               <dt>URL</dt><dd className="mono">{m.url}</dd>
             </dl>
           </Panel>
-          <Panel title="Przesłanki M1"><FindingsTable findings={byModule('m1')} /></Panel>
+          <Panel title="Przesłanki M1"><FindingsTable findings={byModule('m1')} rejected={rejectedSet} /></Panel>
         </div>
       )}
       {tab === 'Finfluencerzy (M1)' && (
@@ -259,7 +314,7 @@ export default function Material() {
             </dl>
             <div className="notice" style={{ marginTop: 10 }}>Brak podmiotu w rejestrze KNF nie oznacza automatycznie nielegalnej działalności – to sygnał do weryfikacji (art. 76 u.o.i.f.).</div>
           </Panel>
-          <Panel title="Przesłanki M3"><FindingsTable findings={byModule('m3')} /></Panel>
+          <Panel title="Przesłanki M3"><FindingsTable findings={byModule('m3')} rejected={rejectedSet} /></Panel>
         </div>
       )}
 

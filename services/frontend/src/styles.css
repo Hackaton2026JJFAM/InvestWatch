@@ -283,3 +283,14 @@ input, select, textarea { color-scheme: inherit; }
 .tag-cloud button:hover, .tag-cloud button.on { border-color: var(--brand-2); color: var(--brand-2); }
 .signal { border-left: 3px solid var(--high); padding: 6px 10px; margin-bottom: 6px; background: var(--surface-2); border-radius: 0 6px 6px 0; }
 .signal.warn { border-left-color: var(--mid); }
+
+/* weryfikacja punktów podsumowania */
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--muted); cursor: pointer; }
+.icon-btn:hover:not(:disabled) { color: var(--brand-2); border-color: var(--brand-2); }
+.icon-btn:disabled { opacity: .4; cursor: default; }
+.review-list { display: grid; gap: 6px; }
+.review-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; background: var(--surface-2); }
+.review-item input { margin-top: 3px; }
+.review-item.off { opacity: .55; }
+.review-item.off b, .review-item.off > span { text-decoration: line-through; text-decoration-color: var(--muted); }

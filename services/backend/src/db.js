@@ -101,6 +101,20 @@ const MIGRATIONS = [
      last_run_at TIMESTAMPTZ, last_found INT, last_queued INT, last_error TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
      UNIQUE (platform, kind, query))`,
   'ALTER TABLE watch_queries ADD COLUMN IF NOT EXISTS polish BOOLEAN NOT NULL DEFAULT TRUE',
+  'ALTER TABLE watch_queries ADD COLUMN IF NOT EXISTS auto BOOLEAN NOT NULL DEFAULT FALSE',
+  `CREATE TABLE IF NOT EXISTS tag_stats (
+     tag TEXT PRIMARY KEY, materials INT NOT NULL, views BIGINT NOT NULL DEFAULT 0, avg_score INT, scams INT NOT NULL DEFAULT 0,
+     recent INT NOT NULL DEFAULT 0, previous INT NOT NULL DEFAULT 0, popularity NUMERIC NOT NULL DEFAULT 0, updated_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+  // decyzje analityka o punktach podsumowania (przesłankach) – trwałe między ponownymi analizami (klucz: reguła)
+  `CREATE TABLE IF NOT EXISTS finding_reviews (
+     material_id INT NOT NULL REFERENCES materials(id) ON DELETE CASCADE, rule_id TEXT NOT NULL, decision TEXT NOT NULL DEFAULT 'rejected',
+     note TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (material_id, rule_id))`,
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS reviewed_score NUMERIC',
+  // uzupełnienie dla materiałów sprzed rankingu tagów: język z ostatniej analizy, hashtagi z tytułu i treści
+  `UPDATE materials m SET lang = x.lang FROM (SELECT DISTINCT ON (material_id) material_id, result->'doc'->>'lang' AS lang
+     FROM analyses ORDER BY material_id, created_at DESC) x WHERE x.material_id = m.id AND m.lang IS NULL AND x.lang IS NOT NULL`,
+  `UPDATE materials SET tags = ARRAY(SELECT DISTINCT lower(t[1]) FROM regexp_matches(coalesce(title, '') || ' ' || content_text, '#([[:alnum:]_]{2,40})', 'g') t)
+    WHERE tags = '{}' AND (coalesce(title, '') || ' ' || content_text) ~ '#[[:alnum:]_]{2,}'`,
 ];
 
 export async function migrate() {

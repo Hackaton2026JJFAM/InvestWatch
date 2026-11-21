@@ -7,14 +7,15 @@ import { enqueue, priorityFor } from '../queue.js';
 import { normTag, PL_SCAM_PHRASES, PRESET_TAGS, WATCH_PRESETS } from '../reach.js';
 import { parse } from '../validate.js';
 import { discoverCandidates, getWatch, runWatch } from '../watch.js';
+import { refreshTags, trendingTags } from '../tags.js';
 
 const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
-const PLATFORMS = ['youtube', 'tiktok', 'instagram', 'x', 'facebook'];
+const PLATFORMS = ['all', 'youtube', 'tiktok', 'instagram', 'x', 'facebook'];
 // profil twórcy natywnie: YouTube (kanał) i TikTok; hashtag/fraza – wszystkie platformy
-const KIND_OK = (p, k) => k !== 'profile' || ['youtube', 'tiktok'].includes(p);
+const KIND_OK = (p, k) => k !== 'profile' || ['all', 'youtube', 'tiktok'].includes(p);
 const searchSchema = z.object({
-  platform: z.enum(PLATFORMS),
+  platform: z.enum(PLATFORMS).default('all'),
   kind: z.enum(['search', 'hashtag', 'profile']),
   query: z.string().trim().min(1).max(200),
   sort: z.enum(['relevance', 'views', 'date']).default('views'),
@@ -31,7 +32,8 @@ r.get('/tags/popular', async (req, res) => {
        JOIN LATERAL (SELECT score FROM analyses WHERE material_id = m.id ORDER BY created_at DESC LIMIT 1) a ON TRUE
       WHERE m.fetched_at > now() - make_interval(days => $1)
       GROUP BY t ORDER BY count(*) DESC, sum(m.views) DESC NULLS LAST LIMIT 40`, [days]);
-  res.json({ days, tags: rows, presets: PRESET_TAGS, phrases: PL_SCAM_PHRASES,
+  const trending = await trendingTags(30);
+  res.json({ days, tags: rows, trending, presets: PRESET_TAGS, phrases: PL_SCAM_PHRASES,
     packs: Object.fromEntries(Object.entries(WATCH_PRESETS).map(([k, v]) => [k, { label: v.label, kind: v.kind, count: v.items.length }])) });
 });
 
@@ -49,11 +51,16 @@ r.post('/discover/video/enqueue', async (req, res) => {
   res.status(202).json({ jobs });
 });
 
+// ręczne przeliczenie rankingu i synchronizacja automatycznego monitoringu tagów
+r.post('/tags/refresh', async (_req, res) => res.json(await refreshTags()));
+
 r.get('/watch', async (_req, res) => {
   res.json(await q(
-    `SELECT w.*, count(m.id)::int AS materials, count(m.id) FILTER (WHERE m.profile_type = 'podejrzenie_oszustwa')::int AS scams,
+    `SELECT w.*, ts.popularity, ts.recent, ts.previous, count(m.id)::int AS materials, count(m.id) FILTER (WHERE m.profile_type = 'podejrzenie_oszustwa')::int AS scams,
             coalesce(max(m.views), 0)::bigint AS top_views
-       FROM watch_queries w LEFT JOIN materials m ON m.watch_id = w.id GROUP BY w.id ORDER BY w.created_at DESC`));
+       FROM watch_queries w LEFT JOIN materials m ON m.watch_id = w.id
+       LEFT JOIN tag_stats ts ON w.kind = 'hashtag' AND ts.tag = w.query
+      GROUP BY w.id, ts.popularity, ts.recent, ts.previous ORDER BY w.auto DESC, ts.popularity DESC NULLS LAST, w.created_at DESC`));
 });
 
 r.post('/watch', requireAdmin, async (req, res) => {
@@ -74,7 +81,7 @@ r.post('/watch', requireAdmin, async (req, res) => {
 r.post('/watch/preset', requireAdmin, async (req, res) => {
   const b = parse(z.object({
     preset: z.enum(Object.keys(WATCH_PRESETS)),
-    platforms: z.array(z.enum(PLATFORMS)).min(1).max(5),
+    platforms: z.array(z.enum(PLATFORMS)).min(1).max(6).default(['all']),
     min_views: z.coerce.number().int().min(0).default(0),
     max_per_run: z.coerce.number().int().min(1).max(30).default(5),
   }), req.body);

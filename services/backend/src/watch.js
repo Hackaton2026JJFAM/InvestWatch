@@ -10,9 +10,35 @@ import { enqueue, priorityFor } from './queue.js';
 import { emit } from './realtime.js';
 import { scraper } from './services.js';
 
-/** Kandydaci z platformy z oznaczeniem, czy już są w bazie / w kolejce. */
-export async function discoverCandidates({ platform, kind, query, sort = 'views', limit = 20, minViews = 0, polish = true }) {
-  const r = await scraper.discoverVideo({ platform, kind, query, sort, limit, polish });
+export const ALL_PLATFORMS = ['youtube', 'tiktok', 'instagram', 'x', 'facebook'];
+const PROFILE_HOSTS = { youtube: /youtube\.com|youtu\.be/i, tiktok: /tiktok\.com/i };
+
+/** Platformy dla zapytania „wszystkie”: hashtag/fraza – wszystkie; profil – z adresu, a „@nazwa” – YouTube i TikTok. */
+function platformsFor(platform, kind, query) {
+  if (platform !== 'all') return [platform];
+  if (kind !== 'profile') return ALL_PLATFORMS;
+  const hit = Object.entries(PROFILE_HOSTS).find(([, re]) => re.test(query));
+  return hit ? [hit[0]] : ['youtube', 'tiktok'];
+}
+
+async function discoverOne(platform, kind, query, sort, limit, polish) {
+  try {
+    return { items: (await scraper.discoverVideo({ platform, kind, query, sort, limit, polish })).items, error: null };
+  } catch (err) {
+    return { items: [], error: err.message };
+  }
+}
+
+/** Kandydaci (jedna platforma albo wszystkie naraz) z oznaczeniem, czy już są w bazie / w kolejce. */
+export async function discoverCandidates({ platform = 'all', kind, query, sort = 'views', limit = 20, minViews = 0, polish = true }) {
+  const plats = platformsFor(platform, kind, query);
+  const per = plats.length > 1 ? Math.max(5, Math.ceil(limit / 2)) : limit;
+  const parts = [];
+  for (const p of plats) parts.push([p, await discoverOne(p, kind, query, sort, per, polish)]);  // kolejno – uprzejmie wobec źródeł
+  const errors = Object.fromEntries(parts.filter(([, r]) => r.error).map(([p, r]) => [p, r.error]));
+  if (Object.keys(errors).length === plats.length) throw new Error(Object.values(errors)[0]);
+  const r = { platform, kind, query, platforms: plats, errors, items: parts.flatMap(([p, x]) => x.items.map((i) => ({ ...i, platform: i.platform ?? p }))) };
+  r.count = r.items.length;
   const urls = r.items.map((i) => i.url);
   const known = new Set((await q(
     `SELECT url FROM materials WHERE url = ANY($1) OR final_url = ANY($1)
@@ -20,10 +46,11 @@ export async function discoverCandidates({ platform, kind, query, sort = 'views'
   // zasięg nieznany (posty znalezione przez wyszukiwarkę, platformy bez publicznych licznikach) nie odrzuca –
   // inaczej Instagram/X/Facebook nigdy nie przeszłyby progu; język: przy „tylko polskie” odrzucamy treści rozpoznane jako obce
   const items = r.items.map((i) => {
-    const reachOk = i.views == null ? platform !== 'youtube' || !minViews : i.views >= minViews;
-    const langOk = !polish || i.lang === 'pl' || (i.lang == null && platform !== 'youtube');
+    const reachOk = i.views == null ? i.platform !== 'youtube' || !minViews : i.views >= minViews;
+    const langOk = !polish || i.lang === 'pl' || (i.lang == null && i.platform !== 'youtube');
     return { ...i, known: known.has(i.url), reach_known: i.views != null, passes: !i.live && reachOk && langOk };
   });
+  items.sort((a, b) => (b.passes - a.passes) || ((b.views ?? -1) - (a.views ?? -1)));
   return { ...r, items };
 }
 

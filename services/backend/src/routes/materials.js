@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { saveReach } from '../reach.js';
+import { summaryPoints, withoutRejected } from '../review.js';
 import { z } from 'zod';
 import { getThreshold, one, q, tx } from '../db.js';
 import { emit } from '../realtime.js';
@@ -12,6 +13,7 @@ const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 const STATUSES = ['NEW', 'REVIEWED', 'ESCALATED', 'DISMISSED'];
 const LATEST = 'JOIN LATERAL (SELECT * FROM analyses WHERE material_id = m.id ORDER BY created_at DESC LIMIT 1) a ON TRUE';
+const rejectedOf = async (materialId) => (await q('SELECT rule_id FROM finding_reviews WHERE material_id = $1 AND decision = \'rejected\'', [materialId])).map((x) => x.rule_id);
 
 r.get('/materials', async (req, res) => {
   const f = parse(z.object({
@@ -97,7 +99,7 @@ r.get('/materials/:id', async (req, res) => {
       consent_hidden: layout.consent_hidden ?? 0, viewports,
       video, image_ocr: layout.image_ocr ?? null },
     analysis: analyses[0] ? { ...analyses[0], result: latest.result } : null,
-    history: analyses, findings, entities, alerts, threshold,
+    history: analyses, findings, entities, alerts, threshold, rejected: await rejectedOf(id),
     similar: await findSimilar(m.simhash, { excludeId: m.id }),
     risk: analyses[0] ? riskLevel(analyses[0].score) : null,
     above_threshold: analyses[0] ? analyses[0].score >= threshold : null,
@@ -152,7 +154,11 @@ r.post('/materials/:id/reanalyze', async (req, res) => {
     return row;
   });
   if (result.doc?.simhash) await q('UPDATE materials SET simhash = $2 WHERE id = $1', [id, result.doc.simhash]);
-  const s = await analyzer.summary(result).catch(() => null);
+  // odrzucenia analityka obowiązują także po ponownej analizie
+  const rejected = await rejectedOf(id);
+  const reviewed = rejected.length ? withoutRejected(result, rejected) : null;
+  await q('UPDATE materials SET reviewed_score = $2 WHERE id = $1', [id, reviewed ? reviewed.score : null]);
+  const s = await analyzer.summary(reviewed ?? result).catch(() => null);
   if (s) await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   res.json(a);
 });
@@ -164,14 +170,43 @@ r.get('/analyses/:id', async (req, res) => {
   res.json({ ...a, findings: await q('SELECT * FROM findings WHERE analysis_id = $1 ORDER BY id', [id]) });
 });
 
+
 r.get('/summary/:materialId', async (req, res) => {
   const { materialId } = parse(z.object({ materialId: z.coerce.number().int().positive() }), req.params);
-  const a = await one('SELECT id, result, summary, summary_engine FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [materialId]);
+  const a = await one('SELECT id, score, result, summary, summary_engine FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [materialId]);
   if (!a) return res.status(404).json({ error: 'Brak analizy' });
-  if (a.summary && req.query.refresh !== '1') return res.json({ summary: a.summary, engine: a.summary_engine });
-  const s = await analyzer.summary(a.result);
-  await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
-  res.json(s);
+  const rejected = await rejectedOf(materialId);
+  const reviewed = rejected.length ? withoutRejected(a.result, rejected) : null;
+  let s = { summary: a.summary, engine: a.summary_engine };
+  if (!a.summary || req.query.refresh === '1') {
+    s = await analyzer.summary(reviewed ?? a.result);
+    await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
+  }
+  res.json({ ...s, points: summaryPoints(a.result, rejected), score: Number(a.score), reviewed_score: reviewed ? reviewed.score : null });
+});
+
+// Odrzucenie wybranych punktów podsumowania (pełny zestaw odrzuconych reguł; pusta lista = przywrócenie wszystkich)
+r.put('/materials/:id/review', async (req, res) => {
+  const { id } = parse(idParam, req.params);
+  const b = parse(z.object({ rejected: z.array(z.string().regex(/^[\w.]{1,12}$/)).max(60), note: z.string().max(500).optional() }), req.body);
+  const a = await one('SELECT id, score, result FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [id]);
+  if (!a) return res.status(404).json({ error: 'Brak analizy' });
+  const known = new Set(a.result.findings.map((f) => f.rule_id));
+  const rejected = [...new Set(b.rejected)].filter((r0) => known.has(r0));
+  const reviewed = rejected.length ? withoutRejected(a.result, rejected) : null;
+  const s = await analyzer.summary(reviewed ?? a.result).catch(() => null);
+  await tx(async (t) => {
+    await t.q('DELETE FROM finding_reviews WHERE material_id = $1 AND NOT (rule_id = ANY($2))', [id, rejected]);
+    for (const rule of rejected) {
+      await t.q(`INSERT INTO finding_reviews (material_id, rule_id, note) VALUES ($1, $2, $3)
+                 ON CONFLICT (material_id, rule_id) DO UPDATE SET note = COALESCE(EXCLUDED.note, finding_reviews.note)`, [id, rule, b.note ?? null]);
+    }
+    await t.q('UPDATE materials SET reviewed_score = $2 WHERE id = $1', [id, reviewed ? reviewed.score : null]);
+    if (s) await t.q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
+  });
+  emit('material:status', { id });
+  res.json({ rejected, reviewed_score: reviewed ? reviewed.score : null, score: Number(a.score), summary: s?.summary ?? null,
+    points: summaryPoints(a.result, rejected) });
 });
 
 export default r;

@@ -67,6 +67,12 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Instagram: zasięg (wyświetlenia) bez logowania niedostępny – tylko polubienia/opis; Facebook: metadane ograniczone
 - [ ] Rejestr licencjonowanych doradców inwestycyjnych KNF – dziś licencja „zadeklarowana, do weryfikacji” (numer wyciągany z treści)
 
+## Monitoring – iteracja 3
+- [x] „Wyszukaj kandydatów” bez wyboru platformy: jedno zapytanie przeszukuje YouTube, TikTok, Instagram, X i Facebook naraz (kolumna „Platforma”, błędy pojedynczych platform pokazywane osobno); „Monitoruj stale” zapisuje zapytanie dla wszystkich platform
+- [x] Stała aktualizacja hashtagów wg popularności (`TAGS_CRON`, domyślnie co godzinę): ranking z polskich materiałów (zasięg × liczba × średnie ryzyko, trend 7 dni vs poprzednie 7), czołówka (`TAG_AUTO_WATCH`=8) automatycznie monitorowana na wszystkich platformach, tagi, które wypadły z czołówki – automatycznie wstrzymywane; tagi ogólne i oznaczenia współpracy (#reklama, #współpraca, #fyp…) wykluczone; stała lista tagów usunięta z UI (tylko zimny start przy pustej bazie)
+- [x] Podsumowanie: ikona edycji (ołówek) → tryb weryfikacji z przełącznikami „uwzględnij” przy punktach; odrzucone punkty nie liczą się do „wyniku po weryfikacji” (ten sam wzór co analizator) ani do podsumowania, są oznaczone w tabelach przesłanek i obowiązują po ponownej analizie; wynik klasyfikatora zostaje w historii
+- [x] Uzupełnienie języka i hashtagów dla materiałów sprzed rankingu (migracja)
+
 ## Poprawki po testach zespołu (21.11.2026)
 - [x] „render: none”: Playwright działa w Dockerze i dev (XTB: 3 viewporty, ~520 bloków); dodano: ponowne uruchomienie Chromium po awarii, drugą, lżejszą próbę renderu przy timeoucie, przyczynę na karcie materiału, baner „Ograniczona analiza” przy braku Chromium/OCR/Whispera, `playwright install chromium` w `restart.ps1`
 - [x] Nakładki cookies (CMP, także rozpoznane po treści) i puste przezroczyste warstwy (np. HubSpot) ukrywane przed pomiarem – reguła 5 nie zgłasza już „przesłonięcia” na stronie XTB; przyklejony pasek z ostrzeżeniem u góry nie jest „stopką”

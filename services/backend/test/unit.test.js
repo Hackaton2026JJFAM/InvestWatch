@@ -82,3 +82,19 @@ test('isVideoUrl: filmy z platform tak, profile i zwykłe strony nie', async () 
     assert.equal(isVideoUrl(u), false, u);
   }
 });
+
+test('weryfikacja: wynik po odrzuceniu przesłanek liczony jak w analizatorze (noisy-OR, maks. z modułów)', async () => {
+  const { scoreOf, withoutRejected, summaryPoints } = await import('../src/review.js');
+  const findings = [
+    { module: 'm1', rule_id: 'M1.1', status: 'fail', severity: 55 },
+    { module: 'm1', rule_id: 'M1.3', status: 'fail', severity: 40 },
+    { module: 'm2', rule_id: '3', status: 'warn', severity: 60 },
+    { module: 'm2', rule_id: '1', status: 'pass', severity: 0 },
+  ];
+  assert.deepEqual(scoreOf(findings), { score: 73, module_scores: { m1: 73, m2: 30 } });
+  const r = withoutRejected({ findings, score: 73, module_scores: { m1: 73, m2: 30, m3: 0 } }, ['M1.1', 'M1.3']);
+  assert.equal(r.score, 30);
+  assert.deepEqual(r.modules, ['m2']);
+  const pts = summaryPoints({ findings }, ['M1.3']);
+  assert.deepEqual(pts.map((p) => [p.rule_id, p.rejected]), [['M1.1', false], ['M1.3', true], ['3', false]]);
+});
