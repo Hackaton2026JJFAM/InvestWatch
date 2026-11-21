@@ -12,6 +12,8 @@ Materiały można dodawać jako adres URL, HTML, tekst albo **obraz reklamy** (P
 
 **Wideo i reels** (TikTok, Instagram, YouTube/Shorts, Facebook, X, Threads, LinkedIn, Vimeo, Twitch, Reddit, Dailymotion, Rumble i in., albo wgrany plik do 250 MB): yt-dlp pobiera publiczny materiał, faster-whisper przepisuje mowę, a OCR czyta napisy z klatek. Na wynik działają te same reguły, plus czas wyświetlania ostrzeżenia (poniżej 3 s to naruszenie) i ostrzeżenie wypowiedziane, ale nie pokazane na ekranie. Materiały wymagające zalogowania kończą się komunikatem „wgraj plik ręcznie”.
 
+**Rynek:** strona „Rezerwy giełd (PoR)” pokazuje raport Proof of Reserves OKX (pokrycie per aktywo, alert przy pokryciu < 1:1 lub braku nowego raportu > 45 dni; to deklaracja giełdy, nie audyt). Karta podmiotu ma panel „Zachowanie w kryzysach (GPW)”: kurs spółki wobec WIG w okresie krachu COVID-19 lub wybuchu wojny w Ukrainie (maks. spadek, dni do odrobienia strat, beta, zmienność) z archiwum notowań gpw.pl.
+
 Każdy wynik ma przesłanki: `rule_id`, podstawę prawną, uzasadnienie i cytowany fragment. Wynik to sygnał do weryfikacji, nie stwierdzenie naruszenia.
 
 ## Quick Start
@@ -73,6 +75,7 @@ Wideo: model Whisper `small` zajmuje ~0,5 GB (wolumen `whisper`, pobierany przy 
 | `WHISPER_PRELOAD` | true | Ładowanie modelu w tle przy starcie scrapera |
 | `VIDEO_MAX_SECONDS`, `VIDEO_MAX_MB` | 900, 250 | Limity długości i rozmiaru wideo |
 | `SCRAPER_COOKIES_FILE` | – | Opcjonalny plik cookies (format Netscape) dla materiałów wymagających logowania |
+| `RESERVES_CRON` | `30 6 * * *` | Odczyt raportu Proof of Reserves (OKX); działa przy `ENRICH_AUTO=true` |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | –, `gemma3:4b` | LLM do podsumowań |
 | `ENRICH_AUTO` | true | Automatyczne wzbogacanie nowych spółek (KRS, GLEIF, listy) – wymaga internetu z analizatora |
 | `SEED_DEMO` | true | Próbki przy pustej bazie i fikcyjne podmioty DEMO w rejestrze (oznaczone jako DEMO, nigdy jako wpis KNF) |

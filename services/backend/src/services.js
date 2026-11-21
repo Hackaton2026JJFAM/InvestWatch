@@ -66,6 +66,20 @@ export const analyzer = {
   gleifDetail: (lei) => call(config.analyzerUrl, 'analyzer', `/enrich/gleif/${encodeURIComponent(lei)}`, { method: 'GET', timeoutMs: 45000 }),
   watchCheck: (params) => call(config.analyzerUrl, 'analyzer', `/watchlists/check?${new URLSearchParams(Object.entries(params).filter(([, v]) => v))}`, { method: 'GET' }),
   watchMeta: () => call(config.analyzerUrl, 'analyzer', '/watchlists/meta', { method: 'GET' }),
+  okxReserves: (force = false) => call(config.analyzerUrl, 'analyzer', `/reserves/okx${force ? '?force=true' : ''}`, { method: 'GET', timeoutMs: 45000 }),
+  crises: () => call(config.analyzerUrl, 'analyzer', '/markets/crises', { method: 'GET' }),
+  gpwInstruments: () => call(config.analyzerUrl, 'analyzer', '/markets/gpw/instruments', { method: 'GET', timeoutMs: 60000 }),
+  // pierwsze pobranie okresu z archiwum GPW to kilkaset żądań (~4 min) – długi limit czasu
+  crisisReport: async (body) => {
+    try {
+      const { status, data } = await longPost(config.analyzerUrl, '/markets/gpw/crisis', { json: body, timeoutMs: 15 * 60 * 1000 });
+      if (status >= 400) throw new UpstreamError('analyzer', status, typeof data.detail === 'string' ? data.detail : undefined);
+      return data;
+    } catch (err) {
+      if (err instanceof UpstreamError) throw err;
+      throw new UpstreamError('analyzer', 0, err.name === 'AbortError' ? 'przekroczono czas odpowiedzi' : 'serwis niedostępny');
+    }
+  },
   registryCheck: (name) => call(config.analyzerUrl, 'analyzer', `/registry/check?name=${encodeURIComponent(name)}`, { method: 'GET' }),
   health: () => call(config.analyzerUrl, 'analyzer', '/health', { method: 'GET', timeoutMs: 3000 }),
 };

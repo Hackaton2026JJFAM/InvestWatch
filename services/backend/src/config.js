@@ -43,4 +43,6 @@ export const config = {
   secureCookies: env('SECURE_COOKIES', 'false') === 'true',
   // Automatyczne wzbogacanie nowych spółek (KRS/GLEIF/listy ostrzeżeń) – wymaga dostępu do internetu
   enrichAuto: env('ENRICH_AUTO', 'true') === 'true',
+  // Proof of Reserves (OKX): odczyt raportu codziennie rano
+  reservesCron: env('RESERVES_CRON', '30 6 * * *'),
 };

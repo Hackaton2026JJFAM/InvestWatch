@@ -13,6 +13,7 @@ const Material = lazy(() => import('./pages/Material.jsx'));
 const Results = lazy(() => import('./pages/Results.jsx'));
 const Scan = lazy(() => import('./pages/Scan.jsx'));
 const Search = lazy(() => import('./pages/Search.jsx'));
+const Reserves = lazy(() => import('./pages/Reserves.jsx'));
 import './styles.css';
 
 applyTheme(readTheme()); // przed pierwszym renderem – bez mignięcia jasnego motywu
@@ -33,6 +34,7 @@ function Shell() {
           <NavLink to="/alerts">Alerty {unread > 0 && <span className="badge">{unread}</span>}</NavLink>
           <NavLink to="/entities">Podmioty</NavLink>
           <NavLink to="/search">Wyszukiwarka (KRS, LEI)</NavLink>
+          <NavLink to="/reserves">Rezerwy giełd (PoR)</NavLink>
           <NavLink to="/calibration">Kalibracja</NavLink>
           <NavLink to="/scan">Skanowanie i źródła</NavLink>
         </nav>
@@ -56,6 +58,7 @@ function Shell() {
           <Route path="/entities" element={<Entities />} />
           <Route path="/entities/:id" element={<Entity />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/reserves" element={<Reserves />} />
           <Route path="/registries" element={<Navigate to="/search?tab=external" replace />} />
           <Route path="/calibration" element={<Calibration />} />
           <Route path="/scan" element={<Scan />} />

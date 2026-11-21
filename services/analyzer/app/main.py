@@ -17,7 +17,7 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-from . import enrich, m1, m3, reserves, rules_m2, signals
+from . import enrich, m1, m3, markets, reserves, rules_m2, signals
 from .classifier import get_classifier, simhash
 from .model import Doc
 from .registry import get_registry
@@ -262,6 +262,39 @@ def watchlists_check(name: str | None = Query(default=None, max_length=300), dom
 @app.get("/watchlists/meta")
 def watchlists_meta():
     return get_watchlists().meta
+
+
+# ---------------------------------------------------------------------------- kryzysy (GPW)
+class CrisisReq(BaseModel):
+    ticker: str = Field(min_length=2, max_length=20)
+    crisis: str = Field(default="covid2020", max_length=30)
+    start: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    end: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+
+
+@app.get("/markets/crises")
+def markets_crises():
+    return markets.CRISES
+
+
+@app.get("/markets/gpw/instruments")
+def markets_instruments(date: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")):
+    try:
+        return {"date": date, "instruments": markets.instruments(date)}
+    except (markets.MarketDataUnavailable, httpx.HTTPError) as exc:
+        raise HTTPException(502, str(exc) or "Archiwum GPW niedostępne")
+
+
+@app.post("/markets/gpw/crisis")
+def markets_crisis(req: CrisisReq):
+    try:
+        return markets.crisis_report(req.ticker, req.crisis, req.start, req.end)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
+    except LookupError as exc:
+        raise HTTPException(404, str(exc))
+    except markets.MarketDataUnavailable as exc:
+        raise HTTPException(502, str(exc))
 
 
 # ---------------------------------------------------------------------------- proof of reserves

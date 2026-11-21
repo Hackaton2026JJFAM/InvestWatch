@@ -41,7 +41,8 @@ r.get('/dashboard/stats', async (_req, res) => {
 r.get('/alerts', async (req, res) => {
   const f = parse(z.object({ status: z.enum(['NEW', 'REVIEWED', 'DISMISSED']).optional() }), req.query);
   res.json(await q(
-    `SELECT al.*, m.title, m.url, m.platform FROM alerts al JOIN materials m ON m.id = al.material_id
+    `SELECT al.*, COALESCE(m.title, e.name) AS title, m.url, COALESCE(m.platform, al.kind) AS platform, e.name AS entity_name
+       FROM alerts al LEFT JOIN materials m ON m.id = al.material_id LEFT JOIN entities e ON e.id = al.entity_id
       ${f.status ? 'WHERE al.status = $1' : ''} ORDER BY al.created_at DESC LIMIT 200`, f.status ? [f.status] : []));
 });
 
@@ -198,13 +199,6 @@ r.get('/registries/gleif', async (req, res) => {
 r.get('/registries/gleif/:lei', async (req, res) => {
   const { lei } = parse(z.object({ lei: z.string().regex(/^[A-Z0-9]{18}[0-9]{2}$/, 'Niepoprawny LEI') }), req.params);
   res.json(await analyzer.gleifDetail(lei));
-});
-
-r.get('/entities/:id/crisis', async (req, res) => {
-  const { id } = parse(idParam, req.params);
-  const periods = await q('SELECT * FROM crisis_periods ORDER BY start_date');
-  const rows = await q('SELECT * FROM company_crisis_behavior WHERE entity_id = $1', [id]);
-  res.json(periods.map((p) => ({ period: p, behavior: rows.find((r) => r.crisis_id === p.id) ?? null, status: rows.some((r) => r.crisis_id === p.id) ? 'ok' : 'brak danych' })));
 });
 
 r.get('/entities/:id/reserves', async (req, res) => {

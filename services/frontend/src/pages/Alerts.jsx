@@ -31,7 +31,9 @@ export default function Alerts() {
             <tbody>{data.map((a) => (
               <tr key={a.id} style={{ fontWeight: a.read ? 400 : 600 }}>
                 <td>{!a.read && <span className="dot" style={{ background: 'var(--high)' }} />}</td>
-                <td><Link to={`/materials/${a.material_id}`} onClick={() => !a.read && update(a.id, { read: true })}>{a.title || a.url}</Link><div className="small muted truncate">{a.platform} · {a.url}</div></td>
+                <td>{a.material_id
+                  ? <><Link to={`/materials/${a.material_id}`} onClick={() => !a.read && update(a.id, { read: true })}>{a.title || a.url}</Link><div className="small muted truncate">{a.platform} · {a.url}</div></>
+                  : <><Link to={a.kind?.startsWith('reserves') ? '/reserves' : `/entities/${a.entity_id}`} onClick={() => !a.read && update(a.id, { read: true })}>{a.entity_name ?? 'Podmiot'} – {a.kind?.startsWith('reserves') ? 'Proof of Reserves' : a.kind}</Link><div className="small muted">{a.message}</div></>}</td>
                 <td><Score score={a.score} threshold={threshold} /></td>
                 <td>{a.threshold}</td>
                 <td className="small muted">{fmtDate(a.created_at)}</td>

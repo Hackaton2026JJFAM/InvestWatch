@@ -56,6 +56,26 @@ const MIGRATIONS = [
   'ALTER TABLE entities ADD COLUMN IF NOT EXISTS enriched_at TIMESTAMPTZ',
   'ALTER TABLE persons ADD COLUMN IF NOT EXISTS masked BOOLEAN NOT NULL DEFAULT FALSE',
   'CREATE INDEX IF NOT EXISTS registry_records_entity ON registry_records (entity_id, registry, checked_at DESC)',
+  // alerty niezwiązane z materiałem (Proof of Reserves) – dotyczą podmiotu
+  'ALTER TABLE alerts ALTER COLUMN material_id DROP NOT NULL',
+  'ALTER TABLE alerts ALTER COLUMN analysis_id DROP NOT NULL',
+  "ALTER TABLE alerts ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'material'",
+  'ALTER TABLE alerts ADD COLUMN IF NOT EXISTS entity_id INT REFERENCES entities(id) ON DELETE CASCADE',
+  'ALTER TABLE alerts ADD COLUMN IF NOT EXISTS message TEXT',
+  // Proof of Reserves: identyfikator raportu i pełne dane (pokrycie per aktywo)
+  'ALTER TABLE reserves_reports ADD COLUMN IF NOT EXISTS audit_id TEXT',
+  'ALTER TABLE reserves_reports ADD COLUMN IF NOT EXISTS data JSONB',
+  'CREATE UNIQUE INDEX IF NOT EXISTS reserves_reports_uq ON reserves_reports (entity_id, audit_id)',
+  // zachowanie w kryzysach (GPW)
+  'ALTER TABLE entities ADD COLUMN IF NOT EXISTS ticker TEXT',
+  'ALTER TABLE crisis_periods ADD COLUMN IF NOT EXISTS code TEXT',
+  'CREATE UNIQUE INDEX IF NOT EXISTS crisis_periods_code ON crisis_periods (code)',
+  'ALTER TABLE company_crisis_behavior ADD COLUMN IF NOT EXISTS ticker TEXT',
+  "ALTER TABLE company_crisis_behavior ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'done'",
+  'ALTER TABLE company_crisis_behavior ADD COLUMN IF NOT EXISTS error TEXT',
+  'ALTER TABLE company_crisis_behavior ADD COLUMN IF NOT EXISTS data JSONB',
+  'ALTER TABLE company_crisis_behavior ADD COLUMN IF NOT EXISTS computed_at TIMESTAMPTZ',
+  'CREATE UNIQUE INDEX IF NOT EXISTS company_crisis_uq ON company_crisis_behavior (entity_id, crisis_id)',
 ];
 
 export async function migrate() {

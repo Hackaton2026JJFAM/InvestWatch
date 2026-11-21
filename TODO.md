@@ -68,8 +68,9 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Embeddingi (Ollama `nomic-embed-text`) do grupowania podobnych reklam
 
 ## Could
-- [ ] Zachowanie w kryzysach dla 1 okresu i 1 podmiotu (archiwum notowań GPW – bez stooq, który ma blokadę dla botów)
-- [~] Proof of reserves dla 1 giełdy (OKX): parser raportu i pokrycie per aktywo w analyzerze (`GET /reserves/okx`, testy) – [ ] zapis w bazie, harmonogram, alert przy pokryciu < 1:1 / braku raportu > 45 dni, panel w UI (`backend/src/reserves.js` napisany, niepodłączony)
+- [x] Zachowanie w kryzysach (GPW): archiwum notowań gpw.pl (akcje + WIG, bufor dni na dysku; stooq pominięty – blokada dla botów); okresy „Krach COVID-19” (II–VII 2020) i „Inwazja Rosji na Ukrainę” (II–VI 2022); metryki: maks. spadek od szczytu przed dnem WIG, spadek wobec WIG, dni do odrobienia strat, beta, zmienność, najgorsze sesje; wykres spółka vs WIG na karcie podmiotu. Sprawdzone: PKO BP −40,9% (WIG −36,0%), XTB −16,4% i odrobione w 12 dni
+- [ ] Kryzysy: kursy bez korekty o dywidendy/splity; pierwsze pobranie okresu ~4 min (~230 żądań z odstępem) – potem natychmiast z bufora
+- [x] Proof of Reserves (OKX): parser raportu (pokrycie per aktywo), zapis w `reserves_reports`, odczyt przy starcie i codziennie (`RESERVES_CRON`), alerty: pokrycie < 1:1, brak nowego raportu > 45 dni, nowy raport (informacja); strona „Rezerwy giełd (PoR)” z wykresem pokrycia i historią; alerty bez materiału na liście alertów. Sprawdzone: raport z 31.10.2026, min. pokrycie 100,02%
 - [x] Wideo/reels: yt-dlp → faster-whisper → OCR klatek → te same reguły (sekcja „Wideo / reels”)
 - [x] Lista sankcji UE (6303 wpisy, osoby i podmioty) – przesłanka M1.8 zawsze „wymaga weryfikacji”, nigdy naruszenie; panel na karcie podmiotu
 

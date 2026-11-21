@@ -11,6 +11,8 @@ import insights from './routes/insights.js';
 import materials from './routes/materials.js';
 import scans from './routes/scans.js';
 import { startScheduler } from './scheduler.js';
+import { startReservesSchedule } from './reserves.js';
+import markets from './routes/markets.js';
 import { seedSamples } from './seed.js';
 import { analyzer, scraper, UpstreamError } from './services.js';
 
@@ -37,7 +39,7 @@ app.get('/api/health', async (_req, res) => {
   res.status(body.ok ? 200 : 503).json(body);
 });
 
-app.use('/api', authRouter, scans, materials, insights);
+app.use('/api', authRouter, scans, materials, insights, markets);
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Nie znaleziono' }));
 
 // Express 5 przekazuje tu także błędy z funkcji async.
@@ -62,6 +64,7 @@ try {
 }
 startWorker();
 startScheduler();
+startReservesSchedule();
 server.listen(config.port, () => log.info('backend listening', { port: config.port }));
 if (config.seedDemo) seedSamples().catch((err) => log.warn('seed failed', { err: err.message }));
 

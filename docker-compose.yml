@@ -69,6 +69,7 @@ services:
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ENRICH_AUTO: ${ENRICH_AUTO:-true}
+      RESERVES_CRON: ${RESERVES_CRON:-30 6 * * *}
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
     volumes:
       - ./data/samples:/app/samples:ro

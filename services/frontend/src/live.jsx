@@ -40,7 +40,7 @@ export function LiveProvider({ children }) {
       disconnect: () => setConnected(false),
       'alert:new': (a) => {
         setUnread((n) => n + 1);
-        toast({ kind: 'alert', title: `Wysokie ryzyko (${Math.round(a.score)}/100)`, text: a.title || a.url, href: `/materials/${a.materialId}` });
+        toast({ kind: 'alert', title: `Wysokie ryzyko (${Math.round(a.score)}/100)`, text: a.title || a.url, href: a.materialId ? `/materials/${a.materialId}` : a.kind === 'reserves' ? '/reserves' : `/entities/${a.entityId}` });
         bump('alert:new')(a);
       },
       'alert:update': () => { refreshCounters(); bump('alert:update')(); },

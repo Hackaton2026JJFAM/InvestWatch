@@ -1,12 +1,12 @@
 // Karta podmiotu – panele kategorii; każdy pokazuje źródło i datę odczytu.
 import { Fragment, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { axisProps, barCursor, ChartGrid, ChartTooltip, useChartColors } from '../components/charts.jsx';
+import { Bar, BarChart, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { axisProps, barCursor, ChartGrid, ChartTooltip, cursorStyle, Legend, useChartColors } from '../components/charts.jsx';
 import { api } from '../api.js';
 import DataTree from '../components/DataTree.jsx';
 import { GleifRelations, GleifSummary, KrsSummary } from '../components/Registry.jsx';
-import { Empty, fmtDate, Panel, RiskBadge, Score } from '../components/ui.jsx';
+import { Empty, fmtDate, Panel, RiskBadge, Score, StatCard } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 import { KIND, REG } from './Entities.jsx';
@@ -152,24 +152,97 @@ function HistoryPanel({ entity, timeline, registry }) {
   );
 }
 
-function CrisisPanel({ id }) {
-  const { data } = useData(`/entities/${id}/crisis`);
+const pctSigned = (x) => (x == null ? '–' : `${x > 0 ? '+' : ''}${(x * 100).toFixed(1)}%`);
+const CRISES = { covid2020: 'Krach COVID-19 (II–VII 2020)', ukraina2022: 'Inwazja Rosji na Ukrainę (II–VI 2022)' };
+
+// Zachowanie spółki giełdowej w kryzysie – kursy z archiwum GPW wobec indeksu WIG.
+function CrisisPanel({ id, entity, refreshKey }) {
+  const c = useChartColors();
+  const { toast } = useLive();
+  const { data, reload } = useData(`/entities/${id}/crisis`, refreshKey);
+  const [ticker, setTicker] = useState('');
+  const [crisis, setCrisis] = useState('covid2020');
+  const [names, setNames] = useState(null);
+  useEffect(() => { if (data?.ticker && !ticker) setTicker(data.ticker); }, [data, ticker]);
+  const loadNames = () => { if (!names) api.get('/markets/gpw/instruments').then((d) => setNames(d.instruments ?? [])).catch(() => setNames([])); };
+  const results = data?.results ?? [];
+  const running = results.some((r) => r.status === 'running');
+  useEffect(() => {
+    if (!running) return undefined;
+    const t = setInterval(reload, 5000);
+    return () => clearInterval(t);
+  }, [running, reload]);
+  const run = async () => {
+    try {
+      await api.post(`/entities/${id}/crisis`, { ticker, crisis });
+      toast({ kind: 'info', title: 'Liczenie zachowania w kryzysie', text: 'Pierwsze pobranie okresu z archiwum GPW trwa kilka minut.' });
+      reload();
+    } catch (e) { toast({ kind: 'error', title: 'Kryzys – błąd', text: e.message }); }
+  };
   return (
-    <Panel title="Zachowanie w kryzysach" meta="fakty i źródła, bez przypisywania winy">
-      {data ? <table><thead><tr><th>Okres</th><th>Maks. spadek</th><th>Powrót</th><th>Status</th></tr></thead>
-        <tbody>{data.map((r) => <tr key={r.period.id}><td>{r.period.name}<div className="small muted">{r.period.start_date} – {r.period.end_date}</div></td>
-          <td>{r.behavior?.max_drawdown ?? '–'}</td><td>{r.behavior?.recovery_days ?? '–'}</td><td><span className="chip na">{r.status}</span></td></tr>)}</tbody></table> : <Empty>Ładowanie…</Empty>}
+    <Panel title="Zachowanie w kryzysach (GPW)" meta="kursy zamknięcia z archiwum GPW wobec WIG · fakty, bez oceny">
+      <div className="btn-row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
+        <input list="gpw-names" placeholder="Nazwa skrócona z GPW (np. PKOBP, XTB)" value={ticker} onFocus={loadNames}
+          onChange={(e) => setTicker(e.target.value.toUpperCase())} style={{ width: 260 }} />
+        <datalist id="gpw-names">{(names ?? []).map((n) => <option key={n} value={n} />)}</datalist>
+        <select value={crisis} onChange={(e) => setCrisis(e.target.value)}>
+          {Object.entries(CRISES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <button className="btn primary" disabled={!ticker || running} onClick={run}>{running ? 'Liczenie…' : 'Policz'}</button>
+        {entity.kind !== 'company' && <span className="small muted">Dotyczy spółek notowanych na GPW.</span>}
+      </div>
+      {!results.length && <Empty>Brak wyliczeń. Wpisz nazwę skróconą spółki z tabeli notowań GPW i wybierz okres.</Empty>}
+      {results.map((r) => <CrisisResult key={r.id} r={r} c={c} />)}
     </Panel>
+  );
+}
+
+function CrisisResult({ r, c }) {
+  const d = r.data;
+  if (r.status === 'running') return <div className="notice">{r.crisis_name}: liczenie dla {r.ticker}… (archiwum GPW, kilka minut przy pierwszym pobraniu okresu)</div>;
+  if (r.status === 'failed') return <div className="notice">{r.crisis_name}: {r.error}</div>;
+  if (!d) return null;
+  const worse = d.relative_drawdown != null && d.relative_drawdown < 0;
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <h3 style={{ margin: '4px 0 8px' }}>{d.period?.name} · {d.ticker} <span className="small muted">{d.period?.start} – {d.period?.end}</span></h3>
+      <div className="grid g4" style={{ marginBottom: 8 }}>
+        <StatCard label="Maks. spadek (faza kryzysu)" value={pctSigned(d.max_drawdown)} sub={`WIG: ${pctSigned(d.benchmark_drawdown)}`} tone={worse ? 'high' : 'low'} />
+        <StatCard label="Wobec rynku" value={pctSigned(d.relative_drawdown)} sub={worse ? 'spadek głębszy niż WIG' : 'spadek płytszy niż WIG'} />
+        <StatCard label="Odrobienie strat" value={d.recovered ? `${d.recovery_days} dni` : 'nie w okresie'}
+          sub={d.recovered ? `od dna ${d.trough.date} do ${d.recovery_date}` : `na koniec: ${pctSigned(d.recovery_pct_at_end)} od szczytu`} />
+        <StatCard label="Beta (WIG) · zmienność" value={`${d.beta_wig ?? '–'} · ${d.volatility != null ? `${Math.round(d.volatility * 100)}%` : '–'}`} sub="zmienność roczna z dziennych stóp zwrotu" />
+      </div>
+      <ResponsiveContainer width="100%" height={220}>
+        <LineChart data={d.chart} margin={{ left: -10, right: 12, top: 6 }}>
+          <ChartGrid c={c} />
+          <XAxis dataKey="date" {...axisProps(c)} minTickGap={40} tickFormatter={(v) => v.slice(5)} />
+          <YAxis {...axisProps(c)} axisLine={false} width={44} domain={['auto', 'auto']} />
+          <Tooltip cursor={cursorStyle(c)} content={<ChartTooltip valueFormatter={(v) => (v == null ? '–' : v.toFixed(1))} />} />
+          <ReferenceLine y={100} stroke={c.axis} strokeDasharray="4 4" />
+          {d.market_trough && <ReferenceLine x={d.market_trough} stroke={c.axis} strokeDasharray="2 4" label={{ value: 'dno WIG', fill: c.axis, fontSize: 11, position: 'insideTopRight' }} />}
+          <Line dataKey="stock" name={d.ticker} stroke={c.s1} dot={false} strokeWidth={2} />
+          <Line dataKey="wig" name="WIG" stroke={c.s2} dot={false} strokeWidth={1.5} />
+        </LineChart>
+      </ResponsiveContainer>
+      <Legend items={[{ label: `${d.ticker} (początek okresu = 100)`, color: c.s1 }, { label: 'WIG', color: c.s2 }]} />
+      <p className="small muted" style={{ marginBottom: 0 }}>Najgorsze sesje: {(d.worst_sessions ?? []).map((w) => `${w.date} (${w.change_pct}%)`).join(', ')} · {d.note} <SourceLink url={d.source_url} label="archiwum GPW" /></p>
+    </div>
   );
 }
 
 function ReservesPanel({ id }) {
   const { data } = useData(`/entities/${id}/reserves`);
+  const latest = data?.reports?.[0];
+  const rep = latest?.data;
   return (
-    <Panel title="Rezerwy i pokrycie 1:1" meta={data?.status}>
-      <div className="notice">{data?.note ?? 'Dane o rezerwach to deklaracja podmiotu, nie audyt.'}</div>
-      {data?.reports?.length ? <table><tbody>{data.reports.map((r) => <tr key={r.id}><td>{r.report_date}</td><td>pokrycie {r.coverage}</td><td><SourceLink url={r.source_url} /></td></tr>)}</tbody></table>
-        : <Empty>Brak danych</Empty>}
+    <Panel title="Rezerwy i pokrycie 1:1" meta={latest ? `raport ${String(latest.report_date).slice(0, 10)}` : data?.status}>
+      <div className="notice">Proof of Reserves to deklaracja giełdy, nie audyt finansowy.</div>
+      {rep ? (
+        <p style={{ marginBottom: 0 }}>Minimalne pokrycie: <b>{(rep.min_coverage * 100).toFixed(1)}%</b>
+          {rep.below_one?.length ? <> · <span className="chip high">poniżej 1:1: {rep.below_one.join(', ')}</span></> : <> · <span className="chip pass">wszystkie aktywa ≥ 1:1</span></>}
+          <br /><Link to="/reserves">Szczegóły raportu →</Link></p>
+      ) : <Empty>Brak raportów dla tego podmiotu.</Empty>}
     </Panel>
   );
 }
@@ -226,9 +299,9 @@ export default function Entity() {
         <WarningsPanel registry={registry} />
         <PersonsPanel persons={persons} registry={registry} />
         <HistoryPanel entity={entity} timeline={timeline} registry={registry} />
-        <CrisisPanel id={id} />
         <ReservesPanel id={id} />
       </div>
+      <CrisisPanel id={id} entity={entity} refreshKey={`${tick}-${refresh}`} />
       <AllRegistryData registry={registry} />
       <Panel title="Materiały powiązane">
         {materials.length ? <table><thead><tr><th>Materiał</th><th>Rola podmiotu</th><th>Wynik</th><th>Ryzyko</th><th>Data</th></tr></thead>

@@ -114,4 +114,32 @@ describe('Wzbogacanie podmiotów', () => {
     assert.ok(Array.isArray(body.registry), 'registry pozostaje listą (zgodność wsteczna)');
     assert.ok(body.entity.enriched_at);
   });
+
+  test('Proof of Reserves: kształt odpowiedzi i alerty bez materiału', async (t) => {
+    if (!up) return t.skip('backend nie działa');
+    const { status, body } = await get('/reserves');
+    assert.equal(status, 200);
+    assert.ok(Array.isArray(body.history) && Array.isArray(body.alerts));
+    assert.equal(body.staleDays, 45);
+    const alerts = await get('/alerts');
+    assert.equal(alerts.status, 200);   // LEFT JOIN – alerty PoR nie mają materiału
+  });
+
+  test('Kryzysy: walidacja nazwy z GPW i nieznanego okresu', async (t) => {
+    if (!up) return t.skip('backend nie działa');
+    const e = await send('POST', '/entities', { name: 'Spółka Testowa Kryzys S.A.' });
+    assert.ok([200, 201].includes(e.status), JSON.stringify(e.body));
+    const id = e.body.id;
+    assert.equal((await send('POST', `/entities/${id}/crisis`, { ticker: 'x; DROP' })).status, 400);
+    assert.equal((await send('POST', `/entities/${id}/crisis`, { ticker: 'PKOBP', crisis: 'nieznany' })).status, 400);
+    const r = await get(`/entities/${id}/crisis`);
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.body.results, []);
+  });
+
+  test('wideo: odrzuca treść, która nie jest plikiem wideo', async (t) => {
+    if (!up) return t.skip('backend nie działa');
+    const r = await fetch(`${API}/scans/video`, { method: 'POST', headers: { 'content-type': 'text/plain' }, body: 'to nie jest wideo' });
+    assert.equal(r.status, 415);
+  });
 });

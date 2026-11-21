@@ -16,11 +16,12 @@ async function okxEntity(t) {
      ON CONFLICT (name_norm, kind) DO UPDATE SET name = entities.name RETURNING id`);
 }
 
+// Alert tylko raz dla danego klucza (np. numeru raportu) – codzienny odczyt nie powiela alertów.
 async function alertOnce(t, entityId, kind, key, score, message) {
-  const exists = await t.one("SELECT id FROM alerts WHERE kind = $1 AND entity_id = $2 AND message LIKE $3 || '%'", [kind, entityId, key]);
+  const exists = await t.one('SELECT id FROM alerts WHERE kind = $1 AND entity_id = $2 AND left(message, length($3)) = $3', [kind, entityId, key]);
   if (exists) return null;
   return t.one(
-    'INSERT INTO alerts (kind, entity_id, score, threshold, message) VALUES ($1, $2, $3, 0, $4) RETURNING id, created_at',
+    'INSERT INTO alerts (kind, entity_id, score, threshold, message) VALUES ($1, $2, $3, 0, $4) RETURNING id, score, message, created_at',
     [kind, entityId, score, `${key} ${message}`]);
 }
 
@@ -50,7 +51,9 @@ export async function refreshReserves() {
     }
     return { entityId: e.id, newReport: Boolean(inserted), alerts: alerts.filter(Boolean) };
   });
-  for (const a of result.alerts) emit('alert:new', { id: a.id, entityId: result.entityId, score: 90, title: 'OKX – Proof of Reserves', kind: 'reserves' });
+  for (const a of result.alerts) {
+    emit('alert:new', { id: a.id, entityId: result.entityId, score: Number(a.score), title: `OKX – Proof of Reserves: ${a.message}`, kind: 'reserves' });
+  }
   emit('entity:enriched', { id: result.entityId });
   log.info('reserves refreshed', { exchange: 'OKX', audit: r.audit_id, min: r.min_coverage, new: result.newReport });
   return { ...result, report: r, ageDays };
