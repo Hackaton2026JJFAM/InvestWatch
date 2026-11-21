@@ -123,3 +123,12 @@ label.f { display: flex; flex-direction: column; gap: 3px; font-size: .75rem; co
 .confusion div { border-radius: 8px; padding: 10px; text-align: center; }
 .confusion b { display: block; font-size: 1.6rem; }
 .search-big { width: 100%; font-size: 1.05rem; padding: 12px 14px; }
+
+.shot-wrap { position: relative; line-height: 0; }
+.hl { position: absolute; border: 2px solid; border-radius: 3px; pointer-events: auto; }
+.hl.risk { border-color: var(--high); background: rgba(198, 40, 40, .08); }
+.hl.profit { border-color: var(--brand-2); background: rgba(29, 95, 168, .06); }
+.hl-tag { position: absolute; left: -2px; bottom: 100%; background: var(--high); color: #fff; font-size: 10px; line-height: 1.4; padding: 1px 5px; border-radius: 3px 3px 0 0; white-space: nowrap; }
+.drop { border: 2px dashed var(--border); border-radius: 10px; padding: 14px; text-align: center; background: var(--surface-2); }
+.drop.over { border-color: var(--brand-2); background: #eef4fc; }
+.drop p { margin: 4px 0 8px; }

@@ -398,6 +398,39 @@ def r8(c: Ctx) -> Finding:
     return F("8", PASS, "Ostrzeżenie czytelne na desktopie, tablecie i telefonie.")
 
 
+def highlights(doc: Doc, limit: int = 40) -> list[dict]:
+    """Prostokąty (desktop) do podświetlenia na zrzucie: ostrzeżenia o ryzyku i obietnice zysku."""
+    if not doc.has_layout:
+        return []
+    blocks = doc.blocks("desktop")
+    vis = [b for b in blocks if b.get("visible") and b.get("w", 0) > 0]
+    dom = dominant_font([b for b in vis if not is_risk_warning(b["text"])]) or 16
+    out = []
+    for b in blocks:
+        if b.get("w", 0) <= 0 or b.get("h", 0) <= 0:
+            continue
+        if is_risk_warning(b["text"]):
+            kind = "risk"
+        elif T.has(T.GUARANTEE, b["text"]) or T.has(T.PROFIT, b["text"]):
+            kind = "profit"
+        else:
+            continue
+        issues = []
+        if kind == "risk":
+            if b["font_size"] / dom < 0.75 or b["font_size"] < 10:
+                issues.append(f"czcionka {b['font_size']:.0f}px [4]")
+            if b.get("contrast", 21) < 4.5:
+                issues.append(f"kontrast {b['contrast']}:1 [5]")
+            if b.get("occluded"):
+                issues.append("przesłonięte [5]")
+            if b.get("in_footer") or b.get("in_fine_print"):
+                issues.append("stopka/przypis [6]")
+        out.append({"kind": kind, "x": b["x"], "y": b["y"], "w": b["w"], "h": b["h"], "text": b["text"][:160], "issues": issues})
+        if len(out) >= limit:
+            break
+    return out
+
+
 def run(doc: Doc) -> list[Finding]:
     c = Ctx(doc)
     out = [r1(c), r2(c), r3(c), g1(c)]

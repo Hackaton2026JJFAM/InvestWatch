@@ -43,6 +43,16 @@ export async function waitForDb(retries = 30) {
   throw new Error('Baza danych niedostępna');
 }
 
+// Migracje idempotentne – aktualizują bazy utworzone starszą wersją db/init.sql.
+const MIGRATIONS = [
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS simhash TEXT',
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS near_duplicate_of INT REFERENCES materials(id) ON DELETE SET NULL',
+];
+
+export async function migrate() {
+  for (const sql of MIGRATIONS) await pool.query(sql);
+}
+
 export async function getThreshold() {
   const row = await one("SELECT value FROM settings WHERE key = 'threshold'");
   return row ? Number(row.value) : config.defaultThreshold;

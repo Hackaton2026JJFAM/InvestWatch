@@ -47,7 +47,7 @@ export default function Results() {
               </tr></thead>
               <tbody>{data.items.map((m) => (
                 <tr key={m.id} className="click" onClick={() => nav(`/materials/${m.id}`)}>
-                  <td><div className="truncate">{m.title || '(bez tytułu)'}</div><div className="small muted truncate">{m.url}</div></td>
+                  <td><div className="truncate">{m.title || '(bez tytułu)'}{m.near_duplicate_of && <span className="chip mid" style={{ marginLeft: 6 }} title={`Prawie duplikat materiału #${m.near_duplicate_of}`}>duplikat #{m.near_duplicate_of}</span>}</div><div className="small muted truncate">{m.url}</div></td>
                   <td><span className="chip neutral">{m.platform}</span>{m.author && <div className="small muted">{m.author}</div>}</td>
                   <td><ModuleChips modules={m.modules} /></td>
                   <td style={{ minWidth: 90 }}><Score score={m.score} threshold={data.threshold} /><ScoreBar score={m.score} threshold={data.threshold} /></td>

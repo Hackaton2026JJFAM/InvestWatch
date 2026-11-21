@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getThreshold, one, q, tx } from '../db.js';
 import { emit } from '../realtime.js';
 import { analyzer } from '../services.js';
+import { findSimilar } from '../similarity.js';
 import { parse, riskSql } from '../validate.js';
 
 const r = Router();
@@ -37,7 +38,7 @@ r.get('/materials', async (req, res) => {
   const sortCol = { score: 'a.score', fetched_at: 'm.fetched_at', title: 'm.title' }[f.sort];
   params.push(f.size, (f.page - 1) * f.size);
   const items = await q(
-    `SELECT m.id, m.url, m.title, m.author, m.platform, m.status, m.fetched_at, m.ground_truth,
+    `SELECT m.id, m.url, m.title, m.author, m.platform, m.status, m.fetched_at, m.ground_truth, m.near_duplicate_of,
             a.id AS analysis_id, a.score, a.modules, a.module_scores, ${riskSql()} AS risk
        FROM materials m ${LATEST} ${w}
       ORDER BY ${sortCol} ${f.dir} NULLS LAST, m.id DESC
@@ -59,11 +60,12 @@ r.get('/materials/:id', async (req, res) => {
     `SELECT e.id, e.name, e.kind, e.registry_status, me.role FROM material_entities me JOIN entities e ON e.id = me.entity_id WHERE me.material_id = $1`, [id]);
   const alerts = await q('SELECT * FROM alerts WHERE material_id = $1 ORDER BY id DESC', [id]);
   const { layout = {}, content_text: _c, full_text: _f, ...meta } = m.raw ?? {};
-  const viewports = Object.fromEntries(Object.entries(layout.viewports ?? {}).map(([k, v]) => [k, { width: v.width, height: v.height, page_height: v.page_height, blocks: v.blocks?.length ?? 0 }]));
+  const viewports = Object.fromEntries(Object.entries(layout.viewports ?? {}).map(([k, v]) => [k, { width: v.width, height: v.height, page_height: v.page_height, screenshot_height: v.screenshot_height ?? null, blocks: v.blocks?.length ?? 0 }]));
   res.json({
     material: { ...m, raw: undefined, meta: { ...meta, links: undefined }, screenshot: layout.screenshot ?? null, layout_engine: layout.engine ?? 'none', viewports },
     analysis: analyses[0] ? { ...analyses[0], result: latest.result } : null,
     history: analyses, findings, entities, alerts, threshold,
+    similar: await findSimilar(m.simhash, { excludeId: m.id }),
     risk: analyses[0] ? (analyses[0].score >= threshold ? 'wysokie' : analyses[0].score >= threshold * 0.6 ? 'średnie' : 'niskie') : null,
   });
 });
@@ -76,6 +78,15 @@ r.patch('/materials/:id/status', async (req, res) => {
   if (status !== 'NEW') await q("UPDATE alerts SET status = $2, read = TRUE WHERE material_id = $1 AND status = 'NEW'", [id, status === 'DISMISSED' ? 'DISMISSED' : 'REVIEWED']);
   emit('material:status', row);
   res.json(row);
+});
+
+r.delete('/materials/:id', async (req, res) => {
+  const { id } = parse(idParam, req.params);
+  const row = await one('DELETE FROM materials WHERE id = $1 RETURNING id', [id]);
+  if (!row) return res.status(404).json({ error: 'Nie znaleziono materiału' });
+  await q("DELETE FROM entities e WHERE NOT EXISTS (SELECT 1 FROM material_entities me WHERE me.entity_id = e.id) AND e.kind IN ('influencer', 'unknown')");
+  emit('material:deleted', row);
+  res.status(204).end();
 });
 
 r.patch('/materials/:id/label', async (req, res) => {
@@ -102,6 +113,7 @@ r.post('/materials/:id/reanalyze', async (req, res) => {
     }
     return row;
   });
+  if (result.doc?.simhash) await q('UPDATE materials SET simhash = $2 WHERE id = $1', [id, result.doc.simhash]);
   const s = await analyzer.summary(result).catch(() => null);
   if (s) await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   res.json(a);

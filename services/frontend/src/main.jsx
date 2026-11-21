@@ -1,16 +1,16 @@
-import { StrictMode } from 'react';
+import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Link, NavLink, Route, Routes } from 'react-router-dom';
 import { LiveProvider, useLive } from './live.jsx';
-import Alerts from './pages/Alerts.jsx';
-import Calibration from './pages/Calibration.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import Entities from './pages/Entities.jsx';
-import Entity from './pages/Entity.jsx';
-import Material from './pages/Material.jsx';
-import Results from './pages/Results.jsx';
-import Scan from './pages/Scan.jsx';
-import Search from './pages/Search.jsx';
+const Alerts = lazy(() => import('./pages/Alerts.jsx'));
+const Calibration = lazy(() => import('./pages/Calibration.jsx'));
+const Dashboard = lazy(() => import('./pages/Dashboard.jsx'));
+const Entities = lazy(() => import('./pages/Entities.jsx'));
+const Entity = lazy(() => import('./pages/Entity.jsx'));
+const Material = lazy(() => import('./pages/Material.jsx'));
+const Results = lazy(() => import('./pages/Results.jsx'));
+const Scan = lazy(() => import('./pages/Scan.jsx'));
+const Search = lazy(() => import('./pages/Search.jsx'));
 import './styles.css';
 
 function Shell() {
@@ -38,6 +38,7 @@ function Shell() {
         </div>
       </aside>
       <main className="main">
+        <Suspense fallback={<div className="empty">Ładowanie…</div>}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/materials" element={<Results />} />
@@ -50,6 +51,7 @@ function Shell() {
           <Route path="/scan" element={<Scan />} />
           <Route path="*" element={<div className="empty">Nie znaleziono strony</div>} />
         </Routes>
+        </Suspense>
       </main>
       <div className="toasts" aria-live="polite">
         {toasts.map((t) => (

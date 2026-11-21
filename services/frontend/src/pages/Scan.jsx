@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
+import BulkImport from '../components/BulkImport.jsx';
 import { Empty, fmtDate, Panel } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
@@ -67,6 +68,7 @@ export default function Scan() {
           <div className="btn-row" style={{ marginTop: 8, justifyContent: 'flex-end' }}><button className="btn primary" disabled={!upload.body} onClick={submitUpload}>Dodaj i analizuj</button></div>
         </Panel>
       </div>
+      <div style={{ marginTop: 16 }}><BulkImport onDone={(n) => toast({ title: 'Import zakończony', text: `${n} materiałów wysłano do analizy` })} /></div>
       <div className="grid g2" style={{ marginTop: 16 }}>
         <Panel title="Kolejka zadań" meta="na żywo">
           {jobs.data?.length ? <div className="table-wrap" style={{ maxHeight: 420, overflow: 'auto' }}><table>

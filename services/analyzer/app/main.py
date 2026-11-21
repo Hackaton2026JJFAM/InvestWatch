@@ -81,7 +81,7 @@ def analyze_material(m: dict) -> dict:
         "m3": {"classification": r3["classification"], "entities": r3["entities"]},
         "ml": {"model": clf.version, "train_size": clf.n_train, **clf.document_profile(doc.sentences)},
         "doc": {"lang": doc.lang, "domain": doc.domain, "sentences": len(doc.sentences), "layout": doc.layout.get("engine"),
-                "simhash": simhash(doc.content_text)},
+                "simhash": simhash(doc.content_text), "highlights": rules_m2.highlights(doc)},
         "analyzer_version": VERSION,
         "elapsed_ms": round((time.perf_counter() - t0) * 1000),
     }

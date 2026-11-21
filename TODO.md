@@ -14,16 +14,25 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [x] Frontend: pulpit, wyniki z filtrami, szczegóły materiału (zakładki M1/M2/M3, zrzut, historia), alerty na żywo, podmioty (panele kategorii), wyszukiwarka, kalibracja (FP/FN, krzywe), skanowanie i źródła
 - [x] `npm audit` (0 podatności), `pip-audit` (0 podatności), wersje przypięte
 
+- [x] Lokalny stos bez Dockera (`tools/devstack/restart.ps1`: wbudowany Postgres, kolejka w pamięci)
+- [x] Przeglądarka: konsola bez nowych błędów, toasty WebSocket na żywo, panel kalibracji – sprawdzone w trybie dev
+- [x] Code-splitting frontendu (leniwe strony; największy chunk 386 kB zamiast 835 kB)
+- [x] Testy backendu `npm test` (3 jednostkowe + 5 integracyjnych na działającym stosie: walidacja, SSRF, import → analiza → podobne → deduplikacja)
+- [x] Podświetlanie ostrzeżeń i obietnic zysku na zrzucie całej strony (z naruszeniami reguł 4/5/6)
+- [x] Prawie-duplikaty (simhash, Hamming ≤ 3 bity) + lista podobnych materiałów; migracje bazy przy starcie
+- [x] Import wielu plików naraz (HTML/TXT/JSON/CSV z URL, `labels.json` z etykietami), przeciągnij i upuść
+- [x] `DELETE /api/materials/:id`
+
 ## Następne kroki (priorytet)
-- [ ] (!) Pierwsze uruchomienie `docker compose up --build` i test całego stosu (lokalnie nie było Dockera)
-- [x] Wykonać testy przeglądarkowe: 10/12 zaliczonych; toast WebSocket i zapis progu działają.
-- [ ] (!) Naprawić listę materiałów i filtry (HTTP 502), odświeżanie licznika alertów oraz ponownie sprawdzić konsolę.
-- [ ] (!) Na hackathonie: wczytać próbki od UKNF (pendrive) przez „Import materiału”, oznaczyć je i przeliczyć kalibrację
-- [ ] Code-splitting frontendu (bundle 835 kB, dynamiczny import Recharts)
-- [x] Przetestować REST i zapis na osobnym PostgreSQL 16: 40/51 zaliczonych w wariancie diagnostycznym.
+- [ ] (!) Pierwsze uruchomienie `docker compose up --build` i test całego stosu (odłożone – brak Dockera)
+- [x] Wykonać testy przeglądarkowe (audyt): 10/12 zaliczonych; toast WebSocket i zapis progu działają.
+- [ ] (!) Naprawić listę materiałów i filtry (HTTP 502), odświeżanie licznika alertów oraz ponownie sprawdzić konsolę – zweryfikować wobec raportu audytu.
+- [x] Przetestować REST i zapis na osobnym PostgreSQL 16 (audyt): 40/51 zaliczonych w wariancie diagnostycznym.
 - [ ] (!) Dodać brakujący sterownik `ioredis` do aplikacji i powtórzyć test backendu w docelowym Compose.
-- [ ] Podświetlanie fragmentu ostrzeżenia na zrzucie ekranu (bbox z layoutu)
-- [ ] Prawie-duplikaty: porównanie `simhash` w backendzie (pole już liczone w analyzerze)
+- [ ] (!) Na hackathonie: wczytać próbki od UKNF (pendrive) przez „Import wielu plików”, oznaczyć je i przeliczyć kalibrację
+- [ ] Sprawdzić konsolę na buildzie produkcyjnym (w dev StrictMode/HMR dodają ostrzeżenia WebSocket)
+- [ ] Import obrazów/zrzutów reklam (OCR) – formaty dziś pomijane przy imporcie
+- [ ] Przycisk „Usuń materiał” w UI (endpoint już jest)
 
 ## Should
 - [ ] Adapter KRS (API KRS – sprawdzić limity): zarząd, wspólnicy, kapitał → `persons`, `person_links`

@@ -29,6 +29,23 @@ function FindingsTable({ findings }) {
   );
 }
 
+// Zrzut strony z nałożonymi ramkami bloków (współrzędne z renderu Playwright, viewport desktop).
+function AnnotatedShot({ src, vp, boxes }) {
+  const W = vp?.width ?? 1366;
+  const H = vp?.screenshot_height;
+  return (
+    <div className="shot-wrap">
+      <img className="shot" src={src} alt="Zrzut ekranu materiału" />
+      {H && boxes.filter((b) => b.y < H).map((b, i) => (
+        <div key={i} className={`hl ${b.kind}`} title={`${b.text}${b.issues.length ? `\n⚠ ${b.issues.join(', ')}` : ''}`}
+          style={{ left: `${(b.x / W) * 100}%`, top: `${(b.y / H) * 100}%`, width: `${(b.w / W) * 100}%`, height: `${(Math.min(b.h, H - b.y) / H) * 100}%` }}>
+          {b.issues.length > 0 && <span className="hl-tag">{b.issues.join(' · ')}</span>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Summary({ materialId, analysis, tick }) {
   const { data, reload } = useData(`/summary/${materialId}`, `${tick}-${analysis?.id}`);
   return (
@@ -46,7 +63,7 @@ export default function Material() {
   const { data, error, reload } = useData(`/materials/${id}`, tick);
   if (error) return <Empty>{error.message}</Empty>;
   if (!data) return <Empty>Ładowanie…</Empty>;
-  const { material: m, analysis: a, findings, entities, history, threshold, risk } = data;
+  const { material: m, analysis: a, findings, entities, history, threshold, risk, similar = [] } = data;
   const r = a?.result ?? {};
   const byModule = (mod) => findings.filter((f) => f.module === mod);
   const setStatus = (status) => api.patch(`/materials/${id}/status`, { status }).then(reload);
@@ -97,6 +114,11 @@ export default function Material() {
               <button className={`btn ${m.ground_truth === false ? 'primary' : ''}`} onClick={() => label(false)}>Poprawny</button>
               <button className="btn" onClick={() => label(null)}>Brak etykiety</button>
             </div>
+            <h3 style={{ marginTop: 16 }}>Podobne materiały (simhash)</h3>
+            {similar.length ? <table><tbody>{similar.map((x) => (
+              <tr key={x.id}><td><Link to={`/materials/${x.id}`}>{x.title || x.url}</Link><div className="small muted">{x.platform}{x.author ? ` · ${x.author}` : ''}</div></td>
+                <td><span className={`chip ${x.distance <= 3 ? 'mid' : 'neutral'}`}>{x.distance <= 3 ? 'prawie duplikat' : 'podobny'} · {x.distance} bit</span></td></tr>))}
+            </tbody></table> : <p className="small muted">Brak podobnych treści w bazie.</p>}
           </Panel>
         </div>
       )}
@@ -139,8 +161,8 @@ export default function Material() {
 
       {tab === 'Materiał' && (
         <div className="grid g2">
-          <Panel title="Zrzut ekranu (desktop)">
-            {m.screenshot ? <img className="shot" src={m.screenshot} alt="Zrzut ekranu materiału" /> : <Empty>Brak zrzutu (materiał tekstowy).</Empty>}
+          <Panel title="Zrzut ekranu (desktop)" meta="ramki: czerwona = ostrzeżenie o ryzyku, niebieska = obietnica zysku">
+            {m.screenshot ? <AnnotatedShot src={m.screenshot} vp={m.viewports?.desktop} boxes={r.doc?.highlights ?? []} /> : <Empty>Brak zrzutu (materiał tekstowy).</Empty>}
             {Object.keys(m.viewports ?? {}).length > 0 && (
               <p className="small muted">Viewporty: {Object.entries(m.viewports).map(([k, v]) => `${k} ${v.width}×${v.height} (${v.blocks} bloków)`).join(' · ')}</p>
             )}

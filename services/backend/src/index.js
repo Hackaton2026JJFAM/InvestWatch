@@ -2,7 +2,7 @@ import http from 'node:http';
 import express from 'express';
 import helmet from 'helmet';
 import { config } from './config.js';
-import { pool, waitForDb } from './db.js';
+import { migrate, pool, waitForDb } from './db.js';
 import { log } from './log.js';
 import { scanQueue, startWorker } from './queue.js';
 import { attach } from './realtime.js';
@@ -44,6 +44,7 @@ const server = http.createServer(app);
 attach(server);
 
 await waitForDb();
+await migrate();
 startWorker();
 startScheduler();
 server.listen(config.port, () => log.info('backend listening', { port: config.port }));

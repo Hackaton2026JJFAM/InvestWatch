@@ -11,6 +11,8 @@ from .net import next_proxy, random_ua, validate_url
 
 log = logging.getLogger("scraper.render")
 
+SHOT_MAX_H = 4000
+
 VIEWPORTS = {
     "desktop": {"width": 1366, "height": 768},
     "tablet": {"width": 768, "height": 1024},
@@ -150,8 +152,12 @@ class Renderer:
                 await page.wait_for_timeout(150)
                 viewports[name] = await page.evaluate(LAYOUT_JS)
                 if name == "desktop":
-                    shot = await page.screenshot(type="jpeg", quality=55, full_page=False)
+                    # zrzut całej strony (maks. SHOT_MAX_H px) – współrzędne bloków pokrywają się ze zrzutem
+                    shot_h = min(viewports[name]["page_height"], SHOT_MAX_H)
+                    shot = await page.screenshot(type="jpeg", quality=55, full_page=True,
+                                                 clip={"x": 0, "y": 0, "width": size["width"], "height": shot_h})
                     screenshot = "data:image/jpeg;base64," + base64.b64encode(shot).decode()
+                    viewports[name]["screenshot_height"] = shot_h
             return {"engine": "playwright", "final_url": final_url, "html": page_html,
                     "viewports": viewports, "screenshot": screenshot}
         finally:
