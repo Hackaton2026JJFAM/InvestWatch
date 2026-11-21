@@ -1,0 +1,49 @@
+{
+  "database": {
+    "current_database": "investwatch_audit"
+  },
+  "counts": {
+    "materials": 25,
+    "analyses": 26,
+    "findings": 586,
+    "alerts": 15,
+    "entities": 10
+  },
+  "jobs": [
+    {
+      "status": "failed",
+      "n": 2
+    },
+    {
+      "status": "duplicate",
+      "n": 2
+    },
+    {
+      "status": "done",
+      "n": 25
+    }
+  ],
+  "materialWithoutAnalysis": 0,
+  "health": {
+    "ok": true,
+    "db": true,
+    "scraper": {
+      "ok": true,
+      "playwright": true,
+      "version": "0.1.0"
+    },
+    "analyzer": {
+      "ok": true,
+      "version": "0.1.0",
+      "registry_firms": 752,
+      "registry_fetched_at": "2026-11-21T12:22:19.989861+00:00",
+      "classifier": "tfidf-lr-0889ab43"
+    },
+    "queue": {
+      "waiting": 0,
+      "active": 0,
+      "failed": 2,
+      "completed": 27
+    }
+  }
+}

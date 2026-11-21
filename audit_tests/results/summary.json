@@ -1,0 +1,261 @@
+{
+  "suites": [
+    {
+      "file": "backend-workflows.xml",
+      "total": 8,
+      "passed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "file": "backend.xml",
+      "total": 43,
+      "passed": 32,
+      "failed": 11,
+      "skipped": 0
+    },
+    {
+      "file": "browser.xml",
+      "total": 12,
+      "passed": 10,
+      "failed": 2,
+      "skipped": 0
+    },
+    {
+      "file": "controlled-scrape.xml",
+      "total": 8,
+      "passed": 6,
+      "failed": 2,
+      "skipped": 0
+    },
+    {
+      "file": "http-visual.xml",
+      "total": 57,
+      "passed": 45,
+      "failed": 12,
+      "skipped": 0
+    },
+    {
+      "file": "node.xml",
+      "total": 8,
+      "passed": 6,
+      "failed": 2,
+      "skipped": 0
+    },
+    {
+      "file": "original-analyzer.xml",
+      "total": 14,
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0
+    },
+    {
+      "file": "public.xml",
+      "total": 5,
+      "passed": 3,
+      "failed": 2,
+      "skipped": 0
+    },
+    {
+      "file": "scoring.xml",
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "skipped": 0
+    }
+  ],
+  "totals": {
+    "total": 161,
+    "passed": 130,
+    "failed": 31,
+    "skipped": 0
+  },
+  "failures": [
+    {
+      "file": "backend.xml",
+      "test": "test_get_endpoints[/materials]",
+      "message": "AssertionError: {\"error\":\"bind message supplies 1 parameters, but prepared statement \\\"\\\" requires 0\"}\nassert 502 == 200\n +  where 502 = <Response [502 Bad Gateway]>.status_code",
+      "detail": "path = '/materials'\n\n    @pytest.mark.parametrize(\"path\", [\n        \"/health\", \"/dashboard/stats\", \"/materials\", \"/alerts\", \"/settings\",\n        \"/calibration\", \"/search?q=audit\", \"/entities\", \"/rules\", \"/sources\", \"/scans\",\n    ])\n    def test_get_endpoints(path):\n        response = call(\"GET\", path)\n>       assert response.status_code == 200, response.text\nE       AssertionError: {\"error\":\"bind message supplies 1 parameters, but prepared statement \\\"\\\" requires 0\"}\nE       assert 502 == 200\nE        +  where 502 = <Response [502 Bad Gateway]>.status_code\n\naudit_tests\\test_backend.py:44: AssertionError"
+    },
+    {
+      "file": "backend.xml",
+      "test": "test_all_filters_and_sorting[platform=web]",
+      "message": "AssertionError: ('platform=web', '{\"error\":\"could not determine data type of parameter $1\"}')\nassert 502 == 200\n +  where 502 = <Response [502 Bad Gateway]>.status_code",
+      "detail": "material = {'material': {'id': 1, 'source_id': None, 'url': 'https://audit.example/e2bc29bd28924388a6d7413583697661', 'final_url'...: 1, 'module': 'm2', 'rule_id': '4', ...}, {'id': 6, 'analysis_id': 1, 'module': 'm2', 'rule_id': '5', ...}, ...], ...}\nquery = 'platform=web'\n\n    @pytest.mark.parametrize(\"query\", [\n            \"platform=web\", \"module=m2\", \"risk=wysokie\", \"status=NEW\",\n            \"from=2026-01-01&to=2026-12-31\", \"sort=score&dir=asc\",\n            \"q=Syntetyczny\", \"domain=audit.example\",\n            \"module=m2&platform=web&risk=wysokie&status=NEW&sort=title\",\n    ])\n    def test_all_filters_and_sorting(material, query):\n        response = call(\"GET\", \"/materials?\" + query)\n>       assert response.status_code == 200, (query, response.text)\nE       AssertionError: ('platform=web', '{\"error\":\"could not determine data type of parameter $1\"}')\nE       assert 502 == 200\nE        +  where 502 = <Response [502 Bad Gateway]>.status_code\n\naudit_tests\\test_backend.py:88: AssertionError"
+    },
+    {
+      "file": "backend.xml",
+      "test": "test_all_filters_and_sorting[module=m2]",
+      "message": "AssertionError: ('module=m2', '{\"error\":\"could not determine data type of parameter $1\"}')\nassert 502 == 200\n +  where 502 = <Response [502 Bad Gateway]>.status_code",
+      "detail": "material = {'material': {'id': 1, 'source_id': None, 'url': 'https://audit.example/e2bc29bd28924388a6d7413583697661', 'final_url'...: 1, 'module': 'm2', 'rule_id': '4', ...}, {'id': 6, 'analysis_id': 1, 'module': 'm2', 'rule_id': '5', ...}, ...], ...}\nquery = 'module=m2'\n\n    @pytest.mark.parametrize(\"query\", [\n            \"platform=web\", \"module=m2\", \"risk=wysokie\", \"status=NEW\",\n            \"from=2026-01-01&to=2026-12-31\", \"sort=score&dir=asc\",\n            \"q=Syntetyczny\", \"domain=audit.example\",\n            \"module=m2&platform=web&risk=wysokie&status=NEW&sort=title\",\n    ])\n    def test_all_filters_and_sorting(material, query):\n        response = call(\"GET\", \"/materials?\" + query)\n>       assert response.status_code == 200, (query, response.text)\nE       AssertionError: ('module=m2', '{\"error\":\"could not determine data type of parameter $1\"}')\nE       assert 502 == 200\nE        +  where 502 = <Response [502 Bad Gateway]>.status_code\n\naudit_tests\\test_backend.py:88: AssertionError"
+    },
+    {
+      "file": "backend.xml",
+      "test": "test_all_filters_and_sorting[status=NEW]",
+      "message": "AssertionError: ('status=NEW', '{\"error\":\"could not determine data type of parameter $1\"}')\nassert 502 == 200\n +  where 502 = <Response [502 Bad Gateway]>.status_code",
+      "detail": "material = {'material': {'id': 1, 'source_id': None, 'url': 'https://audit.example/e2bc29bd28924388a6d7413583697661', 'final_url'...: 1, 'module': 'm2', 'rule_id': '4', ...}, {'id': 6, 'analysis_id': 1, 'module': 'm2', 'rule_id': '5', ...}, ...], ...}\nquery = 'status=NEW'\n\n    @pytest.mark.parametrize(\"query\", [\n            \"platform=web\", \"module=m2\", \"risk=wysokie\", \"status=NEW\",\n            \"from=2026-01-01&to=2026-12-31\", \"sort=score&dir=asc\",\n            \"q=Syntetyczny\", \"domain=audit.example\",\n            \"module=m2&platform=web&risk=wysokie&status=NEW&sort=title\",\n    ])\n    def test_all_filters_and_sorting(material, query):\n        response = call(\"GET\", \"/materials?\" + query)\n>       assert response.status_code == 200, (query, response.text)\nE       AssertionError: ('status=NEW', '{\"error\":\"could not determine data type of parameter $1\"}')\nE       assert 502 == 200\nE        +  where 502 = <Response [502 Bad Gateway]>.status_code\n\naudit_tests\\test_backend.py:88: AssertionError"
+    },
+    {
+      "file": "backend.xml",
+      "test": "test_all_filters_and_sorting[from=2026-01-01&to=2026-12-31]",
+      "message": "AssertionError: ('from=2026-01-01&to=2026-12-31', '{\"error\":\"could not determine data type of parameter $1\"}')\nassert 502 == 200\n +  where 502 = <Response [502 Bad Gateway]>.status_code",
+      "detail": "material = {'material': {'id': 1, 'source_id': None, 'url': 'https://audit.example/e2bc29bd28924388a6d7413583697661', 'final_url'...: 1, 'module': 'm2', 'rule_id': '4', ...}, {'id': 6, 'analysis_id': 1, 'module': 'm2', 'rule_id': '5', ...}, ...], ...}\nquery = 'from=2026-01-01&to=2026-12-31'\n\n    @pytest.mark.parametrize(\"query\", [\n            \"platform=web\", \"module=m2\", \"risk=wysokie\", \"status=NEW\",\n            \"from=2026-01-01&to=2026-12-31\", \"sort=score&dir=asc\",\n            \"q=Syntetyczny\", \"domain=audit.example\",\n            \"module=m2&platform=web&risk=wysokie&status=NEW&sort=title\",\n    ])\n    def test_all_filters_and_sorting(material, query):\n        response = call(\"GET\", \"/materials?\" + query)\n>       assert response.status_code == 200, (query, response.text)\nE       AssertionError: ('from=2026-01-01&to=2026-12-31', '{\"error\":\"could not determine data type of parameter $1\"}')\nE       assert 502 == 200\nE        +  where 502 = <Response [502 Bad Gateway]>.status_code\n\naudit_tests\\test_backend.py:88: AssertionError"
+    },
+    {
+      "file": "backend.xml",
+      "test": "test_all_filters_and_sorting[sort=score&dir=asc]",
+      "message": "AssertionError: ('sort=score&dir=asc', '{\"error\":\"bind message supplies 1 parameters, but prepared statement \\\\\"\\\\\" requires 0\"}')\nassert 502 == 200\n +  where 502 = <Response [502 Bad Gateway]>.status_code",
+      "detail": "material = {'material': {'id': 1, 'source_id': None, 'url': 'https://audit.example/e2bc29bd28924388a6d7413583697661', 'final_url'...: 1, 'module': 'm2', 'rule_id': '4', ...}, {'id': 6, 'analysis_id': 1, 'module': 'm2', 'rule_id': '5', ...}, ...], ...}\nquery = 'sort=score&dir=asc'\n\n    @pytest.mark.parametrize(\"query\", [\n            \"platform=web\", \"module=m2\", \"risk=wysokie\", \"status=NEW\",\n            \"from=2026-01-01&to=2026-12-31\", \"sort=score&dir=asc\",\n            \"q=Syntetyczny\", \"domain=audit.example\",\n            \"module=m2&platform=web&risk=wysokie&status=NEW&sort=title\",\n    ])\n    def test_all_filters_and_sorting(material, query):\n        response = call(\"GET\", \"/materials?\" + query)\n>       assert response.status_code == 200, (query, response.text)\nE       AssertionError: ('sort=score&dir=asc', '{\"error\":\"bind message supplies 1 parameters, but prepared statement \\\\\"\\\\\" requires 0\"}')\nE       assert 502 == 200\nE        +  where 502 = <Response [502 Bad Gateway]>.status_code\n\naudit_tests\\test_backend.py:88: AssertionError"
+    },
+    {
+      "file": "backend.xml",
+      "test": "test_all_filters_and_sorting[q=Syntetyczny]",
+      "message": "AssertionError: ('q=Syntetyczny', '{\"error\":\"could not determine data type of parameter $1\"}')\nassert 502 == 200\n +  where 502 = <Response [502 Bad Gateway]>.status_code",
+      "detail": "material = {'material': {'id': 1, 'source_id': None, 'url': 'https://audit.example/e2bc29bd28924388a6d7413583697661', 'final_url'...: 1, 'module': 'm2', 'rule_id': '4', ...}, {'id': 6, 'analysis_id': 1, 'module': 'm2', 'rule_id': '5', ...}, ...], ...}\nquery = 'q=Syntetyczny'\n\n    @pytest.mark.parametrize(\"query\", [\n            \"platform=web\", \"module=m2\", \"risk=wysokie\", \"status=NEW\",\n            \"from=2026-01-01&to=2026-12-31\", \"sort=score&dir=asc\",\n            \"q=Syntetyczny\", \"domain=audit.example\",\n            \"module=m2&platform=web&risk=wysokie&status=NEW&sort=title\",\n    ])\n    def test_all_filters_and_sorting(material, query):\n        response = call(\"GET\", \"/materials?\" + query)\n>       assert response.status_code == 200, (query, response.text)\nE       AssertionError: ('q=Syntetyczny', '{\"error\":\"could not determine data type of parameter $1\"}')\nE       assert 502 == 200\nE        +  where 502 = <Response [502 Bad Gateway]>.status_code\n\naudit_tests\\test_backend.py:88: AssertionError"
+    },
+    {
+      "file": "backend.xml",
+      "test": "test_all_filters_and_sorting[domain=audit.example]",
+      "message": "AssertionError: ('domain=audit.example', '{\"error\":\"could not determine data type of parameter $1\"}')\nassert 502 == 200\n +  where 502 = <Response [502 Bad Gateway]>.status_code",
+      "detail": "material = {'material': {'id': 1, 'source_id': None, 'url': 'https://audit.example/e2bc29bd28924388a6d7413583697661', 'final_url'...: 1, 'module': 'm2', 'rule_id': '4', ...}, {'id': 6, 'analysis_id': 1, 'module': 'm2', 'rule_id': '5', ...}, ...], ...}\nquery = 'domain=audit.example'\n\n    @pytest.mark.parametrize(\"query\", [\n            \"platform=web\", \"module=m2\", \"risk=wysokie\", \"status=NEW\",\n            \"from=2026-01-01&to=2026-12-31\", \"sort=score&dir=asc\",\n            \"q=Syntetyczny\", \"domain=audit.example\",\n            \"module=m2&platform=web&risk=wysokie&status=NEW&sort=title\",\n    ])\n    def test_all_filters_and_sorting(material, query):\n        response = call(\"GET\", \"/materials?\" + query)\n>       assert response.status_code == 200, (query, response.text)\nE       AssertionError: ('domain=audit.example', '{\"error\":\"could not determine data type of parameter $1\"}')\nE       assert 502 == 200\nE        +  where 502 = <Response [502 Bad Gateway]>.status_code\n\naudit_tests\\test_backend.py:88: AssertionError"
+    },
+    {
+      "file": "backend.xml",
+      "test": "test_style_only_change_is_not_duplicate",
+      "message": "AssertionError: {'id': 4, 'url': 'https://audit.example/d16201cef0234c0f9c2540ebcdaa23b3', 'source_id': None, 'trigger': 'upload', ...}\nassert 'duplicate' == 'done'\n  \n  - done\n  + duplicate",
+      "detail": "def test_style_only_change_is_not_duplicate():\n        url = f\"https://audit.example/{uuid.uuid4().hex}\"\n        base = \"\"\"<html><body><main><p>Reklama. Zarabiaj 12% rocznie.</p>\n        <p style=\"font-size:SIZEpx\">Inwestowanie wiąże się z ryzykiem utraty kapitału.</p>\n        </main></body></html>\"\"\"\n        ids = []\n        for size in (16, 6):\n            response = call(\"POST\", \"/scans/upload\", json={\n                \"html\": base.replace(\"SIZE\", str(size)), \"url\": url,\n            })\n            assert response.status_code == 202\n            for _ in range(100):\n                job = call(\"GET\", f\"/scans/{response.json()['id']}\").json()\n                if job[\"status\"] in (\"done\", \"duplicate\", \"failed\"):\n                    break\n                time.sleep(.1)\n>           assert job[\"status\"] == \"done\", job\nE           AssertionError: {'id': 4, 'url': 'https://audit.example/d16201cef0234c0f9c2540ebcdaa23b3', 'source_id': None, 'trigger': 'upload', ...}\nE           assert 'duplicate' == 'done'\nE             \nE             - done\nE             + duplicate\n\naudit_tests\\test_backend.py:166: AssertionError"
+    },
+    {
+      "file": "backend.xml",
+      "test": "test_unauthenticated_settings_write_is_denied",
+      "message": "AssertionError: {\"threshold\":45}\nassert 200 in (401, 403)\n +  where 200 = <Response [200 OK]>.status_code",
+      "detail": "def test_unauthenticated_settings_write_is_denied():\n        current = call(\"GET\", \"/settings\").json()[\"threshold\"]\n        response = call(\"PATCH\", \"/settings\", json={\"threshold\": current})\n>       assert response.status_code in (401, 403), response.text\nE       AssertionError: {\"threshold\":45}\nE       assert 200 in (401, 403)\nE        +  where 200 = <Response [200 OK]>.status_code\n\naudit_tests\\test_backend.py:194: AssertionError"
+    },
+    {
+      "file": "backend.xml",
+      "test": "test_html_upload_preserves_author_title_platform",
+      "message": "AssertionError: {'id': 3, 'source_id': None, 'url': 'https://audit.example/html/ca7ad119f25b4b5782f7e7fcf3e1a95d', 'final_url': 'https://audit.example/html/ca7ad119f25b4b5782f7e7fcf3e1a95d', ...}\nassert None == '@audit_synthetic'",
+      "detail": "def test_html_upload_preserves_author_title_platform():\n        response = call(\"POST\", \"/scans/upload\", json={\n            \"html\": \"<html><body><p>Syntetyczny materiał edukacyjny.</p></body></html>\",\n            \"url\": f\"https://audit.example/html/{uuid.uuid4().hex}\",\n            \"author\": \"@audit_synthetic\", \"title\": \"Tytuł nadany przy imporcie\", \"platform\": \"instagram\",\n        })\n        assert response.status_code == 202\n        for _ in range(100):\n            job = call(\"GET\", f\"/scans/{response.json()['id']}\").json()\n            if job[\"status\"] in (\"done\", \"failed\"):\n                break\n            time.sleep(.1)\n        assert job[\"status\"] == \"done\", job\n        data = call(\"GET\", f\"/materials/{job['material_id']}\").json()[\"material\"]\n>       assert data[\"author\"] == \"@audit_synthetic\", data\nE       AssertionError: {'id': 3, 'source_id': None, 'url': 'https://audit.example/html/ca7ad119f25b4b5782f7e7fcf3e1a95d', 'final_url': 'https://audit.example/html/ca7ad119f25b4b5782f7e7fcf3e1a95d', ...}\nE       assert None == '@audit_synthetic'\n\naudit_tests\\test_backend.py:219: AssertionError"
+    },
+    {
+      "file": "browser.xml",
+      "test": "test_results_do_not_display_backend_sql_error",
+      "message": "assert 'Błąd:' not in 'Wyniki anal...\" requires 0'\n  \n  'Błąd:' is contained here:\n    Wyniki analiz\n    \n    Filtrowanie po dacie, źródle, module i poziomie ryzyka\n    \n    Od...\n  \n  ...Full output truncated, use '-vv' to show",
+      "detail": "page = <Page url='http://127.0.0.1:5173/materials'>\n\n    def test_results_do_not_display_backend_sql_error(page):\n        page.goto(ROOT + \"/materials\")\n        page.locator(\".panel\").first.wait_for()\n        page.wait_for_function(\n            \"() => document.querySelector('table') || document.body.innerText.includes('Błąd:') \"\n            \"|| document.body.innerText.includes('Brak wyników')\")\n>       assert \"Błąd:\" not in page.locator(\"main\").inner_text()\nE       assert 'Błąd:' not in 'Wyniki anal...\" requires 0'\nE         \nE         'Błąd:' is contained here:\nE           Wyniki analiz\nE           \nE           Filtrowanie po dacie, źródle, module i poziomie ryzyka\nE           \nE           Od...\nE         \nE         ...Full output truncated, use '-vv' to show\n\naudit_tests\\test_browser.py:54: AssertionError"
+    },
+    {
+      "file": "browser.xml",
+      "test": "test_material_status_updates_unread_badge",
+      "message": "AssertionError: {'displayed': 2, 'db': 1}\nassert 2 == 1",
+      "detail": "page = <Page url='http://127.0.0.1:5173/materials/5'>\n\n    def test_material_status_updates_unread_badge(page):\n        # Anonimowy status zmienia bazę alertów; licznik powinien odświeżyć się z eventu.\n        response = httpx.post(API + \"/scans/upload\", json={\n            \"text\": \"Gwarantowany zysk 30% rocznie bez ryzyka.\",\n            \"url\": f\"https://audit.example/status/{uuid.uuid4().hex}\", \"title\": \"Syntetyczny status\",\n        })\n        job_id = response.json()[\"id\"]\n        for _ in range(100):\n            job = httpx.get(API + f\"/scans/{job_id}\").json()\n            if job[\"status\"] == \"done\":\n                break\n            time.sleep(.1)\n        assert job[\"status\"] == \"done\", job\n        page.goto(ROOT + f\"/materials/{job['material_id']}\")\n        page.get_by_role(\"button\", name=\"Zweryfikowany\", exact=True).wait_for()\n        page.get_by_text(\"Na żywo (WebSocket)\", exact=True).wait_for()\n        before = httpx.get(API + \"/dashboard/stats\").json()[\"totals\"][\"unread\"]\n        with page.expect_response(lambda r: \"/status\" in r.url and r.request.method == \"PATCH\"):\n            page.get_by_role(\"button\", name=\"Zweryfikowany\", exact=True).click()\n        page.wait_for_function(\n            \"() => Array.from(document.querySelectorAll('button')).some(\"\n            \"b => b.innerText === 'Zweryfikowany' && b.disabled)\")\n        after = httpx.get(API + \"/dashboard/stats\").json()[\"totals\"][\"unread\"]\n        assert after == before - 1\n        page.wait_for_timeout(300)\n        badge = page.locator('a[href=\"/alerts\"] .badge')\n        displayed = int(badge.inner_text()) if badge.count() else 0\n>       assert displayed == after, {\"displayed\": displayed, \"db\": after}\nE       AssertionError: {'displayed': 2, 'db': 1}\nE       assert 2 == 1\n\naudit_tests\\test_browser.py:122: AssertionError"
+    },
+    {
+      "file": "controlled-scrape.xml",
+      "test": "test_real_source_404[True]",
+      "message": "AssertionError: {\"title\":\"Syntetyczny błąd 404\",\"author\":null,\"publisher\":null,\"published_at\":null,\"lang\":null,\"description\":null,\"platform\":\"web\",\"social_handle\":null,\"content_text\":\"Brak strony.\",\"full_text\":\"Syntetyczny błąd 404\\nBrak strony.\",\"content_hash\":\"2ef4b5457da3bd8ce4695cc2698cb4be4141361405fe2c19d8c72\nassert 200 == 502\n +  where 200 = <Response [200 OK]>.status_code",
+      "detail": "render = True\n\n    @pytest.mark.parametrize(\"render\", [False, True])\n    def test_real_source_404(render):\n        response = httpx.post(BASE + \"/scrape\", json={\"url\": SOURCE + \"/404\", \"render\": render}, timeout=30)\n>       assert response.status_code == 502, response.text[:300]\nE       AssertionError: {\"title\":\"Syntetyczny błąd 404\",\"author\":null,\"publisher\":null,\"published_at\":null,\"lang\":null,\"description\":null,\"platform\":\"web\",\"social_handle\":null,\"content_text\":\"Brak strony.\",\"full_text\":\"Syntetyczny błąd 404\\nBrak strony.\",\"content_hash\":\"2ef4b5457da3bd8ce4695cc2698cb4be4141361405fe2c19d8c72\nE       assert 200 == 502\nE        +  where 200 = <Response [200 OK]>.status_code\n\naudit_tests\\test_controlled_scrape.py:32: AssertionError"
+    },
+    {
+      "file": "controlled-scrape.xml",
+      "test": "test_discover_real_source_404",
+      "message": "AssertionError: {\"url\":\"http://127.0.0.1:18080/404\",\"candidates\":[]}\nassert 200 == 502\n +  where 200 = <Response [200 OK]>.status_code",
+      "detail": "def test_discover_real_source_404():\n        response = httpx.post(BASE + \"/discover\", json={\"url\": SOURCE + \"/404\", \"limit\": 10}, timeout=30)\n>       assert response.status_code == 502, response.text\nE       AssertionError: {\"url\":\"http://127.0.0.1:18080/404\",\"candidates\":[]}\nE       assert 200 == 502\nE        +  where 200 = <Response [200 OK]>.status_code\n\naudit_tests\\test_controlled_scrape.py:43: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_analyzer_rejects_empty_text",
+      "message": "AssertionError: assert 200 == 422\n +  where 200 = <Response [200 OK]>.status_code\n +    where <Response [200 OK]> = post('http://127.0.0.1:8002', '/analyze', {'url': 'x', 'content_text': ''})",
+      "detail": "def test_analyzer_rejects_empty_text():\n        # Wymagany błąd 4xx zamiast pozornej analizy pustego dokumentu.\n>       assert post(ANA, \"/analyze\", {\"url\": \"x\", \"content_text\": \"\"}).status_code == 422\nE       AssertionError: assert 200 == 422\nE        +  where 200 = <Response [200 OK]>.status_code\nE        +    where <Response [200 OK]> = post('http://127.0.0.1:8002', '/analyze', {'url': 'x', 'content_text': ''})\n\naudit_tests\\test_http.py:112: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_nested_invalid_payload_is_4xx[extra1]",
+      "message": "AssertionError: Internal Server Error\nassert 500 < 500\n +  where 500 = <Response [500 Internal Server Error]>.status_code",
+      "detail": "extra = {'layout': {'engine': 'playwright', 'viewports': {'desktop': 'bad'}}}\n\n    @pytest.mark.parametrize(\"extra\", [\n        {\"links\": [None]}, {\"layout\": {\"engine\": \"playwright\", \"viewports\": {\"desktop\": \"bad\"}}},\n    ])\n    def test_nested_invalid_payload_is_4xx(extra):\n        response = post(ANA, \"/analyze\", {\n            \"url\": \"https://audit.example\", \"content_text\": \"Reklama akcji. Zarabiaj 10% rocznie.\",\n            **extra,\n        })\n>       assert 400 <= response.status_code < 500, response.text\nE       AssertionError: Internal Server Error\nE       assert 500 < 500\nE        +  where 500 = <Response [500 Internal Server Error]>.status_code\n\naudit_tests\\test_http.py:123: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_summary_rejects_invalid_result",
+      "message": "AssertionError: Internal Server Error\nassert 500 < 500\n +  where 500 = <Response [500 Internal Server Error]>.status_code",
+      "detail": "def test_summary_rejects_invalid_result():\n        response = post(ANA, \"/summary\", {\"result\": {}})\n>       assert 400 <= response.status_code < 500, response.text\nE       AssertionError: Internal Server Error\nE       assert 500 < 500\nE        +  where 500 = <Response [500 Internal Server Error]>.status_code\n\naudit_tests\\test_http.py:128: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_registry_demo_is_not_official_registration",
+      "message": "AssertionError: {'name': 'Dom Maklerski Vistula Capital S.A.', 'status': 'registered', 'match': {'name': 'Dom Maklerski Vistula Capital S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}, 'note': None, ...}\nassert 'registered' != 'registered'",
+      "detail": "def test_registry_demo_is_not_official_registration():\n        response = httpx.get(ANA + \"/registry/check\", params={\n            \"name\": \"Dom Maklerski Vistula Capital S.A.\"})\n        assert response.status_code == 200\n        data = response.json()\n>       assert data[\"status\"] != \"registered\", data\nE       AssertionError: {'name': 'Dom Maklerski Vistula Capital S.A.', 'status': 'registered', 'match': {'name': 'Dom Maklerski Vistula Capital S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}, 'note': None, ...}\nE       assert 'registered' != 'registered'\n\naudit_tests\\test_http.py:144: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_m1_domain_suffix_does_not_impersonate_firm",
+      "message": "AssertionError: {'firms': [{'name': 'DOM MAKLERSKI INC S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}, {'name': 'Dom Maklerski Vistula Capital S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}], 'instruments': ['Akcje', 'ETF'], 'publisher': {'type': 'firma', 'name': 'Dom Maklerski Vistula Capital S.A.', 'platform': 'web'}}\nassert 'firma' != 'firma'",
+      "detail": "def test_m1_domain_suffix_does_not_impersonate_firm():\n        result = analyze(\n            \"Dom Maklerski Vistula Capital S.A. Polecam akcje i ETF. Z moim kodem polecającym bonus.\",\n            url=\"https://evilvistula-capital.example/post\", author=\"@audit_synthetic\")\n>       assert result[\"m1\"][\"publisher\"][\"type\"] != \"firma\", result[\"m1\"]\nE       AssertionError: {'firms': [{'name': 'DOM MAKLERSKI INC S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}, {'name': 'Dom Maklerski Vistula Capital S.A.', 'category': 'dom_maklerski', 'country': 'PL', 'supervisor': None, ...}], 'instruments': ['Akcje', 'ETF'], 'publisher': {'type': 'firma', 'name': 'Dom Maklerski Vistula Capital S.A.', 'platform': 'web'}}\nE       assert 'firma' != 'firma'\n\naudit_tests\\test_http.py:160: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_m2_negated_guarantee_is_not_a_promise",
+      "message": "AssertionError: {'module': 'm2', 'rule_id': 'G1', 'title': 'Obietnice zysku bez ryzyka', 'status': 'fail', ...}\nassert 'fail' != 'fail'",
+      "detail": "def test_m2_negated_guarantee_is_not_a_promise():\n        result = analyze(\n            \"Materiał edukacyjny. Nie obiecujemy gwarantowanego zysku. \"\n            \"Nie istnieje zysk bez ryzyka. Możesz stracić cały kapitał.\")\n>       assert rule(result, \"G1\")[\"status\"] != \"fail\", rule(result, \"G1\")\nE       AssertionError: {'module': 'm2', 'rule_id': 'G1', 'title': 'Obietnice zysku bez ryzyka', 'status': 'fail', ...}\nE       assert 'fail' != 'fail'\n\naudit_tests\\test_http.py:173: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_m2_negative_ad_label_is_not_disclosure",
+      "message": "AssertionError: {'module': 'm2', 'rule_id': '2', 'title': 'Oznaczenie reklamy', 'status': 'pass', ...}\nassert 'pass' != 'pass'",
+      "detail": "def test_m2_negative_ad_label_is_not_disclosure():\n        result = analyze(\"To nie jest reklama. Zarabiaj 15% rocznie. Otwórz konto.\")\n>       assert rule(result, \"2\")[\"status\"] != \"pass\", rule(result, \"2\")\nE       AssertionError: {'module': 'm2', 'rule_id': '2', 'title': 'Oznaczenie reklamy', 'status': 'pass', ...}\nE       assert 'pass' != 'pass'\n\naudit_tests\\test_http.py:178: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_m2_positive_and_ambiguous_risk",
+      "message": "AssertionError: {'module': 'm2', 'rule_id': '3', 'title': 'Informacja o ryzyku przy zyskach', 'status': 'pass', ...}\nassert 'pass' != 'pass'",
+      "detail": "def test_m2_positive_and_ambiguous_risk():\n        good = analyze(\n            \"Materiał marketingowy. Akcje mogą przynieść zysk. \"\n            \"Inwestowanie wiąże się z ryzykiem utraty kapitału.\")\n        assert rule(good, \"3\")[\"status\"] == \"pass\"\n        ambiguous = analyze(\"Reklama. Zysk 12% rocznie. Nasz zespół lubi ryzykować.\")\n>       assert rule(ambiguous, \"3\")[\"status\"] != \"pass\", rule(ambiguous, \"3\")\nE       AssertionError: {'module': 'm2', 'rule_id': '3', 'title': 'Informacja o ryzyku przy zyskach', 'status': 'pass', ...}\nE       assert 'pass' != 'pass'\n\naudit_tests\\test_http.py:187: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_m3_mentioning_broker_does_not_authorize_advisor",
+      "message": "AssertionError: {'module': 'm3', 'rule_id': 'M3.1', 'title': 'Doradztwo świadczone przez podmiot z rejestru', 'status': 'warn', ...}\nassert 'warn' == 'fail'\n  \n  - fail\n  + warn",
+      "detail": "def test_m3_mentioning_broker_does_not_authorize_advisor():\n        result = analyze(\n            \"Syntetyczna Aurum Advisory Sp. z o.o. Wealth management. \"\n            \"Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji. \"\n            \"Pakiet 990 zł/mies. Transakcje wykonasz przez Dom Maklerski Vistula Capital S.A.\")\n>       assert rule(result, \"M3.1\")[\"status\"] == \"fail\", rule(result, \"M3.1\")\nE       AssertionError: {'module': 'm3', 'rule_id': 'M3.1', 'title': 'Doradztwo świadczone przez podmiot z rejestru', 'status': 'warn', ...}\nE       assert 'warn' == 'fail'\nE         \nE         - fail\nE         + warn\n\naudit_tests\\test_http.py:204: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_mobile_vertical_clipping_is_detected",
+      "message": "AssertionError: {'module': 'm2', 'rule_id': '8', 'title': 'Responsywność', 'status': 'pass', ...}\nassert 'pass' == 'fail'\n  \n  - fail\n  + pass",
+      "detail": "def test_mobile_vertical_clipping_is_detected():\n        _, result = render_and_analyze(html(style=\"\"\"\n            @media(max-width:500px){.risk{max-height:1px;overflow:hidden;width:300px}}\n        \"\"\"))\n>       assert rule(result, \"8\")[\"status\"] == \"fail\", rule(result, \"8\")\nE       AssertionError: {'module': 'm2', 'rule_id': '8', 'title': 'Responsywność', 'status': 'pass', ...}\nE       assert 'pass' == 'fail'\nE         \nE         - fail\nE         + pass\n\naudit_tests\\test_visual.py:59: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_delayed_javascript_risk_is_extracted",
+      "message": "AssertionError: assert 'Syntetyczna treść dynamiczna' in 'Materiał marketingowy. Dom Maklerski Vistula Capital S.A.\\nAkcje mogą przynieść zysk. Inwestuj.\\nInwestowanie wiąże się z ryzykiem utraty całego kapitału.'",
+      "detail": "def test_delayed_javascript_risk_is_extracted():\n        material, _ = render_and_analyze(html(\n            extra=\"\"\"<script>document.addEventListener('DOMContentLoaded',()=>{\n            let el=document.createElement('p');el.textContent='Syntetyczna treść dynamiczna';\n            document.querySelector('main').appendChild(el);});</script>\"\"\"))\n>       assert \"Syntetyczna treść dynamiczna\" in material[\"content_text\"]\nE       AssertionError: assert 'Syntetyczna treść dynamiczna' in 'Materiał marketingowy. Dom Maklerski Vistula Capital S.A.\\nAkcje mogą przynieść zysk. Inwestuj.\\nInwestowanie wiąże się z ryzykiem utraty całego kapitału.'\n\naudit_tests\\test_visual.py:67: AssertionError"
+    },
+    {
+      "file": "http-visual.xml",
+      "test": "test_block_positions_match_document",
+      "message": "AssertionError: [2060, 1402]\nassert 1402 > (2060 + 900)",
+      "detail": "def test_block_positions_match_document():\n        material, _ = render_and_analyze(html(extra=\n            '<p style=\"margin-top:2000px\">Blok kontrolny po przewinięciu.</p>'\n            '<p style=\"margin-top:1000px\">Kolejny blok kontrolny.</p>'))\n        blocks = material[\"layout\"][\"viewports\"][\"desktop\"][\"blocks\"]\n        positions = [b[\"y\"] for b in blocks if \"blok kontrolny\" in b[\"text\"].lower()]\n        assert len(positions) == 2\n>       assert positions[1] > positions[0] + 900, positions\nE       AssertionError: [2060, 1402]\nE       assert 1402 > (2060 + 900)\n\naudit_tests\\test_visual.py:77: AssertionError"
+    },
+    {
+      "file": "node.xml",
+      "test": "klient frontend nie powinien akceptować HTML 200 jako poprawnego JSON",
+      "message": "Missing expected rejection.",
+      "detail": "\n[Error [ERR_TEST_FAILURE]: Missing expected rejection.] {\n  code: 'ERR_TEST_FAILURE',\n  failureType: 'testCodeFailure',\n  cause: AssertionError [ERR_ASSERTION]: Missing expected rejection.\n      at async TestContext.<anonymous> (file:///C:/Users/jkacz/Desktop/InvestWatch/audit_tests/test_node.mjs:47:9)\n      at async Test.run (node:internal/test_runner/test:1054:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: undefined,\n    expected: undefined,\n    operator: 'rejects',\n    diff: 'simple'\n  }\n}\n\t\t"
+    },
+    {
+      "file": "node.xml",
+      "test": "Socket.io: obcy Origin powinien zostać odrzucony",
+      "message": "Połączenie WebSocket z obcego Origin zaakceptowanetrue !== false",
+      "detail": "\n[Error [ERR_TEST_FAILURE]: Połączenie WebSocket z obcego Origin zaakceptowane\n\ntrue !== false\n] {\n  code: 'ERR_TEST_FAILURE',\n  failureType: 'testCodeFailure',\n  cause: AssertionError [ERR_ASSERTION]: Połączenie WebSocket z obcego Origin zaakceptowane\n  \n  true !== false\n  \n      at TestContext.<anonymous> (file:///C:/Users/jkacz/Desktop/InvestWatch/audit_tests/test_node.mjs:86:12)\n      at process.processTicksAndRejections (node:internal/process/task_queues:103:5)\n      at async Test.run (node:internal/test_runner/test:1054:7)\n      at async Test.processPendingSubtests (node:internal/test_runner/test:744:7) {\n    generatedMessage: false,\n    code: 'ERR_ASSERTION',\n    actual: true,\n    expected: false,\n    operator: 'strictEqual',\n    diff: 'simple'\n  }\n}\n\t\t"
+    },
+    {
+      "file": "public.xml",
+      "test": "test_source_404_is_not_a_successful_material[True]",
+      "message": "AssertionError: {\"title\":\"Example Domain\",\"author\":null,\"publisher\":null,\"published_at\":null,\"lang\":\"en\",\"description\":null,\"platform\":\"web\",\"social_handle\":null,\"content_text\":\"This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.\\nهذا النطاق مُخصص للاستخدام في أمثلة التوثيق دون الحاجة إلى إذن. هذه ليست خدمة، يُرجى تجنب الاعتماد عليها لأغراض الاختبار والمراقبة.\\n该域名仅用于文档示例,无需获得许可。这并非一项服务,请勿将其用...\n[+2 more lines; full report in element text]",
+      "detail": "render = True\n\n    @pytest.mark.parametrize(\"render\", [False, True])\n    def test_source_404_is_not_a_successful_material(render):\n        response = httpx.post(BASE + \"/scrape\", json={\n            \"url\": \"https://example.com/investwatch-audit-404\", \"render\": render,\n        }, timeout=90)\n>       assert response.status_code == 502, response.text[:500]\nE       AssertionError: {\"title\":\"Example Domain\",\"author\":null,\"publisher\":null,\"published_at\":null,\"lang\":\"en\",\"description\":null,\"platform\":\"web\",\"social_handle\":null,\"content_text\":\"This domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.\\nهذا النطاق مُخصص للاستخدام في أمثلة التوثيق دون الحاجة إلى إذن. هذه ليست خدمة، يُرجى تجنب الاعتماد عليها لأغراض الاختبار والمراقبة.\\n该域名仅用于文档示例,无需获得许可。这并非一项服务,请勿将其用于测试和监控目的。\\nL’usa\nE       assert 200 == 502\nE        +  where 200 = <Response [200 OK]>.status_code\n\naudit_tests\\test_public_scrape.py:23: AssertionError"
+    },
+    {
+      "file": "public.xml",
+      "test": "test_discover_does_not_hide_source_404",
+      "message": "AssertionError: {\"url\":\"https://example.com/investwatch-audit-404\",\"candidates\":[]}\nassert 200 == 502\n +  where 200 = <Response [200 OK]>.status_code",
+      "detail": "def test_discover_does_not_hide_source_404():\n        response = httpx.post(BASE + \"/discover\", json={\n            \"url\": \"https://example.com/investwatch-audit-404\", \"limit\": 5,\n        }, timeout=90)\n>       assert response.status_code == 502, response.text\nE       AssertionError: {\"url\":\"https://example.com/investwatch-audit-404\",\"candidates\":[]}\nE       assert 200 == 502\nE        +  where 200 = <Response [200 OK]>.status_code\n\naudit_tests\\test_public_scrape.py:30: AssertionError"
+    }
+  ]
+}

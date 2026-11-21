@@ -1,0 +1,2733 @@
+{
+  "m1_suffix": {
+    "input": {
+      "text": "Dom Maklerski Vistula Capital S.A. Polecam akcje i ETF. Z moim kodem polecającym bonus.",
+      "url": "https://evilvistula-capital.example/post",
+      "author": "@audit_synthetic"
+    },
+    "result": {
+      "score": 30.0,
+      "module_scores": {
+        "m1": 17.5,
+        "m2": 30.0,
+        "m3": 0.0
+      },
+      "modules": [
+        "m2"
+      ],
+      "findings": [
+        {
+          "module": "m1",
+          "rule_id": "M1.1",
+          "title": "Reklama publikowana przez samą firmę",
+          "status": "pass",
+          "severity": 0,
+          "legal_basis": null,
+          "explanation": "Publikujący odpowiada reklamowanej firmie (Dom Maklerski Vistula Capital S.A.) – materiał właściwy dla Modułu 2.",
+          "evidence": []
+        },
+        {
+          "module": "m1",
+          "rule_id": "M1.2",
+          "title": "Linki/kody afiliacyjne",
+          "status": "warn",
+          "severity": 35,
+          "legal_basis": null,
+          "explanation": "Wykryto kody polecające lub linki partnerskie – wskazuje na współpracę komercyjną.",
+          "evidence": [
+            {
+              "text": "Polecam akcje i ETF.",
+              "where": "tekst"
+            },
+            {
+              "text": "Z moim kodem polecającym bonus.",
+              "where": "tekst"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "1",
+          "title": "Identyfikacja firmy",
+          "status": "pass",
+          "severity": 35,
+          "legal_basis": "art. 44 ust. 2 lit. a rozp. del. 2017/565",
+          "explanation": "W materiale wskazano nazwę firmy inwestycyjnej z rejestru KNF.",
+          "evidence": [
+            {
+              "text": "DOM MAKLERSKI INC S.A.",
+              "where": "rejestr",
+              "category": "dom_maklerski"
+            },
+            {
+              "text": "Dom Maklerski Vistula Capital S.A.",
+              "where": "rejestr",
+              "category": "dom_maklerski"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "2",
+          "title": "Oznaczenie reklamy",
+          "status": "fail",
+          "severity": 30,
+          "legal_basis": "art. 24 ust. 3 MiFID II",
+          "explanation": "Materiał promocyjny nie zawiera oznaczenia „reklama” / „materiał marketingowy”.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "3",
+          "title": "Informacja o ryzyku przy zyskach",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565",
+          "explanation": "Nie wykryto twierdzeń o potencjalnych zyskach.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "4",
+          "title": "Rozmiar czcionki ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "5",
+          "title": "Ekspozycja i kontrast ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "6",
+          "title": "Ukrywanie ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "7",
+          "title": "Dostępność za 1 kliknięciem",
+          "status": "not_checked",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. b i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "8",
+          "title": "Responsywność",
+          "status": "not_checked",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 2 lit. g rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "9",
+          "title": "Zrozumiałość ostrzeżenia",
+          "status": "na",
+          "severity": 15,
+          "legal_basis": "art. 44 ust. 2 lit. d rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku w materiale promocyjnym do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "10",
+          "title": "Spójność językowa",
+          "status": "na",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. f rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "11",
+          "title": "Porównania produktów/usług",
+          "status": "na",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 3 rozp. del. 2017/565",
+          "explanation": "Nie wykryto porównań produktów lub usług.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12a",
+          "title": "Wyniki historyczne – okres i zakres",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12b",
+          "title": "Wyniki historyczne – waluta i koszty",
+          "status": "na",
+          "severity": 25,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "13",
+          "title": "Dominacja wyników historycznych",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 lit. a rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "14",
+          "title": "Ostrzeżenie przy wynikach historycznych",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 4 lit. d rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "15",
+          "title": "Prognozy przyszłych wyników",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 6 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prognoz przyszłych wyników.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "16",
+          "title": "Informacja podatkowa",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 7 rozp. del. 2017/565",
+          "explanation": "Materiał nie odwołuje się do traktowania podatkowego.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "17",
+          "title": "Sugerowanie aprobaty organu nadzoru",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do KNF lub innego organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "18",
+          "title": "Nadzór jako argument bezpieczeństwa",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "G1",
+          "title": "Obietnice zysku bez ryzyka",
+          "status": "pass",
+          "severity": 70,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565 (rzetelny, niewprowadzający w błąd przekaz)",
+          "explanation": "Nie wykryto obietnic gwarantowanego zysku ani braku ryzyka.",
+          "evidence": []
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.1",
+          "title": "Oferta doradztwa inwestycyjnego",
+          "status": "na",
+          "severity": 0,
+          "legal_basis": null,
+          "explanation": "Nie wykryto opisu usług doradczych ani indywidualnych rekomendacji.",
+          "evidence": []
+        }
+      ],
+      "m1": {
+        "firms": [
+          {
+            "name": "DOM MAKLERSKI INC S.A.",
+            "category": "dom_maklerski",
+            "country": "PL",
+            "supervisor": null,
+            "license_date": "21-02-2012",
+            "scope": "1, 2, 5, 6, 9, 11, 14",
+            "demo": false,
+            "domains": [],
+            "former_names": [],
+            "matched_as": "dom maklerski"
+          },
+          {
+            "name": "Dom Maklerski Vistula Capital S.A.",
+            "category": "dom_maklerski",
+            "country": "PL",
+            "supervisor": null,
+            "license_date": "2015-03-02",
+            "scope": "1, 2, 4, 5",
+            "demo": true,
+            "domains": [
+              "vistula-capital.example"
+            ],
+            "former_names": [],
+            "matched_as": "vistula"
+          }
+        ],
+        "instruments": [
+          "Akcje",
+          "ETF"
+        ],
+        "publisher": {
+          "type": "firma",
+          "name": "Dom Maklerski Vistula Capital S.A.",
+          "platform": "web"
+        }
+      },
+      "m3": {
+        "classification": "brak",
+        "entities": []
+      },
+      "ml": {
+        "model": "tfidf-lr-0889ab43",
+        "train_size": 71,
+        "mean": {
+          "advisory": 0.251,
+          "education": 0.182,
+          "neutral": 0.195,
+          "profit": 0.184,
+          "risk": 0.189
+        },
+        "max": {
+          "advisory": 0.413,
+          "education": 0.2,
+          "neutral": 0.236,
+          "profit": 0.218,
+          "risk": 0.256
+        },
+        "top_sentences": {
+          "advisory": [],
+          "education": [],
+          "profit": [],
+          "risk": []
+        }
+      },
+      "doc": {
+        "lang": "pl",
+        "domain": "evilvistula-capital.example",
+        "sentences": 3,
+        "layout": "none",
+        "simhash": "0774145ab4cf3967"
+      },
+      "analyzer_version": "0.1.0",
+      "elapsed_ms": 3
+    }
+  },
+  "m1_generic_firm_name": {
+    "input": {
+      "text": "Reklama. Dom maklerski oferuje akcje. Zarabiaj."
+    },
+    "result": {
+      "score": 80.0,
+      "module_scores": {
+        "m1": 49.0,
+        "m2": 80.0,
+        "m3": 0.0
+      },
+      "modules": [
+        "m1",
+        "m2"
+      ],
+      "findings": [
+        {
+          "module": "m1",
+          "rule_id": "M1.1",
+          "title": "Nie ustalono publikującego",
+          "status": "warn",
+          "severity": 30,
+          "legal_basis": null,
+          "explanation": "Materiał reklamuje firmę/instrument, ale autora nie da się ustalić – oznaczono do ręcznej weryfikacji.",
+          "evidence": []
+        },
+        {
+          "module": "m1",
+          "rule_id": "M1.3",
+          "title": "Brak oznaczenia współpracy",
+          "status": "fail",
+          "severity": 40,
+          "legal_basis": null,
+          "explanation": "Podmiot trzeci promuje firmę/instrument bez oznaczenia współpracy reklamowej (#reklama, #ad).",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "1",
+          "title": "Identyfikacja firmy",
+          "status": "pass",
+          "severity": 35,
+          "legal_basis": "art. 44 ust. 2 lit. a rozp. del. 2017/565",
+          "explanation": "W materiale wskazano nazwę firmy inwestycyjnej z rejestru KNF.",
+          "evidence": [
+            {
+              "text": "DOM MAKLERSKI INC S.A.",
+              "where": "rejestr",
+              "category": "dom_maklerski"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "2",
+          "title": "Oznaczenie reklamy",
+          "status": "pass",
+          "severity": 30,
+          "legal_basis": "art. 24 ust. 3 MiFID II",
+          "explanation": "Materiał jest oznaczony jako reklamowy/marketingowy.",
+          "evidence": [
+            {
+              "text": "Reklama.",
+              "where": "tekst"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "3",
+          "title": "Informacja o ryzyku przy zyskach",
+          "status": "fail",
+          "severity": 80,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565",
+          "explanation": "Twierdzeniom o zyskach nie towarzyszy żadna informacja o ryzyku.",
+          "evidence": [
+            {
+              "text": "Zarabiaj.",
+              "where": "zysk"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "4",
+          "title": "Rozmiar czcionki ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "5",
+          "title": "Ekspozycja i kontrast ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "6",
+          "title": "Ukrywanie ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "7",
+          "title": "Dostępność za 1 kliknięciem",
+          "status": "not_checked",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. b i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "8",
+          "title": "Responsywność",
+          "status": "not_checked",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 2 lit. g rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "9",
+          "title": "Zrozumiałość ostrzeżenia",
+          "status": "na",
+          "severity": 15,
+          "legal_basis": "art. 44 ust. 2 lit. d rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku w materiale promocyjnym do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "10",
+          "title": "Spójność językowa",
+          "status": "na",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. f rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "11",
+          "title": "Porównania produktów/usług",
+          "status": "na",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 3 rozp. del. 2017/565",
+          "explanation": "Nie wykryto porównań produktów lub usług.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12a",
+          "title": "Wyniki historyczne – okres i zakres",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12b",
+          "title": "Wyniki historyczne – waluta i koszty",
+          "status": "na",
+          "severity": 25,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "13",
+          "title": "Dominacja wyników historycznych",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 lit. a rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "14",
+          "title": "Ostrzeżenie przy wynikach historycznych",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 4 lit. d rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "15",
+          "title": "Prognozy przyszłych wyników",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 6 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prognoz przyszłych wyników.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "16",
+          "title": "Informacja podatkowa",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 7 rozp. del. 2017/565",
+          "explanation": "Materiał nie odwołuje się do traktowania podatkowego.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "17",
+          "title": "Sugerowanie aprobaty organu nadzoru",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do KNF lub innego organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "18",
+          "title": "Nadzór jako argument bezpieczeństwa",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "G1",
+          "title": "Obietnice zysku bez ryzyka",
+          "status": "pass",
+          "severity": 70,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565 (rzetelny, niewprowadzający w błąd przekaz)",
+          "explanation": "Nie wykryto obietnic gwarantowanego zysku ani braku ryzyka.",
+          "evidence": []
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.1",
+          "title": "Oferta doradztwa inwestycyjnego",
+          "status": "na",
+          "severity": 0,
+          "legal_basis": null,
+          "explanation": "Nie wykryto opisu usług doradczych ani indywidualnych rekomendacji.",
+          "evidence": []
+        }
+      ],
+      "m1": {
+        "firms": [
+          {
+            "name": "DOM MAKLERSKI INC S.A.",
+            "category": "dom_maklerski",
+            "country": "PL",
+            "supervisor": null,
+            "license_date": "21-02-2012",
+            "scope": "1, 2, 5, 6, 9, 11, 14",
+            "demo": false,
+            "domains": [],
+            "former_names": [],
+            "matched_as": "dom maklerski"
+          }
+        ],
+        "instruments": [
+          "Akcje"
+        ],
+        "publisher": {
+          "type": "nieustalone",
+          "name": null,
+          "platform": "web"
+        }
+      },
+      "m3": {
+        "classification": "brak",
+        "entities": []
+      },
+      "ml": {
+        "model": "tfidf-lr-0889ab43",
+        "train_size": 71,
+        "mean": {
+          "advisory": 0.259,
+          "education": 0.146,
+          "neutral": 0.164,
+          "profit": 0.288,
+          "risk": 0.143
+        },
+        "max": {
+          "advisory": 0.436,
+          "education": 0.188,
+          "neutral": 0.21,
+          "profit": 0.475,
+          "risk": 0.167
+        },
+        "top_sentences": {
+          "advisory": [],
+          "education": [],
+          "profit": [],
+          "risk": []
+        }
+      },
+      "doc": {
+        "lang": null,
+        "domain": "audit.example",
+        "sentences": 3,
+        "layout": "none",
+        "simhash": "1978308210a05837"
+      },
+      "analyzer_version": "0.1.0",
+      "elapsed_ms": 5
+    }
+  },
+  "m2_negated": {
+    "input": {
+      "text": "Materiał edukacyjny. Nie obiecujemy gwarantowanego zysku. Nie istnieje zysk bez ryzyka. Możesz stracić cały kapitał."
+    },
+    "result": {
+      "score": 86.3,
+      "module_scores": {
+        "m1": 0.0,
+        "m2": 86.3,
+        "m3": 0.0
+      },
+      "modules": [
+        "m2"
+      ],
+      "findings": [
+        {
+          "module": "m1",
+          "rule_id": "M1.1",
+          "title": "Reklama firmy inwestycyjnej",
+          "status": "na",
+          "severity": 0,
+          "legal_basis": null,
+          "explanation": "Nie wykryto reklamy firmy inwestycyjnej ani jej instrumentów.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "1",
+          "title": "Identyfikacja firmy",
+          "status": "fail",
+          "severity": 35,
+          "legal_basis": "art. 44 ust. 2 lit. a rozp. del. 2017/565",
+          "explanation": "Nie znaleziono oficjalnej nazwy firmy inwestycyjnej (ani podmiotu z formą prawną).",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "2",
+          "title": "Oznaczenie reklamy",
+          "status": "fail",
+          "severity": 30,
+          "legal_basis": "art. 24 ust. 3 MiFID II",
+          "explanation": "Materiał promocyjny nie zawiera oznaczenia „reklama” / „materiał marketingowy”.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "3",
+          "title": "Informacja o ryzyku przy zyskach",
+          "status": "pass",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565",
+          "explanation": "Twierdzeniom o zyskach towarzyszy informacja o ryzyku (ryzyko/zysk = 0.43).",
+          "evidence": [
+            {
+              "text": "Możesz stracić cały kapitał.",
+              "where": "ryzyko"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "4",
+          "title": "Rozmiar czcionki ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "5",
+          "title": "Ekspozycja i kontrast ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "6",
+          "title": "Ukrywanie ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "7",
+          "title": "Dostępność za 1 kliknięciem",
+          "status": "not_checked",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. b i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "8",
+          "title": "Responsywność",
+          "status": "not_checked",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 2 lit. g rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "9",
+          "title": "Zrozumiałość ostrzeżenia",
+          "status": "pass",
+          "severity": 15,
+          "legal_basis": "art. 44 ust. 2 lit. d rozp. del. 2017/565",
+          "explanation": "Ostrzeżenie sformułowane przystępnie (FOG≈2).",
+          "evidence": [
+            {
+              "text": "Możesz stracić cały kapitał.",
+              "where": "ostrzeżenie",
+              "fog": 1.6
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "10",
+          "title": "Spójność językowa",
+          "status": "pass",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. f rozp. del. 2017/565",
+          "explanation": "Ostrzeżenie w języku głównego przekazu (pl).",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "11",
+          "title": "Porównania produktów/usług",
+          "status": "na",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 3 rozp. del. 2017/565",
+          "explanation": "Nie wykryto porównań produktów lub usług.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12a",
+          "title": "Wyniki historyczne – okres i zakres",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12b",
+          "title": "Wyniki historyczne – waluta i koszty",
+          "status": "na",
+          "severity": 25,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "13",
+          "title": "Dominacja wyników historycznych",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 lit. a rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "14",
+          "title": "Ostrzeżenie przy wynikach historycznych",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 4 lit. d rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "15",
+          "title": "Prognozy przyszłych wyników",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 6 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prognoz przyszłych wyników.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "16",
+          "title": "Informacja podatkowa",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 7 rozp. del. 2017/565",
+          "explanation": "Materiał nie odwołuje się do traktowania podatkowego.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "17",
+          "title": "Sugerowanie aprobaty organu nadzoru",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do KNF lub innego organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "18",
+          "title": "Nadzór jako argument bezpieczeństwa",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "G1",
+          "title": "Obietnice zysku bez ryzyka",
+          "status": "fail",
+          "severity": 70,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565 (rzetelny, niewprowadzający w błąd przekaz)",
+          "explanation": "Wykryto sformułowania sugerujące zysk bez ryzyka: gwarantowanego zysku, zysk bez ryzyka.",
+          "evidence": [
+            {
+              "text": "Nie obiecujemy gwarantowanego zysku.",
+              "where": "tekst"
+            },
+            {
+              "text": "Nie istnieje zysk bez ryzyka.",
+              "where": "tekst"
+            }
+          ]
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.1",
+          "title": "Oferta doradztwa inwestycyjnego",
+          "status": "na",
+          "severity": 0,
+          "legal_basis": null,
+          "explanation": "Nie wykryto opisu usług doradczych ani indywidualnych rekomendacji.",
+          "evidence": []
+        }
+      ],
+      "m1": {
+        "firms": [],
+        "instruments": [],
+        "publisher": {
+          "type": "nieustalone",
+          "name": null,
+          "platform": "web"
+        }
+      },
+      "m3": {
+        "classification": "brak",
+        "entities": []
+      },
+      "ml": {
+        "model": "tfidf-lr-0889ab43",
+        "train_size": 71,
+        "mean": {
+          "advisory": 0.138,
+          "education": 0.211,
+          "neutral": 0.121,
+          "profit": 0.192,
+          "risk": 0.338
+        },
+        "max": {
+          "advisory": 0.155,
+          "education": 0.423,
+          "neutral": 0.141,
+          "profit": 0.242,
+          "risk": 0.443
+        },
+        "top_sentences": {
+          "advisory": [],
+          "education": [],
+          "profit": [],
+          "risk": []
+        }
+      },
+      "doc": {
+        "lang": "pl",
+        "domain": "audit.example",
+        "sentences": 4,
+        "layout": "none",
+        "simhash": "dd78174a16f2203a"
+      },
+      "analyzer_version": "0.1.0",
+      "elapsed_ms": 3
+    }
+  },
+  "m2_fake_risk": {
+    "input": {
+      "text": "Reklama. Zysk 12% rocznie. Nasz zespół lubi ryzykować."
+    },
+    "result": {
+      "score": 35.0,
+      "module_scores": {
+        "m1": 0.0,
+        "m2": 35.0,
+        "m3": 0.0
+      },
+      "modules": [
+        "m2"
+      ],
+      "findings": [
+        {
+          "module": "m1",
+          "rule_id": "M1.1",
+          "title": "Reklama firmy inwestycyjnej",
+          "status": "na",
+          "severity": 0,
+          "legal_basis": null,
+          "explanation": "Nie wykryto reklamy firmy inwestycyjnej ani jej instrumentów.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "1",
+          "title": "Identyfikacja firmy",
+          "status": "fail",
+          "severity": 35,
+          "legal_basis": "art. 44 ust. 2 lit. a rozp. del. 2017/565",
+          "explanation": "Nie znaleziono oficjalnej nazwy firmy inwestycyjnej (ani podmiotu z formą prawną).",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "2",
+          "title": "Oznaczenie reklamy",
+          "status": "pass",
+          "severity": 30,
+          "legal_basis": "art. 24 ust. 3 MiFID II",
+          "explanation": "Materiał jest oznaczony jako reklamowy/marketingowy.",
+          "evidence": [
+            {
+              "text": "Reklama.",
+              "where": "tekst"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "3",
+          "title": "Informacja o ryzyku przy zyskach",
+          "status": "pass",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565",
+          "explanation": "Twierdzeniom o zyskach towarzyszy informacja o ryzyku (ryzyko/zysk = 1.59).",
+          "evidence": [
+            {
+              "text": "Nasz zespół lubi ryzykować.",
+              "where": "ryzyko"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "4",
+          "title": "Rozmiar czcionki ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "5",
+          "title": "Ekspozycja i kontrast ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "6",
+          "title": "Ukrywanie ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "7",
+          "title": "Dostępność za 1 kliknięciem",
+          "status": "not_checked",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. b i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "8",
+          "title": "Responsywność",
+          "status": "not_checked",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 2 lit. g rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "9",
+          "title": "Zrozumiałość ostrzeżenia",
+          "status": "pass",
+          "severity": 15,
+          "legal_basis": "art. 44 ust. 2 lit. d rozp. del. 2017/565",
+          "explanation": "Ostrzeżenie sformułowane przystępnie (FOG≈12).",
+          "evidence": [
+            {
+              "text": "Nasz zespół lubi ryzykować.",
+              "where": "ostrzeżenie",
+              "fog": 11.6
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "10",
+          "title": "Spójność językowa",
+          "status": "pass",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. f rozp. del. 2017/565",
+          "explanation": "Ostrzeżenie w języku głównego przekazu (pl).",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "11",
+          "title": "Porównania produktów/usług",
+          "status": "na",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 3 rozp. del. 2017/565",
+          "explanation": "Nie wykryto porównań produktów lub usług.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12a",
+          "title": "Wyniki historyczne – okres i zakres",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12b",
+          "title": "Wyniki historyczne – waluta i koszty",
+          "status": "na",
+          "severity": 25,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "13",
+          "title": "Dominacja wyników historycznych",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 lit. a rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "14",
+          "title": "Ostrzeżenie przy wynikach historycznych",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 4 lit. d rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "15",
+          "title": "Prognozy przyszłych wyników",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 6 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prognoz przyszłych wyników.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "16",
+          "title": "Informacja podatkowa",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 7 rozp. del. 2017/565",
+          "explanation": "Materiał nie odwołuje się do traktowania podatkowego.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "17",
+          "title": "Sugerowanie aprobaty organu nadzoru",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do KNF lub innego organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "18",
+          "title": "Nadzór jako argument bezpieczeństwa",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "G1",
+          "title": "Obietnice zysku bez ryzyka",
+          "status": "pass",
+          "severity": 70,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565 (rzetelny, niewprowadzający w błąd przekaz)",
+          "explanation": "Nie wykryto obietnic gwarantowanego zysku ani braku ryzyka.",
+          "evidence": []
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.1",
+          "title": "Oferta doradztwa inwestycyjnego",
+          "status": "na",
+          "severity": 0,
+          "legal_basis": null,
+          "explanation": "Nie wykryto opisu usług doradczych ani indywidualnych rekomendacji.",
+          "evidence": []
+        }
+      ],
+      "m1": {
+        "firms": [],
+        "instruments": [],
+        "publisher": {
+          "type": "nieustalone",
+          "name": null,
+          "platform": "web"
+        }
+      },
+      "m3": {
+        "classification": "brak",
+        "entities": []
+      },
+      "ml": {
+        "model": "tfidf-lr-0889ab43",
+        "train_size": 71,
+        "mean": {
+          "advisory": 0.172,
+          "education": 0.152,
+          "neutral": 0.211,
+          "profit": 0.296,
+          "risk": 0.169
+        },
+        "max": {
+          "advisory": 0.209,
+          "education": 0.188,
+          "neutral": 0.303,
+          "profit": 0.496,
+          "risk": 0.209
+        },
+        "top_sentences": {
+          "advisory": [],
+          "education": [],
+          "profit": [],
+          "risk": []
+        }
+      },
+      "doc": {
+        "lang": "pl",
+        "domain": "audit.example",
+        "sentences": 3,
+        "layout": "none",
+        "simhash": "4260f00132300080"
+      },
+      "analyzer_version": "0.1.0",
+      "elapsed_ms": 3
+    }
+  },
+  "m2_negated_disclosure": {
+    "input": {
+      "text": "To nie jest reklama. Zarabiaj 15% rocznie. Otwórz konto."
+    },
+    "result": {
+      "score": 87.0,
+      "module_scores": {
+        "m1": 0.0,
+        "m2": 87.0,
+        "m3": 0.0
+      },
+      "modules": [
+        "m2"
+      ],
+      "findings": [
+        {
+          "module": "m1",
+          "rule_id": "M1.1",
+          "title": "Reklama firmy inwestycyjnej",
+          "status": "na",
+          "severity": 0,
+          "legal_basis": null,
+          "explanation": "Nie wykryto reklamy firmy inwestycyjnej ani jej instrumentów.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "1",
+          "title": "Identyfikacja firmy",
+          "status": "fail",
+          "severity": 35,
+          "legal_basis": "art. 44 ust. 2 lit. a rozp. del. 2017/565",
+          "explanation": "Nie znaleziono oficjalnej nazwy firmy inwestycyjnej (ani podmiotu z formą prawną).",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "2",
+          "title": "Oznaczenie reklamy",
+          "status": "pass",
+          "severity": 30,
+          "legal_basis": "art. 24 ust. 3 MiFID II",
+          "explanation": "Materiał jest oznaczony jako reklamowy/marketingowy.",
+          "evidence": [
+            {
+              "text": "To nie jest reklama.",
+              "where": "tekst"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "3",
+          "title": "Informacja o ryzyku przy zyskach",
+          "status": "fail",
+          "severity": 80,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565",
+          "explanation": "Twierdzeniom o zyskach nie towarzyszy żadna informacja o ryzyku.",
+          "evidence": [
+            {
+              "text": "Zarabiaj 15% rocznie.",
+              "where": "zysk"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "4",
+          "title": "Rozmiar czcionki ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "5",
+          "title": "Ekspozycja i kontrast ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "6",
+          "title": "Ukrywanie ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "7",
+          "title": "Dostępność za 1 kliknięciem",
+          "status": "not_checked",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. b i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "8",
+          "title": "Responsywność",
+          "status": "not_checked",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 2 lit. g rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "9",
+          "title": "Zrozumiałość ostrzeżenia",
+          "status": "na",
+          "severity": 15,
+          "legal_basis": "art. 44 ust. 2 lit. d rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku w materiale promocyjnym do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "10",
+          "title": "Spójność językowa",
+          "status": "na",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. f rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "11",
+          "title": "Porównania produktów/usług",
+          "status": "na",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 3 rozp. del. 2017/565",
+          "explanation": "Nie wykryto porównań produktów lub usług.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12a",
+          "title": "Wyniki historyczne – okres i zakres",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12b",
+          "title": "Wyniki historyczne – waluta i koszty",
+          "status": "na",
+          "severity": 25,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "13",
+          "title": "Dominacja wyników historycznych",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 lit. a rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "14",
+          "title": "Ostrzeżenie przy wynikach historycznych",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 4 lit. d rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "15",
+          "title": "Prognozy przyszłych wyników",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 6 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prognoz przyszłych wyników.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "16",
+          "title": "Informacja podatkowa",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 7 rozp. del. 2017/565",
+          "explanation": "Materiał nie odwołuje się do traktowania podatkowego.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "17",
+          "title": "Sugerowanie aprobaty organu nadzoru",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do KNF lub innego organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "18",
+          "title": "Nadzór jako argument bezpieczeństwa",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "G1",
+          "title": "Obietnice zysku bez ryzyka",
+          "status": "pass",
+          "severity": 70,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565 (rzetelny, niewprowadzający w błąd przekaz)",
+          "explanation": "Nie wykryto obietnic gwarantowanego zysku ani braku ryzyka.",
+          "evidence": []
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.1",
+          "title": "Oferta doradztwa inwestycyjnego",
+          "status": "na",
+          "severity": 0,
+          "legal_basis": null,
+          "explanation": "Nie wykryto opisu usług doradczych ani indywidualnych rekomendacji.",
+          "evidence": []
+        }
+      ],
+      "m1": {
+        "firms": [],
+        "instruments": [],
+        "publisher": {
+          "type": "nieustalone",
+          "name": null,
+          "platform": "web"
+        }
+      },
+      "m3": {
+        "classification": "brak",
+        "entities": []
+      },
+      "ml": {
+        "model": "tfidf-lr-0889ab43",
+        "train_size": 71,
+        "mean": {
+          "advisory": 0.147,
+          "education": 0.235,
+          "neutral": 0.13,
+          "profit": 0.303,
+          "risk": 0.187
+        },
+        "max": {
+          "advisory": 0.238,
+          "education": 0.452,
+          "neutral": 0.183,
+          "profit": 0.568,
+          "risk": 0.224
+        },
+        "top_sentences": {
+          "advisory": [],
+          "education": [],
+          "profit": [
+            "Zarabiaj 15% rocznie."
+          ],
+          "risk": []
+        }
+      },
+      "doc": {
+        "lang": "pl",
+        "domain": "audit.example",
+        "sentences": 3,
+        "layout": "none",
+        "simhash": "557a0085f8260259"
+      },
+      "analyzer_version": "0.1.0",
+      "elapsed_ms": 3
+    }
+  },
+  "m3_without_broker": {
+    "input": {
+      "text": "Syntetyczna Aurum Advisory Sp. z o.o. Wealth management. Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji. Pakiet 990 zł/mies."
+    },
+    "result": {
+      "score": 75.0,
+      "module_scores": {
+        "m1": 0.0,
+        "m2": 0.0,
+        "m3": 75.0
+      },
+      "modules": [
+        "m3"
+      ],
+      "findings": [
+        {
+          "module": "m1",
+          "rule_id": "M1.1",
+          "title": "Reklama firmy inwestycyjnej",
+          "status": "na",
+          "severity": 0,
+          "legal_basis": null,
+          "explanation": "Nie wykryto reklamy firmy inwestycyjnej ani jej instrumentów.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "1",
+          "title": "Identyfikacja firmy",
+          "status": "na",
+          "severity": 35,
+          "legal_basis": "art. 44 ust. 2 lit. a rozp. del. 2017/565",
+          "explanation": "Materiał nie ma cech przekazu promocyjnego.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "2",
+          "title": "Oznaczenie reklamy",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 24 ust. 3 MiFID II",
+          "explanation": "Materiał nie ma cech przekazu promocyjnego (brak twierdzeń o zyskach i wezwań do działania).",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "3",
+          "title": "Informacja o ryzyku przy zyskach",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565",
+          "explanation": "Nie wykryto twierdzeń o potencjalnych zyskach.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "4",
+          "title": "Rozmiar czcionki ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "5",
+          "title": "Ekspozycja i kontrast ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "6",
+          "title": "Ukrywanie ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "7",
+          "title": "Dostępność za 1 kliknięciem",
+          "status": "not_checked",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. b i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "8",
+          "title": "Responsywność",
+          "status": "not_checked",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 2 lit. g rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "9",
+          "title": "Zrozumiałość ostrzeżenia",
+          "status": "na",
+          "severity": 15,
+          "legal_basis": "art. 44 ust. 2 lit. d rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku w materiale promocyjnym do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "10",
+          "title": "Spójność językowa",
+          "status": "na",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. f rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "11",
+          "title": "Porównania produktów/usług",
+          "status": "na",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 3 rozp. del. 2017/565",
+          "explanation": "Nie wykryto porównań produktów lub usług.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12a",
+          "title": "Wyniki historyczne – okres i zakres",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12b",
+          "title": "Wyniki historyczne – waluta i koszty",
+          "status": "na",
+          "severity": 25,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "13",
+          "title": "Dominacja wyników historycznych",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 lit. a rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "14",
+          "title": "Ostrzeżenie przy wynikach historycznych",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 4 lit. d rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "15",
+          "title": "Prognozy przyszłych wyników",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 6 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prognoz przyszłych wyników.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "16",
+          "title": "Informacja podatkowa",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 7 rozp. del. 2017/565",
+          "explanation": "Materiał nie odwołuje się do traktowania podatkowego.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "17",
+          "title": "Sugerowanie aprobaty organu nadzoru",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do KNF lub innego organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "18",
+          "title": "Nadzór jako argument bezpieczeństwa",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "G1",
+          "title": "Obietnice zysku bez ryzyka",
+          "status": "pass",
+          "severity": 70,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565 (rzetelny, niewprowadzający w błąd przekaz)",
+          "explanation": "Nie wykryto obietnic gwarantowanego zysku ani braku ryzyka.",
+          "evidence": []
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.1",
+          "title": "Możliwe doradztwo inwestycyjne bez zezwolenia",
+          "status": "fail",
+          "severity": 70,
+          "legal_basis": "art. 76 u.o.i.f.",
+          "explanation": "Oferta indywidualnych rekomendacji dot. instrumentów finansowych – podmiotu nie odnaleziono w rejestrze firm inwestycyjnych KNF. Sygnał do weryfikacji, nie dowód naruszenia.",
+          "evidence": [
+            {
+              "text": "Wealth management.",
+              "where": "usługa"
+            },
+            {
+              "text": "Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji.",
+              "where": "personalizacja"
+            },
+            {
+              "text": "Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji.",
+              "where": "rekomendacja"
+            }
+          ]
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.2",
+          "title": "Odpłatny charakter usługi",
+          "status": "warn",
+          "severity": 20,
+          "legal_basis": null,
+          "explanation": "Usługa ma charakter komercyjny (cennik, abonament, formularz kontaktowy).",
+          "evidence": [
+            {
+              "text": "Pakiet 990 zł/mies.",
+              "where": "tekst"
+            }
+          ]
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.3",
+          "title": "Instrumenty finansowe w ofercie",
+          "status": "warn",
+          "severity": 15,
+          "legal_basis": "art. 2 u.o.i.f.",
+          "explanation": "Oferta dotyczy instrumentów finansowych: Akcje, Zarządzanie portfelem.",
+          "evidence": []
+        }
+      ],
+      "m1": {
+        "firms": [],
+        "instruments": [
+          "Akcje",
+          "Zarządzanie portfelem"
+        ],
+        "publisher": {
+          "type": "nieustalone",
+          "name": null,
+          "platform": "web"
+        }
+      },
+      "m3": {
+        "classification": "indywidualne_doradztwo",
+        "entities": [
+          {
+            "name": "Syntetyczna Aurum Advisory Sp. z o.o.",
+            "registry": "brak w rejestrze",
+            "registry_match": null
+          }
+        ]
+      },
+      "ml": {
+        "model": "tfidf-lr-0889ab43",
+        "train_size": 71,
+        "mean": {
+          "advisory": 0.372,
+          "education": 0.138,
+          "neutral": 0.161,
+          "profit": 0.197,
+          "risk": 0.133
+        },
+        "max": {
+          "advisory": 0.655,
+          "education": 0.206,
+          "neutral": 0.238,
+          "profit": 0.294,
+          "risk": 0.186
+        },
+        "top_sentences": {
+          "advisory": [
+            "Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji."
+          ],
+          "education": [],
+          "profit": [],
+          "risk": []
+        }
+      },
+      "doc": {
+        "lang": "pl",
+        "domain": "audit.example",
+        "sentences": 4,
+        "layout": "none",
+        "simhash": "c79297d50e43d008"
+      },
+      "analyzer_version": "0.1.0",
+      "elapsed_ms": 5
+    }
+  },
+  "m3_with_broker": {
+    "input": {
+      "text": "Syntetyczna Aurum Advisory Sp. z o.o. Wealth management. Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji. Pakiet 990 zł/mies. Transakcje wykonasz przez Dom Maklerski Vistula Capital S.A."
+    },
+    "result": {
+      "score": 49.0,
+      "module_scores": {
+        "m1": 49.0,
+        "m2": 0.0,
+        "m3": 20.9
+      },
+      "modules": [
+        "m1",
+        "m3"
+      ],
+      "findings": [
+        {
+          "module": "m1",
+          "rule_id": "M1.1",
+          "title": "Nie ustalono publikującego",
+          "status": "warn",
+          "severity": 30,
+          "legal_basis": null,
+          "explanation": "Materiał reklamuje firmę/instrument, ale autora nie da się ustalić – oznaczono do ręcznej weryfikacji.",
+          "evidence": []
+        },
+        {
+          "module": "m1",
+          "rule_id": "M1.3",
+          "title": "Brak oznaczenia współpracy",
+          "status": "fail",
+          "severity": 40,
+          "legal_basis": null,
+          "explanation": "Podmiot trzeci promuje firmę/instrument bez oznaczenia współpracy reklamowej (#reklama, #ad).",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "1",
+          "title": "Identyfikacja firmy",
+          "status": "na",
+          "severity": 35,
+          "legal_basis": "art. 44 ust. 2 lit. a rozp. del. 2017/565",
+          "explanation": "Materiał nie ma cech przekazu promocyjnego.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "2",
+          "title": "Oznaczenie reklamy",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 24 ust. 3 MiFID II",
+          "explanation": "Materiał nie ma cech przekazu promocyjnego (brak twierdzeń o zyskach i wezwań do działania).",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "3",
+          "title": "Informacja o ryzyku przy zyskach",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565",
+          "explanation": "Nie wykryto twierdzeń o potencjalnych zyskach.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "4",
+          "title": "Rozmiar czcionki ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "5",
+          "title": "Ekspozycja i kontrast ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "6",
+          "title": "Ukrywanie ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "7",
+          "title": "Dostępność za 1 kliknięciem",
+          "status": "not_checked",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. b i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "8",
+          "title": "Responsywność",
+          "status": "not_checked",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 2 lit. g rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "9",
+          "title": "Zrozumiałość ostrzeżenia",
+          "status": "na",
+          "severity": 15,
+          "legal_basis": "art. 44 ust. 2 lit. d rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku w materiale promocyjnym do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "10",
+          "title": "Spójność językowa",
+          "status": "na",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. f rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "11",
+          "title": "Porównania produktów/usług",
+          "status": "na",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 3 rozp. del. 2017/565",
+          "explanation": "Nie wykryto porównań produktów lub usług.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12a",
+          "title": "Wyniki historyczne – okres i zakres",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12b",
+          "title": "Wyniki historyczne – waluta i koszty",
+          "status": "na",
+          "severity": 25,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "13",
+          "title": "Dominacja wyników historycznych",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 lit. a rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "14",
+          "title": "Ostrzeżenie przy wynikach historycznych",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 4 lit. d rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "15",
+          "title": "Prognozy przyszłych wyników",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 6 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prognoz przyszłych wyników.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "16",
+          "title": "Informacja podatkowa",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 7 rozp. del. 2017/565",
+          "explanation": "Materiał nie odwołuje się do traktowania podatkowego.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "17",
+          "title": "Sugerowanie aprobaty organu nadzoru",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do KNF lub innego organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "18",
+          "title": "Nadzór jako argument bezpieczeństwa",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "G1",
+          "title": "Obietnice zysku bez ryzyka",
+          "status": "pass",
+          "severity": 70,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565 (rzetelny, niewprowadzający w błąd przekaz)",
+          "explanation": "Nie wykryto obietnic gwarantowanego zysku ani braku ryzyka.",
+          "evidence": []
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.1",
+          "title": "Doradztwo świadczone przez podmiot z rejestru",
+          "status": "warn",
+          "severity": 10,
+          "legal_basis": "art. 76 u.o.i.f.",
+          "explanation": "Oferta doradztwa – podmiot odnaleziony w rejestrze KNF (sprawdzić zakres zezwolenia).",
+          "evidence": [
+            {
+              "text": "Wealth management.",
+              "where": "usługa"
+            },
+            {
+              "text": "Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji.",
+              "where": "personalizacja"
+            },
+            {
+              "text": "Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji.",
+              "where": "rekomendacja"
+            }
+          ]
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.2",
+          "title": "Odpłatny charakter usługi",
+          "status": "warn",
+          "severity": 20,
+          "legal_basis": null,
+          "explanation": "Usługa ma charakter komercyjny (cennik, abonament, formularz kontaktowy).",
+          "evidence": [
+            {
+              "text": "Pakiet 990 zł/mies.",
+              "where": "tekst"
+            }
+          ]
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.3",
+          "title": "Instrumenty finansowe w ofercie",
+          "status": "warn",
+          "severity": 15,
+          "legal_basis": "art. 2 u.o.i.f.",
+          "explanation": "Oferta dotyczy instrumentów finansowych: Akcje, Zarządzanie portfelem.",
+          "evidence": []
+        }
+      ],
+      "m1": {
+        "firms": [
+          {
+            "name": "DOM MAKLERSKI INC S.A.",
+            "category": "dom_maklerski",
+            "country": "PL",
+            "supervisor": null,
+            "license_date": "21-02-2012",
+            "scope": "1, 2, 5, 6, 9, 11, 14",
+            "demo": false,
+            "domains": [],
+            "former_names": [],
+            "matched_as": "dom maklerski"
+          },
+          {
+            "name": "Dom Maklerski Vistula Capital S.A.",
+            "category": "dom_maklerski",
+            "country": "PL",
+            "supervisor": null,
+            "license_date": "2015-03-02",
+            "scope": "1, 2, 4, 5",
+            "demo": true,
+            "domains": [
+              "vistula-capital.example"
+            ],
+            "former_names": [],
+            "matched_as": "vistula"
+          }
+        ],
+        "instruments": [
+          "Akcje",
+          "Zarządzanie portfelem"
+        ],
+        "publisher": {
+          "type": "nieustalone",
+          "name": null,
+          "platform": "web"
+        }
+      },
+      "m3": {
+        "classification": "indywidualne_doradztwo",
+        "entities": [
+          {
+            "name": "Syntetyczna Aurum Advisory Sp. z o.o.",
+            "registry": "brak w rejestrze",
+            "registry_match": null
+          },
+          {
+            "name": "Dom Maklerski Vistula Capital S.A.",
+            "registry": "znaleziono",
+            "registry_match": {
+              "name": "Dom Maklerski Vistula Capital S.A.",
+              "category": "dom_maklerski",
+              "country": "PL",
+              "supervisor": null,
+              "license_date": "2015-03-02",
+              "scope": "1, 2, 4, 5",
+              "demo": true,
+              "domains": [
+                "vistula-capital.example"
+              ],
+              "former_names": [],
+              "match_score": 100.0,
+              "matched_as": "dom maklerski vistula capital"
+            }
+          }
+        ]
+      },
+      "ml": {
+        "model": "tfidf-lr-0889ab43",
+        "train_size": 71,
+        "mean": {
+          "advisory": 0.366,
+          "education": 0.135,
+          "neutral": 0.16,
+          "profit": 0.191,
+          "risk": 0.147
+        },
+        "max": {
+          "advisory": 0.655,
+          "education": 0.206,
+          "neutral": 0.238,
+          "profit": 0.294,
+          "risk": 0.205
+        },
+        "top_sentences": {
+          "advisory": [
+            "Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji."
+          ],
+          "education": [],
+          "profit": [],
+          "risk": []
+        }
+      },
+      "doc": {
+        "lang": "pl",
+        "domain": "audit.example",
+        "sentences": 5,
+        "layout": "none",
+        "simhash": "479637d62647d428"
+      },
+      "analyzer_version": "0.1.0",
+      "elapsed_ms": 5
+    }
+  },
+  "m3_with_broker_disclosure": {
+    "input": {
+      "text": "#reklama. Syntetyczna Aurum Advisory Sp. z o.o. Wealth management. Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji. Pakiet 990 zł/mies. Transakcje wykonasz przez Dom Maklerski Vistula Capital S.A."
+    },
+    "result": {
+      "score": 20.9,
+      "module_scores": {
+        "m1": 15.0,
+        "m2": 0.0,
+        "m3": 20.9
+      },
+      "modules": [
+        "m3"
+      ],
+      "findings": [
+        {
+          "module": "m1",
+          "rule_id": "M1.1",
+          "title": "Nie ustalono publikującego",
+          "status": "warn",
+          "severity": 30,
+          "legal_basis": null,
+          "explanation": "Materiał reklamuje firmę/instrument, ale autora nie da się ustalić – oznaczono do ręcznej weryfikacji.",
+          "evidence": []
+        },
+        {
+          "module": "m1",
+          "rule_id": "M1.3",
+          "title": "Oznaczenie współpracy",
+          "status": "pass",
+          "severity": 0,
+          "legal_basis": null,
+          "explanation": "Współpraca reklamowa została oznaczona.",
+          "evidence": [
+            {
+              "text": "#reklama.",
+              "where": "tekst"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "1",
+          "title": "Identyfikacja firmy",
+          "status": "na",
+          "severity": 35,
+          "legal_basis": "art. 44 ust. 2 lit. a rozp. del. 2017/565",
+          "explanation": "Materiał nie ma cech przekazu promocyjnego.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "2",
+          "title": "Oznaczenie reklamy",
+          "status": "pass",
+          "severity": 30,
+          "legal_basis": "art. 24 ust. 3 MiFID II",
+          "explanation": "Materiał jest oznaczony jako reklamowy/marketingowy.",
+          "evidence": [
+            {
+              "text": "#reklama.",
+              "where": "tekst"
+            }
+          ]
+        },
+        {
+          "module": "m2",
+          "rule_id": "3",
+          "title": "Informacja o ryzyku przy zyskach",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565",
+          "explanation": "Nie wykryto twierdzeń o potencjalnych zyskach.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "4",
+          "title": "Rozmiar czcionki ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "5",
+          "title": "Ekspozycja i kontrast ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. c i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "6",
+          "title": "Ukrywanie ryzyka",
+          "status": "not_checked",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 2 lit. e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "7",
+          "title": "Dostępność za 1 kliknięciem",
+          "status": "not_checked",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. b i e rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "8",
+          "title": "Responsywność",
+          "status": "not_checked",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 2 lit. g rozp. del. 2017/565",
+          "explanation": "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "9",
+          "title": "Zrozumiałość ostrzeżenia",
+          "status": "na",
+          "severity": 15,
+          "legal_basis": "art. 44 ust. 2 lit. d rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku w materiale promocyjnym do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "10",
+          "title": "Spójność językowa",
+          "status": "na",
+          "severity": 50,
+          "legal_basis": "art. 44 ust. 2 lit. f rozp. del. 2017/565",
+          "explanation": "Brak ostrzeżenia o ryzyku do oceny.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "11",
+          "title": "Porównania produktów/usług",
+          "status": "na",
+          "severity": 45,
+          "legal_basis": "art. 44 ust. 3 rozp. del. 2017/565",
+          "explanation": "Nie wykryto porównań produktów lub usług.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12a",
+          "title": "Wyniki historyczne – okres i zakres",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "12b",
+          "title": "Wyniki historyczne – waluta i koszty",
+          "status": "na",
+          "severity": 25,
+          "legal_basis": "art. 44 ust. 4 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "13",
+          "title": "Dominacja wyników historycznych",
+          "status": "na",
+          "severity": 30,
+          "legal_basis": "art. 44 ust. 4 lit. a rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "14",
+          "title": "Ostrzeżenie przy wynikach historycznych",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 4 lit. d rozp. del. 2017/565",
+          "explanation": "Nie wykryto prezentacji wyników historycznych.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "15",
+          "title": "Prognozy przyszłych wyników",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 6 rozp. del. 2017/565",
+          "explanation": "Nie wykryto prognoz przyszłych wyników.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "16",
+          "title": "Informacja podatkowa",
+          "status": "na",
+          "severity": 40,
+          "legal_basis": "art. 44 ust. 7 rozp. del. 2017/565",
+          "explanation": "Materiał nie odwołuje się do traktowania podatkowego.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "17",
+          "title": "Sugerowanie aprobaty organu nadzoru",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do KNF lub innego organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "18",
+          "title": "Nadzór jako argument bezpieczeństwa",
+          "status": "na",
+          "severity": 60,
+          "legal_basis": "art. 44 ust. 8 rozp. del. 2017/565",
+          "explanation": "Brak odwołań do organu nadzoru.",
+          "evidence": []
+        },
+        {
+          "module": "m2",
+          "rule_id": "G1",
+          "title": "Obietnice zysku bez ryzyka",
+          "status": "pass",
+          "severity": 70,
+          "legal_basis": "art. 44 ust. 2 lit. b rozp. del. 2017/565 (rzetelny, niewprowadzający w błąd przekaz)",
+          "explanation": "Nie wykryto obietnic gwarantowanego zysku ani braku ryzyka.",
+          "evidence": []
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.1",
+          "title": "Doradztwo świadczone przez podmiot z rejestru",
+          "status": "warn",
+          "severity": 10,
+          "legal_basis": "art. 76 u.o.i.f.",
+          "explanation": "Oferta doradztwa – podmiot odnaleziony w rejestrze KNF (sprawdzić zakres zezwolenia).",
+          "evidence": [
+            {
+              "text": "Wealth management.",
+              "where": "usługa"
+            },
+            {
+              "text": "Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji.",
+              "where": "personalizacja"
+            },
+            {
+              "text": "Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji.",
+              "where": "rekomendacja"
+            }
+          ]
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.2",
+          "title": "Odpłatny charakter usługi",
+          "status": "warn",
+          "severity": 20,
+          "legal_basis": null,
+          "explanation": "Usługa ma charakter komercyjny (cennik, abonament, formularz kontaktowy).",
+          "evidence": [
+            {
+              "text": "Pakiet 990 zł/mies.",
+              "where": "tekst"
+            }
+          ]
+        },
+        {
+          "module": "m3",
+          "rule_id": "M3.3",
+          "title": "Instrumenty finansowe w ofercie",
+          "status": "warn",
+          "severity": 15,
+          "legal_basis": "art. 2 u.o.i.f.",
+          "explanation": "Oferta dotyczy instrumentów finansowych: Akcje, Zarządzanie portfelem.",
+          "evidence": []
+        }
+      ],
+      "m1": {
+        "firms": [
+          {
+            "name": "DOM MAKLERSKI INC S.A.",
+            "category": "dom_maklerski",
+            "country": "PL",
+            "supervisor": null,
+            "license_date": "21-02-2012",
+            "scope": "1, 2, 5, 6, 9, 11, 14",
+            "demo": false,
+            "domains": [],
+            "former_names": [],
+            "matched_as": "dom maklerski"
+          },
+          {
+            "name": "Dom Maklerski Vistula Capital S.A.",
+            "category": "dom_maklerski",
+            "country": "PL",
+            "supervisor": null,
+            "license_date": "2015-03-02",
+            "scope": "1, 2, 4, 5",
+            "demo": true,
+            "domains": [
+              "vistula-capital.example"
+            ],
+            "former_names": [],
+            "matched_as": "vistula"
+          }
+        ],
+        "instruments": [
+          "Akcje",
+          "Zarządzanie portfelem"
+        ],
+        "publisher": {
+          "type": "nieustalone",
+          "name": null,
+          "platform": "web"
+        }
+      },
+      "m3": {
+        "classification": "indywidualne_doradztwo",
+        "entities": [
+          {
+            "name": "Syntetyczna Aurum Advisory Sp. z o.o.",
+            "registry": "brak w rejestrze",
+            "registry_match": null
+          },
+          {
+            "name": "Dom Maklerski Vistula Capital S.A.",
+            "registry": "znaleziono",
+            "registry_match": {
+              "name": "Dom Maklerski Vistula Capital S.A.",
+              "category": "dom_maklerski",
+              "country": "PL",
+              "supervisor": null,
+              "license_date": "2015-03-02",
+              "scope": "1, 2, 4, 5",
+              "demo": true,
+              "domains": [
+                "vistula-capital.example"
+              ],
+              "former_names": [],
+              "match_score": 100.0,
+              "matched_as": "dom maklerski vistula capital"
+            }
+          }
+        ]
+      },
+      "ml": {
+        "model": "tfidf-lr-0889ab43",
+        "train_size": 71,
+        "mean": {
+          "advisory": 0.339,
+          "education": 0.143,
+          "neutral": 0.169,
+          "profit": 0.197,
+          "risk": 0.152
+        },
+        "max": {
+          "advisory": 0.655,
+          "education": 0.206,
+          "neutral": 0.238,
+          "profit": 0.294,
+          "risk": 0.205
+        },
+        "top_sentences": {
+          "advisory": [
+            "Przygotujemy indywidualne rekomendacje zakupu akcji dopasowane do Twojej sytuacji."
+          ],
+          "education": [],
+          "profit": [],
+          "risk": []
+        }
+      },
+      "doc": {
+        "lang": "pl",
+        "domain": "audit.example",
+        "sentences": 6,
+        "layout": "none",
+        "simhash": "479637d62657dc68"
+      },
+      "analyzer_version": "0.1.0",
+      "elapsed_ms": 5
+    }
+  },
+  "invalid_api": [
+    {
+      "path": "/analyze",
+      "input": {
+        "url": "x",
+        "content_text": ""
+      },
+      "status": 200,
+      "body": "{\"score\":0.0,\"module_scores\":{\"m1\":0.0,\"m2\":0.0,\"m3\":0.0},\"modules\":[],\"findings\":[{\"module\":\"m1\",\"rule_id\":\"M1.1\",\"title\":\"Reklama firmy inwestycyjnej\",\"status\":\"na\",\"severity\":0,\"legal_basis\":null,\"explanation\":\"Nie wykryto reklamy firmy inwestycyjnej ani jej instrumentów.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"1\",\"title\":\"Identyfikacja firmy\",\"status\":\"na\",\"severity\":35,\"legal_basis\":\"art. 44 ust. 2 lit. a rozp. del. 2017/565\",\"explanation\":\"Materiał nie ma cech przekazu promocyjnego.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"2\",\"title\":\"Oznaczenie reklamy\",\"status\":\"na\",\"severity\":30,\"legal_basis\":\"art. 24 ust. 3 MiFID II\",\"explanation\":\"Materiał nie ma cech przekazu promocyjnego (brak twierdzeń o zyskach i wezwań do działania).\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"3\",\"title\":\"Informacja o ryzyku przy zyskach\",\"status\":\"na\",\"severity\":60,\"legal_basis\":\"art. 44 ust. 2 lit. b rozp. del. 2017/565\",\"explanation\":\"Nie wykryto twierdzeń o potencjalnych zyskach.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"4\",\"title\":\"Rozmiar czcionki ryzyka\",\"status\":\"not_checked\",\"severity\":40,\"legal_basis\":\"art. 44 ust. 2 lit. c rozp. del. 2017/565\",\"explanation\":\"Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"5\",\"title\":\"Ekspozycja i kontrast ryzyka\",\"status\":\"not_checked\",\"severity\":40,\"legal_basis\":\"art. 44 ust. 2 lit. c i e rozp. del. 2017/565\",\"explanation\":\"Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"6\",\"title\":\"Ukrywanie ryzyka\",\"status\":\"not_checked\",\"severity\":40,\"legal_basis\":\"art. 44 ust. 2 lit. e rozp. del. 2017/565\",\"explanation\":\"Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"7\",\"title\":\"Dostępność za 1 kliknięciem\",\"status\":\"not_checked\",\"severity\":50,\"legal_basis\":\"art. 44 ust. 2 lit. b i e rozp. del. 2017/565\",\"explanation\":\"Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"8\",\"title\":\"Responsywność\",\"status\":\"not_checked\",\"severity\":45,\"legal_basis\":\"art. 44 ust. 2 lit. g rozp. del. 2017/565\",\"explanation\":\"Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"9\",\"title\":\"Zrozumiałość ostrzeżenia\",\"status\":\"na\",\"severity\":15,\"legal_basis\":\"art. 44 ust. 2 lit. d rozp. del. 2017/565\",\"explanation\":\"Brak ostrzeżenia o ryzyku w materiale promocyjnym do oceny.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"10\",\"title\":\"Spójność językowa\",\"status\":\"na\",\"severity\":50,\"legal_basis\":\"art. 44 ust. 2 lit. f rozp. del. 2017/565\",\"explanation\":\"Brak ostrzeżenia o ryzyku do oceny.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"11\",\"title\":\"Porównania produktów/usług\",\"status\":\"na\",\"severity\":45,\"legal_basis\":\"art. 44 ust. 3 rozp. del. 2017/565\",\"explanation\":\"Nie wykryto porównań produktów lub usług.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"12a\",\"title\":\"Wyniki historyczne – okres i zakres\",\"status\":\"na\",\"severity\":30,\"legal_basis\":\"art. 44 ust. 4 rozp. del. 2017/565\",\"explanation\":\"Nie wykryto prezentacji wyników historycznych.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"12b\",\"title\":\"Wyniki historyczne – waluta i koszty\",\"status\":\"na\",\"severity\":25,\"legal_basis\":\"art. 44 ust. 4 rozp. del. 2017/565\",\"explanation\":\"Nie wykryto prezentacji wyników historycznych.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"13\",\"title\":\"Dominacja wyników historycznych\",\"status\":\"na\",\"severity\":30,\"legal_basis\":\"art. 44 ust. 4 lit. a rozp. del. 2017/565\",\"explanation\":\"Nie wykryto prezentacji wyników historycznych.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"14\",\"title\":\"Ostrzeżenie przy wynikach historycznych\",\"status\":\"na\",\"severity\":40,\"legal_basis\":\"art. 44 ust. 4 lit. d rozp. del. 2017/565\",\"explanation\":\"Nie wykryto prezentacji wyników historycznych.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"15\",\"title\":\"Prognozy przyszłych wyników\",\"status\":\"na\",\"severity\":40,\"legal_basis\":\"art. 44 ust. 6 rozp. del. 2017/565\",\"explanation\":\"Nie wykryto prognoz przyszłych wyników.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"16\",\"title\":\"Informacja podatkowa\",\"status\":\"na\",\"severity\":40,\"legal_basis\":\"art. 44 ust. 7 rozp. del. 2017/565\",\"explanation\":\"Materiał nie odwołuje się do traktowania podatkowego.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"17\",\"title\":\"Sugerowanie aprobaty organu nadzoru\",\"status\":\"na\",\"severity\":60,\"legal_basis\":\"art. 44 ust. 8 rozp. del. 2017/565\",\"explanation\":\"Brak odwołań do KNF lub innego organu nadzoru.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"18\",\"title\":\"Nadzór jako argument bezpieczeństwa\",\"status\":\"na\",\"severity\":60,\"legal_basis\":\"art. 44 ust. 8 rozp. del. 2017/565\",\"explanation\":\"Brak odwołań do organu nadzoru.\",\"evidence\":[]},{\"module\":\"m2\",\"rule_id\":\"G1\",\"title\":\"Obietnice zysku bez ryzyka\",\"status\":\"pass\",\"severity\":70,\"legal_basis\":\"art. 44 ust. 2 lit. b rozp. del. 2017/565 (rzetelny, niewprowadzający w błąd przekaz)\",\"explanation\":\"Nie wykryto obietnic gwarantowanego zysku ani braku ryzyka.\",\"evidence\":[]},{\"module\":\"m3\",\"rule_id\":\"M3.1\",\"title\":\"Oferta doradztwa inwestycyjnego\",\"status\":\"na\",\"severity\":0,\"legal_basis\":null,\"explanation\":\"Nie wykryto opisu usług doradczych ani indywidualnych rekomendacji.\",\"evidence\":[]}],\"m1\":{\"firms\":[],\"instruments\":[],\"publisher\":{\"type\":\"nieustalone\",\"name\":null,\"platform\":\"web\"}},\"m3\":{\"classification\":\"brak\",\"entities\":[]},\"ml\":{\"model\":\"tfidf-lr-0889ab43\",\"train_size\":71},\"doc\":{\"lang\":null,\"domain\":null,\"sentences\":0,\"layout\":\"none\",\"simhash\":\"d41d8cd98f00b204\"},\"analyzer_version\":\"0.1.0\",\"elapsed_ms\":0}",
+      "content_type": "application/json"
+    },
+    {
+      "path": "/analyze",
+      "input": {
+        "url": "x",
+        "content_text": "Reklama. Zysk 10% rocznie.",
+        "layout": {
+          "engine": "playwright",
+          "viewports": {
+            "desktop": "bad"
+          }
+        }
+      },
+      "status": 500,
+      "body": "Internal Server Error",
+      "content_type": "text/plain; charset=utf-8"
+    },
+    {
+      "path": "/summary",
+      "input": {
+        "result": {}
+      },
+      "status": 500,
+      "body": "Internal Server Error",
+      "content_type": "text/plain; charset=utf-8"
+    }
+  ]
+}

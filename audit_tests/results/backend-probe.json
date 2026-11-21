@@ -1,0 +1,93 @@
+{
+  "db": [
+    {
+      "version": "PostgreSQL 16.16, compiled by Visual C++ build 1944, 64-bit",
+      "current_database": "investwatch_audit"
+    }
+  ],
+  "extensions": [
+    {
+      "extname": "plpgsql"
+    },
+    {
+      "extname": "pg_trgm"
+    },
+    {
+      "extname": "unaccent"
+    }
+  ],
+  "threshold": [
+    {
+      "value": 45
+    }
+  ],
+  "requests": [
+    {
+      "method": "GET",
+      "route": "/health",
+      "status": 200,
+      "body": "{\"ok\":true,\"db\":true,\"scraper\":null,\"analyzer\":null,\"queue\":{\"waiting\":0,\"active\":0,\"failed\":0,\"completed\":0}}"
+    },
+    {
+      "method": "GET",
+      "route": "/materials",
+      "status": 502,
+      "body": "{\"error\":\"bind message supplies 1 parameters, but prepared statement \\\"\\\" requires 0\"}"
+    },
+    {
+      "method": "GET",
+      "route": "/materials?risk=wysokie",
+      "status": 200,
+      "body": "{\"total\":0,\"page\":1,\"size\":50,\"threshold\":45,\"items\":[]}"
+    },
+    {
+      "method": "GET",
+      "route": "/materials?platform=web",
+      "status": 502,
+      "body": "{\"error\":\"could not determine data type of parameter $1\"}"
+    },
+    {
+      "method": "GET",
+      "route": "/dashboard/stats",
+      "status": 200,
+      "body": "{\"threshold\":45,\"totals\":{\"materials\":0,\"high\":0,\"medium\":0,\"to_verify\":0,\"unread\":0,\"new\":0},\"trend\":[],\"byModule\":[],\"byRule\":[],\"byPlatform\":[],\"recent\":[]}"
+    },
+    {
+      "method": "GET",
+      "route": "/settings",
+      "status": 200,
+      "body": "{\"threshold\":45,\"alert_modules\":[\"m1\",\"m2\",\"m3\"]}"
+    },
+    {
+      "method": "GET",
+      "route": "/calibration",
+      "status": 200,
+      "body": "{\"threshold\":45,\"current\":45,\"total\":0,\"labeled\":0,\"at\":{\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},\"curve\":[{\"threshold\":0,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":5,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":10,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":15,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":20,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":25,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":30,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":35,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":40,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":45,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":50,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":55,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":60,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":65,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":70,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":75,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":80,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":85,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":90,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":95,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0},{\"threshold\":100,\"tp\":0,\"fp\":0,\"fn\":0,\"tn\":0,\"precision\":null,\"recall\":null,\"f1\":null,\"flagged\":0}],\"items\":[]}"
+    },
+    {
+      "method": "GET",
+      "route": "/entities",
+      "status": 200,
+      "body": "[]"
+    },
+    {
+      "method": "GET",
+      "route": "/search?q=audit&type=entities",
+      "status": 200,
+      "body": "{\"entities\":[]}"
+    },
+    {
+      "method": "GET",
+      "route": "/absent",
+      "status": 404,
+      "body": "{\"error\":\"Nie znaleziono\"}"
+    },
+    {
+      "method": "PATCH",
+      "route": "/settings",
+      "status": 400,
+      "body": "{\"error\":\"Niepoprawne dane wejściowe\",\"details\":[{\"path\":\"threshold\",\"message\":\"Too small: expected number to be >=0\"}]}"
+    }
+  ],
+  "redisConfigFromAuthenticatedTlsUrl": "{\"host\":\"localhost\",\"port\":56379}"
+}

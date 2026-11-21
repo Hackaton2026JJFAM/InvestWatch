@@ -1,0 +1,100 @@
+{
+  "browser": "157.0.4341.60",
+  "routes": [
+    {
+      "route": "/",
+      "heading": "Pulpit",
+      "body": "Pulpit\n\nStan monitoringu treści inwestycyjnych · próg ryzyka 45\n\nPrzeanalizowane materiały\n0\nWysokie ryzyko\n0\nwynik ≥ 45\nNowe alerty\n0\n0 nieprzeczytanych\nWymaga weryfikacji\n0\nstatus „Nowy”, ryzyko średnie lub wysokie\nTrend wykryć (30 dni)\nBrak danych\nPodział według modułów\nBrak danych\nNajnowsze analizy\naktualizowane na żywo\nBrak materiałów – dodaj URL w zakładce „Skanowanie”.\nNajczęstsze przesłanki (reguły niespełnione)\nBrak danych"
+    },
+    {
+      "route": "/materials",
+      "heading": "Wyniki analiz",
+      "body": "Wyniki analiz\n\nFiltrowanie po dacie, źródle, module i poziomie ryzyka\n\nOd\nDo\nŹródło\nwszystkie\nweb\nfacebook\ninstagram\ntiktok\nyoutube\nx\nModuł\nwszystkie\nM1 Finfluencerzy\nM2 Ryzyko\nM3 Shadow Advisory\nRyzyko\nwszystkie\nwysokie\nśrednie\nniskie\nStatus\nwszystkie\nNowy\nZweryfikowany\nEskalowany\nOdrzucony\nBłąd: bind message supplies 1 parameters, but prepared statement \"\" requires 0"
+    },
+    {
+      "route": "/alerts",
+      "heading": "Alerty",
+      "body": "Alerty\n\nMateriały, które w chwili analizy przekroczyły próg ryzyka · powiadomienia przez WebSocket\n\nwszystkie\nNowy\nZweryfikowany\nOdrzucony\nOznacz wszystkie jako przeczytane\nBrak alertów."
+    },
+    {
+      "route": "/entities",
+      "heading": "Podmioty",
+      "body": "Podmioty\n\nFirmy inwestycyjne, reklamujący i podmioty doradcze wykryte w materiałach\n\nBrak podmiotów."
+    },
+    {
+      "route": "/search",
+      "heading": "Wyszukiwarka",
+      "body": "Wyszukiwarka\n\nFirmy, osoby, materiały, adresy URL oraz rejestr firm inwestycyjnych KNF\n\nWszystko\nPodmioty\nMateriały\nRejestr KNF\nWpisz co najmniej 2 znaki."
+    },
+    {
+      "route": "/calibration",
+      "heading": "Panel kalibracji",
+      "body": "Panel kalibracji\n\nRegulacja progu: precyzja vs pełność wykrywania · 0 z 0 materiałów ma etykietę testową\n\nPrzywróć 45\nZapisz próg 45\n45\n\nKategorie: wysokie ≥ 45 · średnie ≥ 27 · niskie poniżej. Zmiana progu nie zmienia wyników klasyfikatora, tylko decyzję o oznaczeniu.\n\nMateriały powyżej progu (alerty)\n0\nprzy obecnym progu 45: 0\nPrecyzja\n–\nobecnie –\nPełność (recall)\n–\nobecnie –\nMacierz pomyłek (dane testowe)\n0\nTP\n0\nFalse Positive\n0\nFalse Negative\n0\nTN\nWpływ progu: FP / FN i liczba alertów\nAlertyFalse NegativeFalse Positive\n0\n5\n10\n15\n20\n25\n30\n35\n40\n45\n50\n55\n60\n65\n70\n75\n80\n85\n90\n95\n100\n0\n1\n2\n3\n4\npróg 45\nRozkład wyników (1 = ryzykowny wg etykiety, 0 = poprawny, 0,5 = bez etykiety)"
+    },
+    {
+      "route": "/scan",
+      "heading": "Skanowanie i źródła",
+      "body": "Skanowanie i źródła\n\nRęczne dodawanie adresów, import materiałów, źródła monitorowane cyklicznie\n\nUruchom skan źródeł teraz\nZaładuj próbki demo\nAnaliza adresów URL\nJeden adres w linii (maks. 50). Adresy prywatne/lokalne są blokowane (SSRF).\nAnalizuj\nImport materiału (HTML / tekst / transkrypcja)\ntekst\nHTML\nweb\nfacebook\ninstagram\ntiktok\nyoutube\nx\nDodaj i analizuj\nKolejka zadań\nna żywo\nBrak zadań.\nŹródła monitorowane (harmonogram)\nDodaj źródło\nBrak źródeł. Harmonogram (cron) skanuje je cyklicznie i wyszukuje podstrony z ofertami."
+    }
+  ],
+  "errors": [
+    {
+      "type": "warning",
+      "text": "WebSocket connection to 'ws://127.0.0.1:5173/socket.io/?EIO=4&transport=websocket' failed: WebSocket is closed before the connection is established."
+    },
+    {
+      "type": "warning",
+      "text": "WebSocket connection to 'ws://127.0.0.1:5173/socket.io/?EIO=4&transport=websocket' failed: WebSocket is closed before the connection is established."
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 502 (Bad Gateway)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 502 (Bad Gateway)"
+    },
+    {
+      "type": "warning",
+      "text": "WebSocket connection to 'ws://127.0.0.1:5173/socket.io/?EIO=4&transport=websocket' failed: WebSocket is closed before the connection is established."
+    },
+    {
+      "type": "warning",
+      "text": "WebSocket connection to 'ws://127.0.0.1:5173/socket.io/?EIO=4&transport=websocket' failed: WebSocket is closed before the connection is established."
+    },
+    {
+      "type": "warning",
+      "text": "WebSocket connection to 'ws://127.0.0.1:5173/socket.io/?EIO=4&transport=websocket' failed: WebSocket is closed before the connection is established."
+    },
+    {
+      "type": "warning",
+      "text": "WebSocket connection to 'ws://127.0.0.1:5173/socket.io/?EIO=4&transport=websocket' failed: WebSocket is closed before the connection is established."
+    },
+    {
+      "type": "warning",
+      "text": "WebSocket connection to 'ws://127.0.0.1:5173/socket.io/?EIO=4&transport=websocket' failed: WebSocket is closed before the connection is established."
+    },
+    {
+      "type": "warning",
+      "text": "WebSocket connection to 'ws://127.0.0.1:5173/socket.io/?EIO=4&transport=websocket' failed: WebSocket is closed before the connection is established."
+    }
+  ],
+  "responses": [
+    {
+      "status": 502,
+      "url": "http://127.0.0.1:5173/api/materials"
+    },
+    {
+      "status": 502,
+      "url": "http://127.0.0.1:5173/api/materials"
+    }
+  ],
+  "thresholdSave": {
+    "alert_modules": [
+      "m1",
+      "m2",
+      "m3"
+    ],
+    "threshold": 100
+  }
+}

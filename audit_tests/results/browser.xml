@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="12" time="4.920" timestamp="2026-11-21T14:20:28.679280+01:00" hostname="MSI-Cyborg-15"><testcase classname="audit_tests.test_browser" name="test_page_loads[/-Pulpit]" time="1.129" /><testcase classname="audit_tests.test_browser" name="test_page_loads[/materials-Wyniki analiz]" time="0.250" /><testcase classname="audit_tests.test_browser" name="test_page_loads[/alerts-Alerty]" time="0.134" /><testcase classname="audit_tests.test_browser" name="test_page_loads[/entities-Podmioty]" time="0.130" /><testcase classname="audit_tests.test_browser" name="test_page_loads[/search-Wyszukiwarka]" time="0.135" /><testcase classname="audit_tests.test_browser" name="test_page_loads[/calibration-Panel kalibracji]" time="0.368" /><testcase classname="audit_tests.test_browser" name="test_page_loads[/scan-Skanowanie i \u017ar\xf3d\u0142a]" time="0.163" /><testcase classname="audit_tests.test_browser" name="test_results_do_not_display_backend_sql_error" time="0.090"><failure message="assert 'Błąd:' not in 'Wyniki anal...&quot; requires 0'&#10;  &#10;  'Błąd:' is contained here:&#10;    Wyniki analiz&#10;    &#10;    Filtrowanie po dacie, źródle, module i poziomie ryzyka&#10;    &#10;    Od...&#10;  &#10;  ...Full output truncated, use '-vv' to show">page = &lt;Page url='http://127.0.0.1:5173/materials'&gt;
+
+    def test_results_do_not_display_backend_sql_error(page):
+        page.goto(ROOT + "/materials")
+        page.locator(".panel").first.wait_for()
+        page.wait_for_function(
+            "() =&gt; document.querySelector('table') || document.body.innerText.includes('Błąd:') "
+            "|| document.body.innerText.includes('Brak wyników')")
+&gt;       assert "Błąd:" not in page.locator("main").inner_text()
+E       assert 'Błąd:' not in 'Wyniki anal..." requires 0'
+E         
+E         'Błąd:' is contained here:
+E           Wyniki analiz
+E           
+E           Filtrowanie po dacie, źródle, module i poziomie ryzyka
+E           
+E           Od...
+E         
+E         ...Full output truncated, use '-vv' to show
+
+audit_tests\test_browser.py:54: AssertionError</failure></testcase><testcase classname="audit_tests.test_browser" name="test_filter_risk_renders_results" time="0.107" /><testcase classname="audit_tests.test_browser" name="test_live_toast_for_new_high_risk" time="0.454" /><testcase classname="audit_tests.test_browser" name="test_calibration_slider_and_save" time="0.578" /><testcase classname="audit_tests.test_browser" name="test_material_status_updates_unread_badge" time="0.784"><failure message="AssertionError: {'displayed': 2, 'db': 1}&#10;assert 2 == 1">page = &lt;Page url='http://127.0.0.1:5173/materials/5'&gt;
+
+    def test_material_status_updates_unread_badge(page):
+        # Anonimowy status zmienia bazę alertów; licznik powinien odświeżyć się z eventu.
+        response = httpx.post(API + "/scans/upload", json={
+            "text": "Gwarantowany zysk 30% rocznie bez ryzyka.",
+            "url": f"https://audit.example/status/{uuid.uuid4().hex}", "title": "Syntetyczny status",
+        })
+        job_id = response.json()["id"]
+        for _ in range(100):
+            job = httpx.get(API + f"/scans/{job_id}").json()
+            if job["status"] == "done":
+                break
+            time.sleep(.1)
+        assert job["status"] == "done", job
+        page.goto(ROOT + f"/materials/{job['material_id']}")
+        page.get_by_role("button", name="Zweryfikowany", exact=True).wait_for()
+        page.get_by_text("Na żywo (WebSocket)", exact=True).wait_for()
+        before = httpx.get(API + "/dashboard/stats").json()["totals"]["unread"]
+        with page.expect_response(lambda r: "/status" in r.url and r.request.method == "PATCH"):
+            page.get_by_role("button", name="Zweryfikowany", exact=True).click()
+        page.wait_for_function(
+            "() =&gt; Array.from(document.querySelectorAll('button')).some("
+            "b =&gt; b.innerText === 'Zweryfikowany' &amp;&amp; b.disabled)")
+        after = httpx.get(API + "/dashboard/stats").json()["totals"]["unread"]
+        assert after == before - 1
+        page.wait_for_timeout(300)
+        badge = page.locator('a[href="/alerts"] .badge')
+        displayed = int(badge.inner_text()) if badge.count() else 0
+&gt;       assert displayed == after, {"displayed": displayed, "db": after}
+E       AssertionError: {'displayed': 2, 'db': 1}
+E       assert 2 == 1
+
+audit_tests\test_browser.py:122: AssertionError</failure></testcase></testsuite></testsuites>

@@ -1,0 +1,1031 @@
+{
+  "before": {
+    "materials": 5,
+    "analyses": 5,
+    "findings": 110,
+    "alerts": 3
+  },
+  "startJobId": 7,
+  "seed": {
+    "status": 202,
+    "data": {
+      "queued": 18
+    }
+  },
+  "jobs": [
+    {
+      "id": 8,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 6
+    },
+    {
+      "id": 9,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 7
+    },
+    {
+      "id": 10,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 9
+    },
+    {
+      "id": 11,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 8
+    },
+    {
+      "id": 12,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 11
+    },
+    {
+      "id": 13,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 10
+    },
+    {
+      "id": 14,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 12
+    },
+    {
+      "id": 15,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 13
+    },
+    {
+      "id": 16,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 14
+    },
+    {
+      "id": 17,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 15
+    },
+    {
+      "id": 18,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 16
+    },
+    {
+      "id": 19,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 17
+    },
+    {
+      "id": 20,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 18
+    },
+    {
+      "id": 21,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 19
+    },
+    {
+      "id": 22,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 21
+    },
+    {
+      "id": 23,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 20
+    },
+    {
+      "id": 24,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 22
+    },
+    {
+      "id": 25,
+      "status": "done",
+      "attempts": 1,
+      "error": null,
+      "material_id": 23
+    }
+  ],
+  "after": {
+    "materials": 23,
+    "analyses": 23,
+    "findings": 516,
+    "alerts": 14
+  },
+  "events": [
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 8,
+        "status": "queued",
+        "url": "https://vistula-capital.example/rachunek"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 8,
+        "status": "running"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 9,
+        "status": "queued",
+        "url": "https://vistula-capital.example/cfd"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 10,
+        "status": "queued",
+        "url": "https://vistula-capital.example/forex"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 9,
+        "status": "running"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 11,
+        "status": "queued",
+        "url": "https://tfi-nadwislanskie.example/fundusz-akcji"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 12,
+        "status": "queued",
+        "url": "https://tfi-nadwislanskie.example/fundusz-obligacji"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 13,
+        "status": "queued",
+        "url": "https://baltyk-invest.example/obligacje"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 14,
+        "status": "queued",
+        "url": "https://zlota-przystan.example/"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 15,
+        "status": "queued",
+        "url": "https://kuba-inwestuje.example/2000-zl-miesiecznie"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 16,
+        "status": "queued",
+        "url": "https://ania-o-finansach.example/etf"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 17,
+        "status": "queued",
+        "url": "https://aurum-family-office.example/"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 18,
+        "status": "queued",
+        "url": "https://wiedza-finansowa.example/obligacje"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 19,
+        "status": "queued",
+        "url": "https://vistula-capital.example/ike"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 20,
+        "status": "queued",
+        "url": "https://vistula-capital.example/krypto"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 21,
+        "status": "queued",
+        "url": "https://vistula-capital.example/portfel"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 22,
+        "status": "queued",
+        "url": "https://vistula-capital.example/indeksy"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 23,
+        "status": "queued",
+        "url": "https://vistula-capital.example/perspektywy"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 24,
+        "status": "queued",
+        "url": "https://www.tiktok.com/@krypto_marek/video/7300000000000000001"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 25,
+        "status": "queued",
+        "url": "https://www.instagram.com/p/DEMO0000001/"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 6,
+        "title": "Rachunek maklerski – Vistula Capital",
+        "url": "https://vistula-capital.example/rachunek",
+        "score": 0,
+        "modules": [],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 8,
+        "status": "done",
+        "materialId": 6
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 10,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 7,
+        "title": "CFD – zarabiaj na wzrostach i spadkach",
+        "url": "https://vistula-capital.example/cfd",
+        "score": 96.7,
+        "modules": [
+          "m2"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 9,
+        "status": "done",
+        "materialId": 7
+      }
+    },
+    {
+      "event": "alert:new",
+      "payload": {
+        "id": 4,
+        "materialId": 7,
+        "score": 96.7,
+        "title": "CFD – zarabiaj na wzrostach i spadkach",
+        "url": "https://vistula-capital.example/cfd"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 11,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 8,
+        "title": "Fundusz Akcji Wisła +38%",
+        "url": "https://tfi-nadwislanskie.example/fundusz-akcji",
+        "score": 94,
+        "modules": [
+          "m2"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 11,
+        "status": "done",
+        "materialId": 8
+      }
+    },
+    {
+      "event": "alert:new",
+      "payload": {
+        "id": 5,
+        "materialId": 8,
+        "score": 94,
+        "title": "Fundusz Akcji Wisła +38%",
+        "url": "https://tfi-nadwislanskie.example/fundusz-akcji"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 12,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 9,
+        "title": "Forex – Vistula Capital",
+        "url": "https://vistula-capital.example/forex",
+        "score": 50,
+        "modules": [
+          "m2"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 10,
+        "status": "done",
+        "materialId": 9
+      }
+    },
+    {
+      "event": "alert:new",
+      "payload": {
+        "id": 6,
+        "materialId": 9,
+        "score": 50,
+        "title": "Forex – Vistula Capital",
+        "url": "https://vistula-capital.example/forex"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 13,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 10,
+        "title": "Obligacje Bałtyk Invest 11%",
+        "url": "https://baltyk-invest.example/obligacje",
+        "score": 99.4,
+        "modules": [
+          "m2"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 13,
+        "status": "done",
+        "materialId": 10
+      }
+    },
+    {
+      "event": "alert:new",
+      "payload": {
+        "id": 7,
+        "materialId": 10,
+        "score": 99.4,
+        "title": "Obligacje Bałtyk Invest 11%",
+        "url": "https://baltyk-invest.example/obligacje"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 14,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 11,
+        "title": "Fundusz Obligacji Wisła – wyniki",
+        "url": "https://tfi-nadwislanskie.example/fundusz-obligacji",
+        "score": 0,
+        "modules": [],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 12,
+        "status": "done",
+        "materialId": 11
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 15,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 12,
+        "title": "Złota Przystań – pewny zysk",
+        "url": "https://zlota-przystan.example/",
+        "score": 97.9,
+        "modules": [
+          "m2"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 14,
+        "status": "done",
+        "materialId": 12
+      }
+    },
+    {
+      "event": "alert:new",
+      "payload": {
+        "id": 8,
+        "materialId": 12,
+        "score": 97.9,
+        "title": "Złota Przystań – pewny zysk",
+        "url": "https://zlota-przystan.example/"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 16,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 13,
+        "title": "Mój sposób na 2000 zł miesięcznie",
+        "url": "https://kuba-inwestuje.example/2000-zl-miesiecznie",
+        "score": 86,
+        "modules": [
+          "m1",
+          "m2"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 15,
+        "status": "done",
+        "materialId": 13
+      }
+    },
+    {
+      "event": "alert:new",
+      "payload": {
+        "id": 9,
+        "materialId": 13,
+        "score": 86,
+        "title": "Mój sposób na 2000 zł miesięcznie",
+        "url": "https://kuba-inwestuje.example/2000-zl-miesiecznie"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 17,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 15,
+        "title": "Aurum Family Office – doradztwo",
+        "url": "https://aurum-family-office.example/",
+        "score": 75,
+        "modules": [
+          "m3"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 17,
+        "status": "done",
+        "materialId": 15
+      }
+    },
+    {
+      "event": "alert:new",
+      "payload": {
+        "id": 10,
+        "materialId": 15,
+        "score": 75,
+        "title": "Aurum Family Office – doradztwo",
+        "url": "https://aurum-family-office.example/"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 14,
+        "title": "Jak zacząć z ETF – współpraca",
+        "url": "https://ania-o-finansach.example/etf",
+        "score": 40,
+        "modules": [
+          "m1"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 16,
+        "status": "done",
+        "materialId": 14
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 18,
+        "status": "running"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 19,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 16,
+        "title": "Czym jest obligacja?",
+        "url": "https://wiedza-finansowa.example/obligacje",
+        "score": 0,
+        "modules": [],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 18,
+        "status": "done",
+        "materialId": 16
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 20,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 17,
+        "title": "IKE z Vistula Capital",
+        "url": "https://vistula-capital.example/ike",
+        "score": 40,
+        "modules": [
+          "m2"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 19,
+        "status": "done",
+        "materialId": 17
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 21,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 19,
+        "title": "Konto inwestycyjne Vistula – lepsze niż lokata",
+        "url": "https://vistula-capital.example/portfel",
+        "score": 45,
+        "modules": [
+          "m2"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 21,
+        "status": "done",
+        "materialId": 19
+      }
+    },
+    {
+      "event": "alert:new",
+      "payload": {
+        "id": 11,
+        "materialId": 19,
+        "score": 45,
+        "title": "Konto inwestycyjne Vistula – lepsze niż lokata",
+        "url": "https://vistula-capital.example/portfel"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 22,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 18,
+        "title": "Kryptowaluty z Vistula",
+        "url": "https://vistula-capital.example/krypto",
+        "score": 50,
+        "modules": [
+          "m2"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 20,
+        "status": "done",
+        "materialId": 18
+      }
+    },
+    {
+      "event": "alert:new",
+      "payload": {
+        "id": 12,
+        "materialId": 18,
+        "score": 50,
+        "title": "Kryptowaluty z Vistula",
+        "url": "https://vistula-capital.example/krypto"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 23,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 20,
+        "title": "Perspektywy rynku 2027 – Vistula",
+        "url": "https://vistula-capital.example/perspektywy",
+        "score": 5,
+        "modules": [],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 23,
+        "status": "done",
+        "materialId": 20
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 24,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 21,
+        "title": "Indeksy CFD – Vistula",
+        "url": "https://vistula-capital.example/indeksy",
+        "score": 56,
+        "modules": [
+          "m2"
+        ],
+        "platform": "web"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 22,
+        "status": "done",
+        "materialId": 21
+      }
+    },
+    {
+      "event": "alert:new",
+      "payload": {
+        "id": 13,
+        "materialId": 21,
+        "score": 56,
+        "title": "Indeksy CFD – Vistula",
+        "url": "https://vistula-capital.example/indeksy"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 25,
+        "status": "running"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 22,
+        "title": "Jak zarobiłem 10 tys. w tydzień",
+        "url": "https://www.tiktok.com/@krypto_marek/video/7300000000000000001",
+        "score": 97.3,
+        "modules": [
+          "m1",
+          "m2"
+        ],
+        "platform": "tiktok"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 24,
+        "status": "done",
+        "materialId": 22
+      }
+    },
+    {
+      "event": "alert:new",
+      "payload": {
+        "id": 14,
+        "materialId": 22,
+        "score": 97.3,
+        "title": "Jak zarobiłem 10 tys. w tydzień",
+        "url": "https://www.tiktok.com/@krypto_marek/video/7300000000000000001"
+      }
+    },
+    {
+      "event": "material:new",
+      "payload": {
+        "id": 23,
+        "title": "Post o ETF",
+        "url": "https://www.instagram.com/p/DEMO0000001/",
+        "score": 40,
+        "modules": [
+          "m1"
+        ],
+        "platform": "instagram"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 25,
+        "status": "done",
+        "materialId": 23
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 26,
+        "status": "queued",
+        "url": "http://127.0.0.1/audit-ssrf"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 26,
+        "status": "running"
+      }
+    },
+    {
+      "event": "scan:update",
+      "payload": {
+        "id": 26,
+        "status": "failed",
+        "error": "scraper: Adres wskazuje na sieć prywatną/lokalną – zablokowano (SSRF)"
+      }
+    }
+  ],
+  "seedAnalyses": [
+    {
+      "url": "https://vistula-capital.example/rachunek",
+      "ground_truth": false,
+      "score": "0.00"
+    },
+    {
+      "url": "https://vistula-capital.example/cfd",
+      "ground_truth": true,
+      "score": "96.70"
+    },
+    {
+      "url": "https://vistula-capital.example/forex",
+      "ground_truth": true,
+      "score": "50.00"
+    },
+    {
+      "url": "https://tfi-nadwislanskie.example/fundusz-akcji",
+      "ground_truth": true,
+      "score": "94.00"
+    },
+    {
+      "url": "https://tfi-nadwislanskie.example/fundusz-obligacji",
+      "ground_truth": false,
+      "score": "0.00"
+    },
+    {
+      "url": "https://baltyk-invest.example/obligacje",
+      "ground_truth": true,
+      "score": "99.40"
+    },
+    {
+      "url": "https://zlota-przystan.example/",
+      "ground_truth": true,
+      "score": "97.90"
+    },
+    {
+      "url": "https://kuba-inwestuje.example/2000-zl-miesiecznie",
+      "ground_truth": true,
+      "score": "86.00"
+    },
+    {
+      "url": "https://ania-o-finansach.example/etf",
+      "ground_truth": false,
+      "score": "40.00"
+    },
+    {
+      "url": "https://aurum-family-office.example/",
+      "ground_truth": true,
+      "score": "75.00"
+    },
+    {
+      "url": "https://wiedza-finansowa.example/obligacje",
+      "ground_truth": false,
+      "score": "0.00"
+    },
+    {
+      "url": "https://vistula-capital.example/ike",
+      "ground_truth": true,
+      "score": "40.00"
+    },
+    {
+      "url": "https://vistula-capital.example/krypto",
+      "ground_truth": true,
+      "score": "50.00"
+    },
+    {
+      "url": "https://vistula-capital.example/portfel",
+      "ground_truth": true,
+      "score": "45.00"
+    },
+    {
+      "url": "https://vistula-capital.example/indeksy",
+      "ground_truth": true,
+      "score": "56.00"
+    },
+    {
+      "url": "https://vistula-capital.example/perspektywy",
+      "ground_truth": false,
+      "score": "5.00"
+    },
+    {
+      "url": "https://www.tiktok.com/@krypto_marek/video/7300000000000000001",
+      "ground_truth": true,
+      "score": "97.30"
+    },
+    {
+      "url": "https://www.instagram.com/p/DEMO0000001/",
+      "ground_truth": false,
+      "score": "40.00"
+    }
+  ],
+  "ssrfJob": {
+    "id": 26,
+    "url": "http://127.0.0.1/audit-ssrf",
+    "source_id": null,
+    "trigger": "manual",
+    "status": "failed",
+    "attempts": 1,
+    "error": "scraper: Adres wskazuje na sieć prywatną/lokalną – zablokowano (SSRF)",
+    "material_id": null,
+    "created_at": "2026-11-21T13:22:20.268Z",
+    "finished_at": "2026-11-21T13:22:20.273Z"
+  },
+  "ok": true
+}
