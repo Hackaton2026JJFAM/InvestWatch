@@ -61,7 +61,13 @@ Bez Ollamy podsumowanie powstaje z szablonu na podstawie tych samych przesłanek
 
 ## Uruchomienie bez Dockera (dev)
 
-Wbudowany PostgreSQL z npm, kolejka w pamięci (`REDIS_URL=memory`). Każde polecenie w osobnym terminalu:
+Wbudowany PostgreSQL z npm, kolejka w pamięci (`REDIS_URL=memory`). Restart całego stosu jednym poleceniem (Windows; logi w `.devdata/logs`, `-ResetDb` zakłada bazę od zera):
+
+```bash
+powershell -ExecutionPolicy Bypass -File tools/devstack/restart.ps1
+```
+
+Ręcznie, każde polecenie w osobnym terminalu:
 
 ```bash
 cd tools/devstack && npm install && node start-db.mjs                    # PostgreSQL :5433
