@@ -224,7 +224,7 @@ def _video_error(exc: Exception) -> HTTPException:
 
 @app.get("/health")
 async def health():
-    return {"ok": True, "playwright": renderer.available, "ocr": ocr.available(), "video": video.capabilities(), "version": VERSION}
+    return {"ok": True, "playwright": renderer.available, "playwright_error": renderer.error, "ocr": ocr.available(), "video": video.capabilities(), "version": VERSION}
 
 
 @app.post("/scrape")
@@ -249,8 +249,18 @@ async def scrape(req: ScrapeReq):
         except SourceHttpError as exc:
             raise HTTPException(502, str(exc))
         except Exception as exc:
-            log.warning("render failed for %s: %s", url, exc)
-            layout = {"engine": "none", "reason": f"render_error: {type(exc).__name__}"}
+            log.warning("render failed for %s: %s – retry (lite)", url, exc)
+            try:
+                rendered = await renderer.render(url=url, lite=True)
+                html, final_url = rendered.pop("html"), rendered.pop("final_url")
+                layout = rendered
+            except SourceHttpError as exc2:
+                raise HTTPException(502, str(exc2))
+            except Exception as exc2:
+                log.error("render failed twice for %s: %s", url, exc2)
+                layout = {"engine": "none", "reason": f"render_error: {type(exc2).__name__}"}
+    elif req.render:
+        layout = {"engine": "none", "reason": f"playwright_unavailable: {renderer.error or 'nie uruchomiono'}"}
     if html is None:
         try:
             resp = await fetch(url)
@@ -389,6 +399,23 @@ async def scrape_video_file(request: Request, url: str = Query(default="upload:/
             os.remove(path)
         except OSError:
             pass
+
+
+class VideoDiscoverReq(BaseModel):
+    platform: str = Field(pattern=r"^(youtube|tiktok)$")
+    kind: str = Field(pattern=r"^(search|hashtag|profile)$")
+    query: str = Field(min_length=1, max_length=200)
+    limit: int = Field(default=20, ge=1, le=50)
+    sort: str = Field(default="relevance", pattern=r"^(relevance|views|date)$")
+
+
+@app.post("/discover/video")
+async def discover_video(req: VideoDiscoverReq):
+    """Kandydaci do analizy (tylko metadane: wyświetlenia, autor, czas) – bez pobierania filmów."""
+    try:
+        return await asyncio.to_thread(video.discover, req.platform, req.kind, req.query, req.limit, req.sort)
+    except Exception as exc:
+        raise _video_error(exc)
 
 
 @app.post("/discover")

@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { Empty, Evidence, fmtDate, MAT_STATUS, MODULES, ModuleChips, Panel, pct, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
+import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, ProfileChip, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { REG } from './Entities.jsx';
 import { useLive } from '../live.jsx';
@@ -84,6 +84,51 @@ function VideoPanel({ video }) {
   );
 }
 
+
+const RET = (c) => `${c.claim}${c.period ? ` ${c.period}` : ''}${c.annual_pct != null ? ` → ≈ ${Math.round(c.annual_pct)}% rocznie` : ''}`;
+
+// Profil publikującego: płatna promocja / podejrzenie oszustwa / doradca + realizm obietnic zysku.
+function ProfilePanel({ r, m }) {
+  const p = r.profile;
+  if (!p) return <Panel title="Profil publikującego"><Empty>Brak profilu – przeanalizuj materiał ponownie.</Empty></Panel>;
+  const lic = r.m3?.license;
+  return (
+    <Panel title="Profil publikującego i wiarygodność oferty" meta="sygnały do weryfikacji, nie ocena prawna">
+      <div className="btn-row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
+        <ProfileChip type={p.primary} />
+        {p.tags.map((t) => <span key={t} className="chip neutral">{t}</span>)}
+        <span className={`chip ${p.scam_score >= 55 ? 'high' : p.scam_score >= 30 ? 'mid' : 'low'}`}>sygnały oszustwa: {p.scam_score}/100</span>
+      </div>
+      <dl className="kv" style={{ marginBottom: 10 }}>
+        <dt>Publikujący</dt><dd>{r.m1?.publisher?.name ?? <i>nieustalone</i>} <span className="small muted">({{ firma: 'sama firma', podmiot_trzeci: 'podmiot trzeci', 'własne_usługi': 'strona własna usługodawcy', nieustalone: 'nieustalone' }[r.m1?.publisher?.type] ?? '–'})</span></dd>
+        <dt>Zasięg</dt><dd>{m.views != null ? `${fmtCount(m.views)} wyświetleń` : '–'}{m.followers != null ? ` · ${fmtCount(m.followers)} obserwujących` : ''}</dd>
+        <dt>Współpraca</dt><dd>{p.paid ? 'oznaczona (#reklama / współpraca)' : p.affiliate ? 'kody/linki afiliacyjne bez oznaczenia' : 'brak sygnałów'}</dd>
+        <dt>Uprawnienia</dt><dd>{lic?.declared ? `zadeklarowane${lic.number ? ` (nr ${lic.number})` : ''} – do weryfikacji w rejestrze KNF` : 'nie deklaruje'}</dd>
+        {m.tags?.length > 0 && <><dt>Tagi</dt><dd>{m.tags.map((t) => <Link key={t} to={`/materials?tag=${encodeURIComponent(t)}`} style={{ marginRight: 6 }}>#{t}</Link>)}</dd></>}
+      </dl>
+      {p.returns?.length > 0 && (
+        <>
+          <h3>Obietnice zysku (przeliczone na rok)</h3>
+          {p.returns.slice(0, 5).map((c, i) => (
+            <div key={i} className={`signal ${(c.annual_pct ?? 0) >= 50 || (c.multiplier && c.annual_pct == null) ? '' : 'warn'}`}>
+              <b>{RET(c)}</b>{c.historical && <span className="small muted"> (wynik historyczny)</span>}<div className="small muted">„{c.text.slice(0, 220)}”</div>
+            </div>
+          ))}
+          <p className="small muted">Punkt odniesienia: lokaty i obligacje skarbowe – kilka procent rocznie; powyżej ~50% rocznie obietnica jest nierealistyczna.</p>
+        </>
+      )}
+      {p.signals?.length > 0 && (
+        <>
+          <h3>Sygnały typowe dla oszustw</h3>
+          {p.signals.map((s) => (
+            <div key={s.key} className={`signal ${s.weight >= 30 ? '' : 'warn'}`}><b>{s.label}</b><div className="small muted">„{(s.evidence[0] ?? '').slice(0, 220)}”</div></div>
+          ))}
+        </>
+      )}
+    </Panel>
+  );
+}
+
 function Summary({ materialId, analysis, tick }) {
   const { data, reload } = useData(`/summary/${materialId}`, `${tick}-${analysis?.id}`);
   return (
@@ -124,9 +169,12 @@ export default function Material() {
           <p className="truncate" style={{ maxWidth: 760 }}><a href={m.final_url || m.url} target="_blank" rel="noreferrer noopener">{m.final_url || m.url}</a></p>
         </div>
         <div className="btn-row">
-          {['REVIEWED', 'ESCALATED', 'DISMISSED'].map((s) => (
-            <button key={s} className={`btn ${s === 'ESCALATED' ? 'primary' : ''}`} disabled={m.status === s} onClick={() => setStatus(s)}>{MAT_STATUS[s]}</button>
+          <span className="small muted">Status: <b>{MAT_STATUS[m.status]}</b> · zmień na:</span>
+          {[['REVIEWED', 'Zweryfikowany'], ['ESCALATED', 'Eskaluj'], ['DISMISSED', 'Odrzuć']].map(([s, label]) => (
+            <button key={s} className={`btn ${m.status === s ? 'selected' : ''}`} aria-pressed={m.status === s} disabled={m.status === s}
+              title={m.status === s ? 'Obecny status' : `Zmień status na „${MAT_STATUS[s]}”`} onClick={() => setStatus(s)}>{m.status === s ? `✓ ${MAT_STATUS[s]}` : label}</button>
           ))}
+          {m.status !== 'NEW' && <button className="btn" onClick={() => setStatus('NEW')}>Przywróć „Nowy”</button>}
           <button className="btn" onClick={reanalyze}>Analizuj ponownie</button>
           <button className="btn danger" onClick={remove}>Usuń</button>
         </div>
@@ -134,7 +182,7 @@ export default function Material() {
 
       <div className="grid g4">
         <div className="panel stat"><span className="label">Wynik punktowy</span><span className="value"><Score score={a?.score} threshold={threshold} /><span className="muted small"> /100</span></span><ScoreBar score={a?.score} threshold={threshold} /></div>
-        <div className="panel stat"><span className="label">Poziom ryzyka (próg {threshold})</span><span><RiskBadge risk={risk} /></span><span className="sub">Moduły: <ModuleChips modules={a?.modules} /></span></div>
+        <div className="panel stat"><span className="label">Poziom ryzyka (skala 0–100)</span><span><RiskBadge risk={risk} />{data.above_threshold && <span className="chip high" style={{ marginLeft: 6 }}>powyżej progu {threshold}</span>}</span><span className="sub">Moduły: <ModuleChips modules={a?.modules} /></span></div>
         <div className="panel stat"><span className="label">Status weryfikacji</span><span className="value" style={{ fontSize: '1.2rem' }}>{MAT_STATUS[m.status]}</span><span className="sub">pobrano {fmtDate(m.fetched_at)}</span></div>
         <div className="panel stat"><span className="label">Wyniki modułów</span>
           {Object.entries(a?.module_scores ?? {}).map(([k, v]) => <span key={k} className="small">{MODULES[k]}: <b>{Math.round(v)}</b></span>)}
@@ -174,7 +222,11 @@ export default function Material() {
         <Panel title="18 reguł UKNF – informacja o ryzyku" meta={`render: ${m.layout_engine}`}>
           {m.video && <div className="notice" style={{ marginBottom: 8 }}>Wideo – mowa przepisana przez Whisper, napisy z klatek odczytane OCR. Reguły 4–6 oceniają wielkość, kontrast, położenie w kadrze i czas wyświetlania ostrzeżenia (min. 3 s); ostrzeżenie tylko w mowie oznaczane jest w regule 6.</div>}
           {m.layout_engine === 'ocr' && <div className="notice" style={{ marginBottom: 8 }}>Obraz reklamy (OCR) – reguły 4–6 ocenione na podstawie wysokości liter, kontrastu i położenia tekstu na obrazie; reguły 7–8 nie dotyczą obrazu statycznego.</div>}
-          {!['playwright', 'ocr', 'video'].includes(m.layout_engine) && !m.video && <div className="notice" style={{ marginBottom: 8 }}>Materiał tekstowy – reguły wizualne 4–8 wymagają renderu strony i nie zostały ocenione.</div>}
+          {!['playwright', 'ocr', 'video'].includes(m.layout_engine) && !m.video && <div className="notice" style={{ marginBottom: 8 }}>
+            {m.layout_reason && m.layout_reason !== 'text_only'
+              ? <>Render strony nie powiódł się ({m.layout_reason.replace('playwright_unavailable', 'Playwright niedostępny').replace('render_error', 'błąd renderu')}) – reguły wizualne 4–8 nie zostały ocenione. Użyj „Analizuj ponownie” lub sprawdź status serwisów.</>
+              : 'Materiał tekstowy – reguły wizualne 4–8 wymagają renderu strony i nie zostały ocenione.'}</div>}
+          {m.consent_hidden > 0 && <div className="small muted" style={{ marginBottom: 8 }}>Przed pomiarem ukryto nakładkę zgody na cookies ({m.consent_hidden}) – nie zasłania ostrzeżeń w ocenie reguły 5.</div>}
           <FindingsTable findings={byModule('m2')} />
         </Panel>
       )}
@@ -193,6 +245,9 @@ export default function Material() {
           </Panel>
           <Panel title="Przesłanki M1"><FindingsTable findings={byModule('m1')} /></Panel>
         </div>
+      )}
+      {tab === 'Finfluencerzy (M1)' && (
+        <div style={{ marginTop: 12 }}><ProfilePanel r={r} m={m} /></div>
       )}
 
       {tab === 'Shadow Advisory (M3)' && (

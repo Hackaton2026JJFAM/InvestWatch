@@ -51,6 +51,29 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Relacje (stories) i transmisje na żywo – pomijane (limit `VIDEO_MAX_SECONDS=900`, `!is_live`)
 - [ ] Napisy wypalone w wideo w ruchu (scrolling) – OCR klatek co ~1,5 s może je pominąć
 
+## Oszustwa, finfluencerzy i monitoring popularnych treści
+- [x] Profil publikującego (`analyzer/app/profile.py`) dla stron, postów i wideo (Whisper + OCR): **podejrzenie oszustwa / płatna promocja / doradca / edukacja / informacja** + tagi (współpraca oznaczona, afiliacja bez oznaczenia, nierealistyczne obietnice)
+- [x] Realizm obietnic zysku: „2% dziennie”, „trzydzieści procent miesięcznie” (liczebniki z transkrypcji), „x10 w rok”, „podwoisz” → skala roczna; ≥ 50%/rok = M1.9 naruszenie, 20–50% = ostrzeżenie; ostrzeżenia CFD („74% rachunków traci”), prowizje, podatki nie są liczone jako obietnice
+- [x] Sygnały oszustwa (M1.10, PL+EN): presja czasu, kontakt na WhatsApp/Telegram, wpłata na prywatny portfel/BLIK, piramida, wizerunek znanych osób, „odzyskamy środki”, „zacznij od 250 zł”, bot AI „zarabia za Ciebie”, „bez wiedzy”, lista ostrzeżeń KNF/ESMA
+- [x] M3.5: doradca z nierealistycznymi obietnicami
+- [x] Monitoring wideo (strona „Monitoring wideo”): chmura popularnych tagów (z bazy + zestaw finansowy), wyszukiwanie kandydatów (YouTube: hashtag, fraza sortowana po wyświetleniach, kanał; TikTok: profil) z progiem wyświetleń – najpierw same metadane, transkrypcja i OCR tylko dla treści powyżej progu; „Monitoruj stale” = zapisane zapytania uruchamiane wg `WATCH_CRON`
+- [x] Wyniki: filtry typ publikującego, rodzaj (wideo/obraz/strona), zasięg (≥ 1 tys. … ≥ 1 mln), tag, „tylko powyżej progu”; sortowanie po zasięgu i priorytecie (ryzyko × log zasięgu)
+- [x] Skalowalność: osobny tor kolejki dla wideo (`VIDEO_WORKER_CONCURRENCY`), priorytet wg wyświetleń, pomijanie filmów przeanalizowanych w ostatnich 7 dniach przed pobraniem, indeksy (zasięg, tagi GIN, profil, URL); skalowanie poziome: `docker compose up -d --scale scraper=N`
+- [ ] TikTok: tagi i wyszukiwarka wymagają zalogowania (API aplikacji) – dziś monitoring profili; Instagram/Facebook – plik cookies analityka (`SCRAPER_COOKIES_FILE`)
+- [ ] Rejestr licencjonowanych doradców inwestycyjnych KNF – dziś licencja „zadeklarowana, do weryfikacji” (numer wyciągany z treści)
+
+## Poprawki po testach zespołu (21.11.2026)
+- [x] „render: none”: Playwright działa w Dockerze i dev (XTB: 3 viewporty, ~520 bloków); dodano: ponowne uruchomienie Chromium po awarii, drugą, lżejszą próbę renderu przy timeoucie, przyczynę na karcie materiału, baner „Ograniczona analiza” przy braku Chromium/OCR/Whispera, `playwright install chromium` w `restart.ps1`
+- [x] Nakładki cookies (CMP, także rozpoznane po treści) i puste przezroczyste warstwy (np. HubSpot) ukrywane przed pomiarem – reguła 5 nie zgłasza już „przesłonięcia” na stronie XTB; przyklejony pasek z ostrzeżeniem u góry nie jest „stopką”
+- [x] M1: oficjalna strona firmy (domena = nazwa firmy, np. xtb.com ↔ XTB S.A.; domeny z dopiskami się nie liczą) i strona własna usługodawcy nie są „podmiotem trzecim”; program partnerski na stronie firmy nie jest ukrytą reklamą. XTB: M1 86 → 0
+- [x] Sankcje UE: aliasy będące przetłumaczoną formą prawną („otwarta” spółka akcyjna) nie dopasowują się do zwykłych słów
+- [x] M3: zadeklarowana licencja doradcy / status agenta firmy inwestycyjnej → „do weryfikacji” (waga 10) zamiast „shadow advisory” 75; planowanie finansowe (budżet, cele, emerytura) bez rekomendacji instrumentów ≠ doradztwo inwestycyjne
+- [x] Reguła 3: ostrzeżenie obecne, ale nie przy twierdzeniach o zyskach → „do weryfikacji” z cytatem i miejscem (ekspozycję ocenia reguła 6), nie „niespełnione”
+- [x] Reguła 17: zaprzeczenia („KNF nie zatwierdza”) nie są aprobatą; uprawnienia KNF jako argument kompetencji → ostrzeżenie z tym cytatem (spójne uzasadnienie i dowód)
+- [x] UI: poziom ryzyka w stałej skali 0–29/30–69/70–100 (89 = wysokie), próg alertów osobno („powyżej progu”); przyciski statusu jako akcje z zaznaczonym bieżącym statusem
+- [x] Sprawdzone w przeglądarce: próg 45 → 80 – lista „tylko powyżej progu” 18 → 11 bez odświeżania; alert z drugiego klienta – toast i nowy wiersz na liście alertów na żywo; blog „Jak zainwestować 100 tysięcy” – M3 = 75 (art. 76)
+- [x] Próbki 21–23 (licencjonowany doradca – brak alarmu, scam z botem AI, blog z płatnymi konsultacjami); kalibracja 22 próbek: TP 14, FP 0, FN 1, TN 7 (precyzja 1,00, pełność 0,93)
+
 ## Should
 - [x] Adapter KRS (api-krs.ms.gov.pl, bez klucza; limitów nie publikuje – bufor 6 h, kolejka 1 podmiot/2 s): kapitał, adres, NIP/REGON, zarząd, prokurenci, wspólnicy → `persons`, `person_links`. **Dane osób zanonimizowane w publicznym API** – brak łączenia osób między spółkami
 - [x] Adapter GLEIF (LEI) – wyszukiwanie po nazwie lub LEI, oznaczenie dokładnego dopasowania

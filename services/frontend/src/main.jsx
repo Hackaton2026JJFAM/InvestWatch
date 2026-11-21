@@ -1,5 +1,6 @@
 import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
+import ServiceStatus from './components/ServiceStatus.jsx';
 import { BrowserRouter, Link, Navigate, NavLink, Route, Routes } from 'react-router-dom';
 import { AdminLogin, useAdmin } from './components/AdminAuth.jsx';
 import { LiveProvider, useLive } from './live.jsx';
@@ -14,6 +15,7 @@ const Results = lazy(() => import('./pages/Results.jsx'));
 const Scan = lazy(() => import('./pages/Scan.jsx'));
 const Search = lazy(() => import('./pages/Search.jsx'));
 const Reserves = lazy(() => import('./pages/Reserves.jsx'));
+const Monitor = lazy(() => import('./pages/Monitor.jsx'));
 import './styles.css';
 
 applyTheme(readTheme()); // przed pierwszym renderem – bez mignięcia jasnego motywu
@@ -31,6 +33,7 @@ function Shell() {
         <nav className="nav">
           <NavLink to="/" end>Pulpit</NavLink>
           <NavLink to="/materials">Wyniki analiz</NavLink>
+          <NavLink to="/monitor">Monitoring wideo</NavLink>
           <NavLink to="/alerts">Alerty {unread > 0 && <span className="badge">{unread}</span>}</NavLink>
           <NavLink to="/entities">Podmioty</NavLink>
           <NavLink to="/search">Wyszukiwarka (KRS, LEI)</NavLink>
@@ -49,6 +52,7 @@ function Shell() {
         </div>
       </aside>
       <main className="main">
+        <ServiceStatus />
         <Suspense fallback={<div className="empty">Ładowanie…</div>}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
@@ -59,6 +63,7 @@ function Shell() {
           <Route path="/entities/:id" element={<Entity />} />
           <Route path="/search" element={<Search />} />
           <Route path="/reserves" element={<Reserves />} />
+          <Route path="/monitor" element={<Monitor />} />
           <Route path="/registries" element={<Navigate to="/search?tab=external" replace />} />
           <Route path="/calibration" element={<Calibration />} />
           <Route path="/scan" element={<Scan />} />

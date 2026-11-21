@@ -38,6 +38,8 @@ CATALOG = {
     "G1": ("Obietnice zysku bez ryzyka", f"art. 44 ust. 2 lit. b {R} (rzetelny, niewprowadzający w błąd przekaz)", 70),
 }
 VISUAL_RULES = {"4", "5", "6", "7", "8"}
+CREDIBILITY = T.rx(r"potwierdz\w*", r"gwarant\w*", r"\bekspert\w*", r"wiarygodn\w*", r"zaufan\w*", r"\bjakos\w*", r"\bdowod\w*",
+                   r"\bprofesjonaln\w*", r"\bkompetenc\w*")
 MIN_WARNING_SECONDS = 3   # wideo: minimalny czas wyświetlania ostrzeżenia (czytelność planszy)
 
 
@@ -129,13 +131,18 @@ def r3(c: Ctx) -> Finding:
         return F("3", FAIL, "Twierdzeniom o zyskach nie towarzyszy żadna informacja o ryzyku.",
                  [ev(x.text, "zysk") for x in c.profit[:4]], severity=80)
     lonely = [x for x in c.profit if not near(x, c.risk, 2)]
+    footer_only = c.doc.has_layout and all(b.get("in_footer") or b.get("in_fine_print") for b in c.risk_blocks.get("desktop", []) or [{}])
     profit_chars = sum(len(x.text) for x in c.profit)
     risk_chars = sum(len(x.text) for x in c.risk)
     ratio = risk_chars / max(profit_chars, 1)
     evid = [ev(x.text, "zysk bez ryzyka w sąsiedztwie") for x in lonely[:3]] + [ev(c.risk[0].text, "ryzyko")]
     if lonely and len(lonely) / len(c.profit) > 0.5:
-        return F("3", FAIL, f"{len(lonely)} z {len(c.profit)} twierdzeń o zyskach nie ma informacji o ryzyku w bezpośrednim sąsiedztwie "
-                 f"(proporcja treści ryzyko/zysk = {ratio:.2f}).", evid)
+        # ostrzeżenie istnieje (np. w stopce) – to problem rozmieszczenia, nie braku: WARN; ekspozycję ocenia reguła 6
+        where = "w stopce/przypisie" if footer_only else "w innej części materiału"
+        return F("3", WARN if ratio >= 0.3 else FAIL,
+                 f"Informacja o ryzyku jest obecna ({where}: „{c.risk[0].text[:90]}…”), ale {len(lonely)} z {len(c.profit)} twierdzeń o zyskach "
+                 f"nie ma jej w bezpośrednim sąsiedztwie (proporcja treści ryzyko/zysk = {ratio:.2f}). Widoczność ostrzeżenia – reguła 6.",
+                 evid, severity=30 if ratio >= 0.3 else None)
     if ratio < 0.3:
         return F("3", WARN, f"Informacja o ryzyku jest nieproporcjonalnie krótka względem treści o zyskach (ryzyko/zysk = {ratio:.2f}).", evid)
     return F("3", PASS, f"Twierdzeniom o zyskach towarzyszy informacja o ryzyku (ryzyko/zysk = {ratio:.2f}).", [ev(c.risk[0].text, "ryzyko")])
@@ -299,12 +306,21 @@ def r17_18(c: Ctx) -> list[Finding]:
     sup = [x for x in c.doc.sentences if T.has(T.SUPERVISOR, x.text)]
     if not sup:
         return [F("17", NA, "Brak odwołań do KNF lub innego organu nadzoru."), F("18", NA, "Brak odwołań do organu nadzoru.")]
-    appr = [x for x in sup if T.has(T.APPROVAL, x.text)]
+    # „KNF nie zatwierdza ani nie rekomenduje” to zastrzeżenie, nie sugestia aprobaty – liczymy tylko twierdzenia niezaprzeczone
+    appr = [x for x in sup if T.has_affirmed(T.APPROVAL, x.text)]
+    # uprawnienia nadane przez KNF przedstawione jako dowód kompetencji / jakości usługi
+    credibility = [x for x in sup if T.has(CREDIBILITY, x.text) and x not in appr]
     safe = [x for x in sup if T.has(T.SAFETY, x.text)] + \
            [x for x in c.doc.sentences if T.has(T.SAFETY, x.text) and near(x, sup, 1) and not T.has(T.RISK, x.text)]
     safe = [x for x in safe if not T.has(T.RISK, x.text) or promises(x.text)]
-    f17 = F("17", FAIL, "Odwołanie do organu nadzoru sugeruje zatwierdzenie lub aprobatę produktu/usługi.", [ev(x.text) for x in appr[:3]]) if appr \
-        else F("17", PASS, "Odwołanie do organu nadzoru ma charakter informacyjny (bez sugerowania aprobaty).", [ev(sup[0].text)])
+    neutral = [x for x in sup if x not in credibility]
+    if appr:
+        f17 = F("17", FAIL, "Odwołanie do organu nadzoru sugeruje zatwierdzenie lub aprobatę produktu/usługi.", [ev(x.text) for x in appr[:3]])
+    elif credibility:
+        f17 = F("17", WARN, "Uprawnienia nadane przez organ nadzoru przedstawiono jako potwierdzenie kompetencji/jakości usług – "
+                "dopuszczalne jako informacja, ale nie może sugerować, że KNF poręcza za usługę.", [ev(x.text) for x in credibility[:2]], severity=15)
+    else:
+        f17 = F("17", PASS, "Odwołanie do organu nadzoru ma charakter informacyjny (bez sugerowania aprobaty).", [ev(neutral[0].text)])
     f18 = F("18", FAIL, "Nadzór organu przedstawiono jako argument bezpieczeństwa inwestycji.", [ev(x.text) for x in safe[:3]]) if safe \
         else F("18", PASS, "Nie wykorzystano nadzoru jako argumentu bezpieczeństwa.")
     return [f17, f18]

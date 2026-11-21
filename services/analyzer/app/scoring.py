@@ -23,9 +23,10 @@ def aggregate(by_module: dict[str, list[Finding]]) -> dict:
     return {"score": total, "module_scores": scores, "modules": [m for m, s in scores.items() if s >= 20]}
 
 
-def category(score: float, threshold: float) -> str:
-    if score >= threshold:
+def category(score: float, threshold: float | None = None) -> str:
+    """Poziom ryzyka w stałej skali 0–100 (niezależnie od progu alertów): 0–29 / 30–69 / 70–100."""
+    if score >= 70:
         return "wysokie"
-    if score >= threshold * 0.6:
+    if score >= 30:
         return "średnie"
     return "niskie"

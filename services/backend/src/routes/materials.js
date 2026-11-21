@@ -1,11 +1,12 @@
 import { Router } from 'express';
+import { saveReach } from '../reach.js';
 import { z } from 'zod';
 import { getThreshold, one, q, tx } from '../db.js';
 import { emit } from '../realtime.js';
 import { analyzer } from '../services.js';
 import { findSimilar } from '../similarity.js';
 import { requireAdmin } from '../auth.js';
-import { parse, riskSql } from '../validate.js';
+import { parse, riskLevel, aboveSql, riskSql } from '../validate.js';
 
 const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
@@ -18,7 +19,12 @@ r.get('/materials', async (req, res) => {
     platform: z.string().max(30).optional(), module: z.enum(['m1', 'm2', 'm3']).optional(),
     risk: z.enum(['wysokie', 'średnie', 'niskie']).optional(), status: z.enum(STATUSES).optional(),
     q: z.string().max(200).optional(), domain: z.string().max(200).optional(),
-    sort: z.enum(['score', 'fetched_at', 'title']).default('fetched_at'), dir: z.enum(['asc', 'desc']).default('desc'),
+    // zasięg / popularność i profil publikującego
+    above: z.enum(['1', 'true']).optional(), min_views: z.coerce.number().int().min(0).optional(),
+    min_followers: z.coerce.number().int().min(0).optional(), tag: z.string().max(60).optional(),
+    profile: z.enum(['podejrzenie_oszustwa', 'płatna_promocja', 'doradca_finansowy', 'edukacja', 'informacja']).optional(),
+    media: z.enum(['video', 'image', 'web']).optional(), watch: z.coerce.number().int().positive().optional(),
+    sort: z.enum(['score', 'fetched_at', 'title', 'views', 'priority']).default('fetched_at'), dir: z.enum(['asc', 'desc']).default('desc'),
     page: z.coerce.number().int().min(1).default(1), size: z.coerce.number().int().min(1).max(200).default(50),
   }), req.query);
   const threshold = await getThreshold();
@@ -33,14 +39,26 @@ r.get('/materials', async (req, res) => {
   if (f.status) add('m.status = ?', f.status);
   if (f.q) add("(m.title ILIKE '%' || ? || '%' OR m.url ILIKE '%' || ? || '%')", f.q);
   if (f.domain) add("m.url ILIKE '%' || ? || '%'", f.domain);
+  if (f.above) where.push('a.score >= $1');
+  if (f.min_views != null) add('m.views >= ?', f.min_views);
+  if (f.min_followers != null) add('m.followers >= ?', f.min_followers);
+  if (f.tag) add('? = ANY(m.tags)', f.tag.toLowerCase().replace(/^#+/, ''));
+  if (f.profile) add('m.profile_type = ?', f.profile);
+  if (f.watch) add('m.watch_id = ?', f.watch);
+  if (f.media === 'video') where.push("m.raw->'layout' ? 'video'");
+  if (f.media === 'image') where.push("m.raw->'layout'->>'engine' = 'ocr'");
+  if (f.media === 'web') where.push("NOT (m.raw->'layout' ? 'video') AND coalesce(m.raw->'layout'->>'engine', '') <> 'ocr'");
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
   // $1 (próg) musi wystąpić w zapytaniu także wtedy, gdy nie filtrujemy po ryzyku
   const total = (await one(`SELECT count(*)::int AS n, max($1::numeric) AS threshold FROM materials m ${LATEST} ${w}`, params)).n;
-  const sortCol = { score: 'a.score', fetched_at: 'm.fetched_at', title: 'm.title' }[f.sort];
+  // priorytet = ryzyko × log(zasięg): wysoki wynik u popularnego twórcy na górze listy
+  const sortCol = { score: 'a.score', fetched_at: 'm.fetched_at', title: 'm.title', views: 'm.views',
+    priority: 'a.score * (1 + log(greatest(coalesce(m.views, 0), 1)))' }[f.sort];
   params.push(f.size, (f.page - 1) * f.size);
   const items = await q(
     `SELECT m.id, m.url, m.title, m.author, m.platform, m.status, m.fetched_at, m.ground_truth, m.near_duplicate_of,
-            a.id AS analysis_id, a.score, a.modules, a.module_scores, ${riskSql()} AS risk
+            m.views, m.followers, m.tags, m.profile_type, m.scam_score, (m.raw->'layout' ? 'video') AS is_video,
+            a.id AS analysis_id, a.score, a.modules, a.module_scores, ${riskSql()} AS risk, ${aboveSql()} AS above_threshold
        FROM materials m ${LATEST} ${w}
       ORDER BY ${sortCol} ${f.dir} NULLS LAST, m.id DESC
       LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -72,12 +90,14 @@ r.get('/materials/:id', async (req, res) => {
   } : null;
   const viewports = Object.fromEntries(Object.entries(layout.viewports ?? {}).map(([k, v]) => [k, { width: v.width, height: v.height, page_height: v.page_height, screenshot_height: v.screenshot_height ?? null, blocks: v.blocks?.length ?? 0 }]));
   res.json({
-    material: { ...m, raw: undefined, meta: { ...meta, links: undefined }, screenshot: layout.screenshot ?? null, layout_engine: layout.engine ?? 'none', viewports,
+    material: { ...m, raw: undefined, meta: { ...meta, links: undefined }, screenshot: layout.screenshot ?? null, layout_engine: layout.engine ?? 'none', layout_reason: layout.reason ?? null,
+      consent_hidden: layout.consent_hidden ?? 0, viewports,
       video, image_ocr: layout.image_ocr ?? null },
     analysis: analyses[0] ? { ...analyses[0], result: latest.result } : null,
     history: analyses, findings, entities, alerts, threshold,
     similar: await findSimilar(m.simhash, { excludeId: m.id }),
-    risk: analyses[0] ? (analyses[0].score >= threshold ? 'wysokie' : analyses[0].score >= threshold * 0.6 ? 'średnie' : 'niskie') : null,
+    risk: analyses[0] ? riskLevel(analyses[0].score) : null,
+    above_threshold: analyses[0] ? analyses[0].score >= threshold : null,
   });
 });
 
@@ -125,6 +145,7 @@ r.post('/materials/:id/reanalyze', async (req, res) => {
       await t.q('INSERT INTO findings (analysis_id, module, rule_id, status, severity, title, legal_basis, explanation, evidence) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
         [row.id, f.module, f.rule_id, f.status, f.severity, f.title, f.legal_basis, f.explanation, JSON.stringify(f.evidence)]);
     }
+    await saveReach(t, id, m.raw, result);
     return row;
   });
   if (result.doc?.simhash) await q('UPDATE materials SET simhash = $2 WHERE id = $1', [id, result.doc.simhash]);

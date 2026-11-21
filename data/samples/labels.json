@@ -81,5 +81,16 @@
   "url": "upload://20_reels_krypto_wideo.mp4",
   "platform": "tiktok",
   "title": "Reels: kryptowaluty, 30% miesięcznie (wideo, Whisper + OCR)"
+ },
+ "21_doradca_licencjonowany.html": {
+  "ground_truth": false,
+  "url": "https://anna-przykladowa.example/uslugi"
+ },
+ "22_tiktok_bot_ai_scam.json": {
+  "ground_truth": true
+ },
+ "23_blog_100_tysiecy_konsultacje.html": {
+  "ground_truth": true,
+  "url": "https://zyskowny-blog.example/100-tysiecy"
  }
 }

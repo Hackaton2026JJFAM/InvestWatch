@@ -52,6 +52,8 @@ export const scraper = {
   html: (html, url, meta = {}) => call(config.scraperUrl, 'scraper', '/scrape/html', { body: { html, url, ...meta } }),
   text: (payload) => call(config.scraperUrl, 'scraper', '/scrape/text', { body: payload }),
   image: (payload) => call(config.scraperUrl, 'scraper', '/scrape/image', { body: payload, timeoutMs: 120000 }),
+  // kandydaci do monitoringu (tylko metadane): YouTube fraza/hashtag/kanał, TikTok profil
+  discoverVideo: (body) => call(config.scraperUrl, 'scraper', '/discover/video', { body, timeoutMs: 120000 }),
   discover: (url, limit = 10) => call(config.scraperUrl, 'scraper', '/discover', { body: { url, limit } }),
   health: () => call(config.scraperUrl, 'scraper', '/health', { method: 'GET', timeoutMs: 3000 }),
 };

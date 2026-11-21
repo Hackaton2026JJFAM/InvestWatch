@@ -17,7 +17,7 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 
-from . import enrich, m1, m3, markets, reserves, rules_m2, signals
+from . import enrich, m1, m3, markets, profile, reserves, rules_m2, signals
 from .classifier import get_classifier, simhash
 from .model import Doc
 from .registry import get_registry
@@ -139,15 +139,18 @@ def analyze_material(m: dict) -> dict:
     f2 = rules_m2.run(doc)
     r3 = m3.run(doc)
     sig = signals.run(doc, r3["classification"])
-    by_module = {"m1": r1["findings"] + [f for f in sig["findings"] if f.module == "m1"], "m2": f2,
-                 "m3": r3["findings"] + [f for f in sig["findings"] if f.module == "m3"]}
+    prof = profile.run(doc, r3["classification"], sig["hits"])
+    extra = sig["findings"] + prof["findings"]
+    by_module = {"m1": r1["findings"] + [f for f in extra if f.module == "m1"], "m2": f2,
+                 "m3": r3["findings"] + [f for f in extra if f.module == "m3"]}
     agg = aggregate(by_module)
     findings = [f.to_dict() for fs in by_module.values() for f in fs]
     return {
         **agg,
         "findings": findings,
         "m1": {"firms": r1["firms"], "instruments": r1["instruments"], "publisher": r1["publisher"]},
-        "m3": {"classification": r3["classification"], "entities": r3["entities"]},
+        "m3": {"classification": r3["classification"], "entities": r3["entities"], "license": r3.get("license")},
+        "profile": prof["profile"],
         "watchlists": sig["hits"],
         "ml": {"model": clf.version, "train_size": clf.n_train, **clf.document_profile(doc.sentences)},
         "doc": {"lang": doc.lang, "domain": doc.domain, "sentences": len(doc.sentences), "layout": doc.layout.get("engine"),

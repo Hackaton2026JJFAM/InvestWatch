@@ -9,6 +9,29 @@ from . import text as T
 from .model import FAIL, NA, PASS, WARN, Doc, Finding, ev
 from .registry import core_name, domain_matches, get_registry
 
+# strona własna usługodawcy (doradcy, trenera) – promuje siebie, nie cudzą firmę
+SELF_OFFER = T.rx(r"\bmoj\w* (?:uslug|konsultacj|szkoleni|kurs|ofert|klien)\w*", r"\bumow\w* (?:sie )?(?:na )?(?:konsultacj|spotkani|rozmow)\w*",
+                  r"\boferuj\w*\b", r"\bzapraszam\w* (?:na|do)\b", r"\bo mnie\b", r"\bnazywam sie\b", r"\bpomagam\w* (?:klientom|ludziom|w)\b",
+                  r"\bwspolpracuj\w* ze mna\b")
+
+
+def _site_label(domain: str) -> str:
+    """xtb.com / www.xtb.pl / pl.xtb.com -> „xtb” (etykieta drugiego poziomu)."""
+    parts = [p for p in (domain or "").lower().split(".") if p and p != "www"]
+    if len(parts) >= 3 and parts[-2] in ("com", "co", "org", "net"):  # np. firma.com.pl
+        return parts[-3]
+    return parts[-2] if len(parts) >= 2 else (parts[0] if parts else "")
+
+
+def _squash(name: str) -> str:
+    return "".join(ch for ch in core_name(name) if ch.isalnum())
+
+
+def _strip_tld(name: str) -> str:
+    """„XTB.pl” / „xtb.com” jako nazwa autora/serwisu -> „XTB”."""
+    import re
+    return re.sub(r"\.(?:pl|com|eu|net|org|io|co\.uk|com\.pl)$", "", (name or "").strip(), flags=re.I)
+
 AFFILIATE = T.rx(r"\bkod\w* (?:polecaj|rabat|promocyj|partnersk)\w*", r"\blink\w* (?:afiliac|partnersk|polecaj)\w*", r"link w bio",
                  r"z moim (?:kodem|linkiem)", r"\bref=", r"\baff(?:iliate)?=", r"utm_(?:source|campaign)", r"\bbonus\w* na start",
                  r"\bpolecam\w*", r"\bmoj\w* broker\w*", r"\bkorzystam z\b", r"\bodbierz\w* (?:bonus|darmow)\w*")
@@ -22,12 +45,23 @@ def publisher_type(doc: Doc, firms: list[dict]) -> tuple[str, str | None]:
     """Zwraca (typ, nazwa): firma | podmiot_trzeci | nieustalone."""
     author = doc.author or doc.meta.get("social_handle")
     dom = doc.domain or ""
+    label = _site_label(dom)
     for f in firms:
-        # tylko zweryfikowane domeny podmiotu; sama nazwa w domenie nie dowodzi własności
+        # zweryfikowane domeny podmiotu z rejestru
         if any(domain_matches(dom, d) for d in f.get("domains") or []):
             return "firma", f["name"]
+        # strona w domenie DOKŁADNIE odpowiadającej nazwie firmy (xtb.com ↔ XTB S.A.); domeny z dopiskami
+        # („xtb-bonus.com”) się nie liczą – tak podszywają się oszuści
+        if doc.platform == "web" and label and len(label) >= 3 and label == _squash(f["name"]):
+            return "firma", f["name"]
+        for who in (author, doc.publisher):
+            if who and _squash(_strip_tld(who)) in (_squash(f["name"]), _squash(f["name"]).split(" ")[0]) and doc.platform == "web":
+                return "firma", f["name"]
         if author and core_name(author) == core_name(f["name"]):
             return "firma", f["name"]
+    # strona własna usługodawcy (np. doradcy): promuje swoje usługi, nie jest „podmiotem trzecim” wobec siebie
+    if doc.platform == "web" and sum(T.has(SELF_OFFER, x.text) for x in doc.sentences) >= 2:
+        return "własne_usługi", author or doc.publisher or dom
     if doc.platform != "web" and author:
         return "podmiot_trzeci", author
     if author:
@@ -55,7 +89,11 @@ def run(doc: Doc) -> dict:
         return {"findings": findings, "firms": firms, "instruments": instruments,
                 "publisher": {"type": ptype, "name": pname, "platform": doc.platform}}
 
-    if ptype == "podmiot_trzeci":
+    if ptype == "własne_usługi":
+        findings.append(Finding("m1", "M1.1", "Strona własna usługodawcy", PASS, 0, None,
+                                f"Publikujący ({pname}) promuje własne usługi – nie jest podmiotem trzecim reklamującym cudzą firmę. "
+                                "Treść oceniają Moduły 2 (informacja o ryzyku) i 3 (zakres doradztwa).", [ev(pname or "", "publikujący")]))
+    elif ptype == "podmiot_trzeci":
         findings.append(Finding("m1", "M1.1", "Reklama publikowana przez podmiot trzeci", FAIL, 40 if disclosure else 55, None,
                                 f"Firma/instrument reklamowany przez podmiot inny niż firma inwestycyjna ({pname}, {doc.platform}).",
                                 [ev(f["name"], "firma") for f in firms[:3]] + [ev(pname or "", "reklamujący")]))
@@ -66,11 +104,11 @@ def run(doc: Doc) -> dict:
         findings.append(Finding("m1", "M1.1", "Reklama publikowana przez samą firmę", PASS, 0, None,
                                 f"Publikujący odpowiada reklamowanej firmie ({pname}) – materiał właściwy dla Modułu 2."))
 
-    if affiliate or affiliate_links:
-        findings.append(Finding("m1", "M1.2", "Linki/kody afiliacyjne", FAIL if ptype != "firma" else WARN, 35, None,
+    if (affiliate or affiliate_links) and ptype != "firma":  # program partnerski na stronie samej firmy to nie ukryta reklama
+        findings.append(Finding("m1", "M1.2", "Linki/kody afiliacyjne", FAIL if ptype == "podmiot_trzeci" else WARN, 35, None,
                                 "Wykryto kody polecające lub linki partnerskie – wskazuje na współpracę komercyjną.",
                                 [ev(x.text) for x in affiliate[:3]] + [ev(h, "link") for h in affiliate_links[:2]]))
-    if ptype != "firma":
+    if ptype in ("podmiot_trzeci", "nieustalone"):
         if disclosure:
             findings.append(Finding("m1", "M1.3", "Oznaczenie współpracy", PASS, 0, None, "Współpraca reklamowa została oznaczona.",
                                     [ev(disclosure[0].text)]))

@@ -23,6 +23,14 @@ REGON_IN_TEXT = re.compile(r"\bREGON[:\s]*([0-9]{9}(?:[0-9]{5})?)\b", re.I)
 LEI_IN_TEXT = re.compile(r"\b([A-Z0-9]{18}[0-9]{2})\b")
 
 
+# formy prawne w różnych językach (aliasy z listy sankcji UE są tłumaczone, np. „otwarta spółka akcyjna”)
+LEGAL_WORDS = {"otwarta", "zamknieta", "publiczna", "akcyjna", "spolka", "aktiebolag", "publikt", "spolocnost", "akciova", "otvorena", "cuideachta",
+               "comhstoic", "oscailte", "nyilvanosan", "mukodo", "reszvenytarsasag", "nyrt", "zrt", "offene", "aktiengesellschaft", "gesellschaft",
+               "sociedad", "anonima", "abierta", "societe", "anonyme", "societa", "per", "azioni", "ojsc", "pjsc", "cjsc", "jsc", "ooo", "oao", "pao",
+               "llc", "ltd", "limited", "company", "plant", "joint", "stock", "open", "closed", "public", "akcionarsko", "drustvo", "akciju",
+               "sabiedriba", "aktsiaselts", "osakeyhtio", "julkinen", "anonymi", "etaireia", "spolecnost", "akciova", "verejna", "javna", "delniska",
+               "druzba", "societate", "pe", "actiuni", "naamloze", "vennootschap", "aktieselskab", "allmennaksjeselskap", "openbare", "zavod", "factory"}
+
 # słowa ogólne (po fold), które same nie identyfikują podmiotu
 STOP_WORDS = {"podmiot", "podmioty", "spolka", "spolki", "firma", "firmy", "platforma", "platformy", "strona", "strony", "serwis",
               "osoba", "osoby", "grupa", "projekt", "inwestycje", "inwestycja", "invest", "trading", "trade", "broker", "kantor",
@@ -118,7 +126,7 @@ class Watchlists:
         for n in names:
             c = core_name(n)
             distinctive = re.sub(r"\s+", " ", GENERIC.sub(" ", c)).strip()
-            tokens = [t for t in distinctive.split() if t not in STOP_WORDS]
+            tokens = [t for t in distinctive.split() if t not in STOP_WORDS and t not in LEGAL_WORDS]
             # nazwy zbyt krótkie lub złożone ze słów ogólnych („Podmiot”, „Platforma”) nie są wyszukiwane w treści
             if tokens and (len(" ".join(tokens)) >= 5 or (len(" ".join(tokens)) >= 4 and " " in c)):
                 cores.append(c)
@@ -141,7 +149,8 @@ class Watchlists:
             elif name_core and (name_core in e.cores or (e.data.get("person") and person_key(name) in {person_key(c) for c in e.cores})):
                 how = "nazwa"
             # w treści tylko nazwy wielowyrazowe albo dłuższe (krótkie, np. „bridge”, „circle”, to zwykłe słowa)
-            elif any(f" {c} " in folded for c in e.cores if " " in c or len(c) >= 7):
+            # lista sankcji: tylko nazwy wielowyrazowe (aliasy jednowyrazowe to często zwykłe słowa po przetłumaczeniu formy prawnej)
+            elif any(f" {c} " in folded for c in e.cores if " " in c or (len(c) >= 7 and e.list != "eu_sanctions")):
                 how = "nazwa w treści"
             if how and (e.list, e.name) not in hits:
                 hits[(e.list, e.name)] = {"list": e.list, "name": e.name, "matched_by": how, "domains": e.domains, **e.data}

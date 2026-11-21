@@ -6,7 +6,10 @@ import { analyzer, scraper, UpstreamError } from './services.js';
 import { emit } from './realtime.js';
 import { scheduleEnrichment } from './enrichment.js';
 import { findSimilar, NEAR_DUP_BITS } from './similarity.js';
-import { removeUpload } from './video.js';
+import { isVideoUrl, removeUpload } from './video.js';
+import { saveReach } from './reach.js';
+
+const VIDEO_REFRESH_DAYS = Number(process.env.VIDEO_REFRESH_DAYS ?? 7);
 
 const normName = (s) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/\s+/g, ' ').trim();
 
@@ -77,6 +80,17 @@ export async function processScan(job) {
   await q("UPDATE scan_jobs SET status = 'running', attempts = attempts + 1 WHERE id = $1", [jobId]);
   emit('scan:update', { id: jobId, status: 'running' });
 
+  // wideo już przeanalizowane niedawno – bez ponownego pobierania i transkrypcji (oszczędność przy monitoringu)
+  if (data.kind === 'url' && isVideoUrl(data.url) && !data.force) {
+    const known = await one(`SELECT id FROM materials WHERE (url = $1 OR final_url = $1) AND fetched_at > now() - make_interval(days => $2)
+                              ORDER BY fetched_at DESC LIMIT 1`, [data.url, VIDEO_REFRESH_DAYS]);
+    if (known) {
+      await q("UPDATE scan_jobs SET status = 'duplicate', material_id = $2, finished_at = now() WHERE id = $1", [jobId, known.id]);
+      emit('scan:update', { id: jobId, status: 'duplicate', materialId: known.id });
+      return { duplicate: true, materialId: known.id };
+    }
+  }
+
   let material;
   try {
     material = await fetchMaterial(data);
@@ -136,6 +150,7 @@ export async function processScan(job) {
       );
     }
     await saveEntities(t, m.id, result);
+    await saveReach(t, m.id, material, result, data.watchId ?? null);
     let alert = null;
     if (result.score >= threshold) {
       alert = await t.one(

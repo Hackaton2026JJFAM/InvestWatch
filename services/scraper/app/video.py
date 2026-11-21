@@ -19,7 +19,7 @@ import re
 import shutil
 import tempfile
 import threading
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 from PIL import Image, ImageOps
 
@@ -406,3 +406,81 @@ def process_url(url: str) -> dict:
         "content_text": "\n".join(x for x in [data["content_text"], desc[:5000]] if x),
         "full_text": "\n".join(x for x in [data["full_text"], desc[:5000]] if x),
     }
+
+
+# ---------------------------------------------------------------------------- wyszukiwanie popularnych wideo
+# Proaktywny monitoring: lista kandydatów (same metadane – bez pobierania filmów), filtrowana po zasięgu.
+# Obsługiwane źródła bez logowania: YouTube (fraza, hashtag, kanał), TikTok (profil).
+DISCOVER_SOURCES = {
+    ("youtube", "search"): lambda q, n, sort: (f"https://www.youtube.com/results?search_query={quote_plus(q)}&sp={YT_SORT[sort]}"
+                                               if sort in YT_SORT else f"ytsearch{n}:{q}"),
+    ("youtube", "hashtag"): lambda q, n, sort: f"https://www.youtube.com/hashtag/{quote_plus(q.lstrip('#'))}",
+    # TikTok: strony tagów wymagają zalogowania (API aplikacji) – monitorujemy profile finfluencerów
+    ("tiktok", "profile"): lambda q, n, sort: q if q.startswith("http") else f"https://www.tiktok.com/@{q.lstrip('@')}",
+    ("youtube", "profile"): lambda q, n, sort: q if q.startswith("http") else f"https://www.youtube.com/@{q.lstrip('@')}/videos",
+}
+# parametr sortowania wyników wyszukiwania YouTube (sp=): wyświetlenia / data przesłania
+YT_SORT = {"views": "CAM%253D", "date": "CAI%253D"}
+
+
+def _host_platform(url: str) -> str | None:
+    host = _host(url)
+    for h, (name, _) in sorted(VIDEO_HOSTS.items(), key=lambda kv: -len(kv[0])):
+        if host == h or host.endswith("." + h):
+            return name
+    return None
+
+
+def discover(platform: str, kind: str, query: str, limit: int = 20, sort: str = "relevance") -> dict:
+    try:
+        import yt_dlp
+        from yt_dlp.utils import DownloadError
+    except ImportError as exc:
+        raise VideoUnavailable("Brak yt-dlp w środowisku scrapera") from exc
+    build = DISCOVER_SOURCES.get((platform, kind))
+    if build is None:
+        raise VideoRejected(f"Nieobsługiwane wyszukiwanie: {platform}/{kind} (dostępne: "
+                            + ", ".join(f"{p}/{k}" for p, k in DISCOVER_SOURCES) + ")")
+    query = (query or "").strip()
+    if not query or len(query) > 200:
+        raise VideoRejected("Podaj frazę, hashtag lub profil (do 200 znaków)")
+    target = build(query, limit, sort)
+    if target.startswith("http"):
+        validate_url(target)
+        if _host_platform(target) != platform:
+            raise VideoRejected("Adres profilu nie należy do wybranej platformy")
+    opts = {
+        "extract_flat": "in_playlist", "skip_download": True, "quiet": True, "no_warnings": True, "noprogress": True,
+        "playlistend": limit, "socket_timeout": 30, "cachedir": False, "js_runtimes": {"deno": {}, "node": {}},
+        "http_headers": {"User-Agent": random_ua(), "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.6"},
+    }
+    if proxy := next_proxy():
+        opts["proxy"] = proxy
+    if COOKIES and os.path.exists(COOKIES):
+        opts["cookiefile"] = COOKIES
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            info = ydl.extract_info(target, download=False)
+    except DownloadError as exc:
+        msg = str(exc).lower()
+        if "login" in msg or "cookies" in msg or "sign in" in msg:
+            raise VideoUnavailable("Platforma wymaga zalogowania do tego wyszukiwania (opcjonalnie SCRAPER_COOKIES_FILE)") from exc
+        raise VideoUnavailable(f"Wyszukiwanie nie powiodło się: {re.sub(r'^ERROR: ', '', str(exc))[:200]}") from exc
+    entries = []
+    for e in (info or {}).get("entries") or []:
+        if not e:
+            continue
+        url = e.get("url") or e.get("webpage_url")
+        if url and not url.startswith("http"):
+            url = f"https://www.youtube.com/watch?v={url}" if platform == "youtube" else None
+        if not url or not is_video_url(url):
+            continue
+        entries.append({
+            "url": url, "id": e.get("id"), "title": e.get("title"), "platform": platform,
+            "author": e.get("channel") or e.get("uploader") or e.get("creator"),
+            "author_url": e.get("channel_url") or e.get("uploader_url"),
+            "views": e.get("view_count"), "likes": e.get("like_count"), "followers": e.get("channel_follower_count"),
+            "duration": e.get("duration"), "published": e.get("timestamp") or e.get("upload_date"),
+            "live": e.get("live_status") in ("is_live", "is_upcoming"),
+        })
+    return {"platform": platform, "kind": kind, "query": query, "source": target, "count": len(entries), "items": entries[:limit]}

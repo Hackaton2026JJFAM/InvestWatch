@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import { config } from './config.js';
 import { migrate, pool, waitForDb } from './db.js';
 import { log } from './log.js';
-import { initQueue, queueHealth, scanQueue, startWorker } from './queue.js';
+import { initQueue, queueHealth, queues, startWorker } from './queue.js';
 import { authRouter } from './auth.js';
 import { attach } from './realtime.js';
 import insights from './routes/insights.js';
@@ -13,6 +13,8 @@ import scans from './routes/scans.js';
 import { startScheduler } from './scheduler.js';
 import { startReservesSchedule } from './reserves.js';
 import markets from './routes/markets.js';
+import watch from './routes/watch.js';
+import { startWatchSchedule } from './watch.js';
 import { seedSamples } from './seed.js';
 import { analyzer, scraper, UpstreamError } from './services.js';
 
@@ -39,7 +41,7 @@ app.get('/api/health', async (_req, res) => {
   res.status(body.ok ? 200 : 503).json(body);
 });
 
-app.use('/api', authRouter, scans, materials, insights, markets);
+app.use('/api', authRouter, scans, materials, insights, markets, watch);
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Nie znaleziono' }));
 
 // Express 5 przekazuje tu także błędy z funkcji async.
@@ -65,12 +67,13 @@ try {
 startWorker();
 startScheduler();
 startReservesSchedule();
+startWatchSchedule();
 server.listen(config.port, () => log.info('backend listening', { port: config.port }));
 if (config.seedDemo) seedSamples().catch((err) => log.warn('seed failed', { err: err.message }));
 
 const shutdown = async () => {
   server.close();
-  await scanQueue?.close();
+  for (const qu of Object.values(queues)) await qu?.close();
   await pool.end();
   process.exit(0);
 };

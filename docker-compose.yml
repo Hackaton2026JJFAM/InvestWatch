@@ -70,6 +70,9 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ENRICH_AUTO: ${ENRICH_AUTO:-true}
       RESERVES_CRON: ${RESERVES_CRON:-30 6 * * *}
+      WATCH_CRON: ${WATCH_CRON:-15 */3 * * *}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+      VIDEO_WORKER_CONCURRENCY: ${VIDEO_WORKER_CONCURRENCY:-1}
       SECURE_COOKIES: ${SECURE_COOKIES:-false}
     volumes:
       - ./data/samples:/app/samples:ro

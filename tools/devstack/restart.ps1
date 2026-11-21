@@ -48,6 +48,10 @@ if (-not $dbUp) {
   while (-not (Get-NetTCPConnection -LocalPort 5433 -State Listen -ErrorAction SilentlyContinue) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
 } else { Write-Host 'PostgreSQL :5433 juz dziala (pomijam; -ResetDb tworzy baze od zera)' }
 
+# Chromium dla Playwright – bez niego reguly wizualne 4-8 sa "nie ocenione" (render: none)
+& $py -m playwright install chromium 2>&1 | Out-Null
+if ($LASTEXITCODE) { Write-Warning 'Nie udalo sie zainstalowac Chromium (python -m playwright install chromium) - reguly 4-8 beda wylaczone' }
+
 Write-Host 'Start serwisow...'
 Start-Svc 'scraper' $py '-m uvicorn app.main:app --port 8001' (Join-Path $root 'services\scraper')
 Start-Svc 'analyzer' $py '-m uvicorn app.main:app --port 8002' (Join-Path $root 'services\analyzer')

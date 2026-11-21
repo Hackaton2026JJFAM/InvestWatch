@@ -273,3 +273,13 @@ input, select, textarea { color-scheme: inherit; }
 .transcript { max-height: 360px; overflow: auto; font-size: .88rem; display: grid; gap: 4px; }
 .transcript .seg { padding: 4px 8px; border-radius: 6px; }
 .transcript .seg.risk { background: var(--low-bg); }
+
+/* profil publikującego i przełączniki */
+.chip.info { background: var(--chip-brand-bg); color: var(--brand-2); }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; color: var(--muted); cursor: pointer; }
+.btn.selected { background: var(--surface-2); border-color: var(--brand-2); color: var(--brand-2); font-weight: 600; }
+.tag-cloud { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-cloud button { border: 1px solid var(--border); background: var(--surface-2); color: var(--text); border-radius: 999px; padding: 3px 10px; font-size: .82rem; cursor: pointer; }
+.tag-cloud button:hover, .tag-cloud button.on { border-color: var(--brand-2); color: var(--brand-2); }
+.signal { border-left: 3px solid var(--high); padding: 6px 10px; margin-bottom: 6px; background: var(--surface-2); border-radius: 0 6px 6px 0; }
+.signal.warn { border-left-color: var(--mid); }

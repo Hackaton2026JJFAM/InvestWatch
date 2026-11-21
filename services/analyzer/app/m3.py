@@ -27,6 +27,17 @@ RECOMMEND = T.rx(r"\brekomend\w*", r"\bpowiemy (?:ci )?(?:co|kiedy|jakie)\b", r"
                  r"\bkonkretn\w* (?:spolk|akcj|instrument)\w*", r"\bgotow\w* (?:portfel|strategi)\w*", r"\bstrategi\w* inwestycyjn\w* dla\b")
 COMMERCIAL = T.rx(r"\babonament\w*", r"\bsubskrypcj\w*", r"\bpakiet\w*", r"\bcennik\b", r"\d+\s?(?:zl|pln|eur|usd)\b", r"\bzl ?/ ?mies", r"\bplatn\w*",
                   r"\bumow\w* (?:spotkanie|konsultacj)\w*", r"\bzapisz sie\b", r"\bbezplatn\w* konsultacj\w*", r"\bskontaktuj\w*", r"\bformularz\w*")
+# zadeklarowane uprawnienia: licencja doradcy/maklera (nadawana przez KNF), agent firmy inwestycyjnej
+LICENSE = T.rx(r"\bdoradc\w* inwestycyjn\w* (?:nr|numer|z licencj\w*|licencj\w*)", r"\blicencj\w* (?:doradcy|maklera)\w*", r"\bnr licencji\b",
+               r"\bmakler\w* papierow wartosciow\w* (?:nr|z licencj)", r"\bagent\w* (?:firmy|domu|biura) (?:inwestycyjn|maklersk)\w*",
+               r"\bagentem\b.{0,60}\b(?:securities|maklersk|inwestycyjn|tfi)\w*", r"\bwpisan\w* (?:do|na) (?:rejestr|liste) (?:agentow|doradcow|maklerow)\w*",
+               r"\buprawnieni\w* (?:wydan\w* )?(?:przez )?(?:knf|komisj\w* nadzoru)", r"\bcfa\b", r"\befa\b|\befp\b")
+LICENSE_NO = T.rx(r"(?:doradc\w* inwestycyjn\w*|licencj\w*|makler\w*)[^.]{0,40}?(?:nr|numer)\.?\s?(\d{2,5})")
+# planowanie finansowe (budżet, cele, oszczędzanie, emerytura) – poradnictwo dostępne bez licencji, o ile bez rekomendacji instrumentów
+PLANNING = T.rx(r"\bplanowani\w* finansow\w*", r"\bplan\w* finansow\w*", r"\bbudzet\w*", r"\bcel\w* finansow\w*", r"\boszczedzani\w*",
+                r"\bemerytur\w*", r"\bpoduszk\w* finansow\w*", r"\bfinans\w* (?:osobist|domow)\w*", r"\bwydatk\w*", r"\bkredyt\w*",
+                r"\bubezpiecz\w*", r"\bdlug\w*", r"\bfinancial planning\b")
+
 EDUCATION = T.rx(r"\bmaterial\w* edukacyjn\w*", r"\bcel\w* edukacyjn\w*", r"nie (?:stanowi|jest|sa|stanowia) (?:rekomendacj|porad|doradztw)\w*",
                  r"\bkurs\w* (?:online|inwestowania|dla)\b", r"\bszkoleni\w*", r"\bwebinar\w*", r"\bebook\w*", r"\bpodstaw\w* inwestowania\b",
                  r"\bjak dziala\w*\b", r"\bpoznaj\w* (?:zasady|podstawy)\b", r"not (?:financial|investment) advice")
@@ -40,8 +51,15 @@ def run(doc: Doc) -> dict:
     commercial = [x for x in s if T.has(COMMERCIAL, x.text)]
     education = [x for x in s if T.has(EDUCATION, x.text) or x.labels.get("education", 0) > 0.7]
     instruments = [name for name, pat in T.INSTRUMENTS.items() if T.has(pat, doc.text)]
+    license_ = [x for x in s if T.has(LICENSE, x.text)]
+    license_no = next((m.group(1) for x in license_ for m in [LICENSE_NO.search(T.fold(x.text))] if m), None)
+    planning = [x for x in s if T.has(PLANNING, x.text)]
+    # rekomendacje KONKRETNYCH instrumentów odróżniają doradztwo inwestycyjne od planowania finansowego
+    instrument_recs = [x for x in recommend if any(T.has(p, x.text) for p in T.INSTRUMENTS.values()) or T.has(T.rx(r"\bkonkretn\w*", r"\bco kupic\b",
+                       r"\b(?:kupuj|sprzedaj|trzymaj)\b", r"\bsygnal\w*", r"\bspolk\w*", r"\bakcj\w*"), x.text)]
 
-    if not (service or (recommend and personal)):
+    consult = [x for x in s if T.has(T.rx(r"konsultacj\w*", r"spotkani\w*", r"sesj\w* (?:1:1|indywidualn)"), x.text)]
+    if not (service or (recommend and personal) or (planning and (personal or consult) and (commercial or consult))):
         return {"findings": [Finding("m3", "M3.1", "Oferta doradztwa inwestycyjnego", NA, 0, None,
                                      "Nie wykryto opisu usług doradczych ani indywidualnych rekomendacji.")],
                 "classification": "brak", "entities": []}
@@ -51,6 +69,8 @@ def run(doc: Doc) -> dict:
     edu_points = 2 * len(education)
     if edu_points >= advisory_points and not (personal and recommend):
         classification = "edukacja"
+    elif planning and len(planning) >= len(instrument_recs) * 2 and not instrument_recs:
+        classification = "planowanie_finansowe"
     elif personal and (recommend or service):
         classification = "indywidualne_doradztwo"
     else:
@@ -74,9 +94,26 @@ def run(doc: Doc) -> dict:
     findings: list[Finding] = []
     evid = [ev(x.text, "usługa") for x in service[:2]] + [ev(x.text, "personalizacja") for x in personal[:2]] + \
            [ev(x.text, "rekomendacja") for x in recommend[:2]]
+    lic_ev = [ev(x.text, "uprawnienia") for x in license_[:2]]
     if classification == "edukacja":
         findings.append(Finding("m3", "M3.1", "Materiał edukacyjny", PASS, 0, "art. 76 u.o.i.f.",
                                 "Treść ma charakter edukacyjny – brak cech indywidualnej rekomendacji.", [ev(x.text) for x in education[:2]]))
+    elif classification == "planowanie_finansowe":
+        findings.append(Finding("m3", "M3.1", "Planowanie finansowe (nie doradztwo inwestycyjne)", PASS if not commercial or license_ else WARN,
+                                0 if license_ else 10, "art. 76 u.o.i.f.",
+                                "Usługa dotyczy budżetu, celów i planu finansowego – bez rekomendacji konkretnych instrumentów, więc nie jest "
+                                "doradztwem inwestycyjnym w rozumieniu art. 76 u.o.i.f." + (" Publikujący deklaruje uprawnienia." if license_ else ""),
+                                [ev(x.text, "planowanie") for x in planning[:2]] + lic_ev))
+    elif license_ and not authorized:
+        # zadeklarowana licencja doradcy / status agenta – nie „shadow advisory”, ale do sprawdzenia w rejestrze KNF
+        findings.append(Finding("m3", "M3.1", "Doradztwo – zadeklarowane uprawnienia", WARN, 10, "art. 76 u.o.i.f.; art. 127 u.o.i.f.",
+                                "Oferta doradcza, publikujący deklaruje uprawnienia"
+                                + (f" (nr {license_no})" if license_no else "")
+                                + " – zweryfikować w rejestrze doradców inwestycyjnych / agentów firm inwestycyjnych KNF oraz czy usługę "
+                                  "świadczy w imieniu firmy inwestycyjnej.", lic_ev + evid[:2]))
+        if commercial:
+            findings.append(Finding("m3", "M3.2", "Odpłatny charakter usługi", WARN, 5, None,
+                                    "Usługa odpłatna świadczona przez osobę deklarującą uprawnienia.", [ev(x.text) for x in commercial[:1]]))
     else:
         sev = 70 if classification == "indywidualne_doradztwo" else 40
         if authorized:
@@ -94,4 +131,5 @@ def run(doc: Doc) -> dict:
         if instruments:
             findings.append(Finding("m3", "M3.3", "Instrumenty finansowe w ofercie", WARN, 15, "art. 2 u.o.i.f.",
                                     f"Oferta dotyczy instrumentów finansowych: {', '.join(instruments)}."))
-    return {"findings": findings, "classification": classification, "entities": entities}
+    return {"findings": findings, "classification": classification, "entities": entities,
+            "license": {"declared": bool(license_), "number": license_no, "evidence": [x.text[:300] for x in license_[:2]]}}

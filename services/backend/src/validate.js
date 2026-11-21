@@ -16,5 +16,13 @@ export function parse(schema, input) {
   return res.data;
 }
 
-export const riskSql = (alias = 'a', param = '$1') =>
-  `CASE WHEN ${alias}.score >= ${param} THEN 'wysokie' WHEN ${alias}.score >= ${param} * 0.6 THEN 'średnie' ELSE 'niskie' END`;
+// Poziom ryzyka w stałej skali 0–100 (niezależny od progu alertów): 0–29 niskie, 30–69 średnie, 70–100 wysokie.
+// Próg alertów (kalibracja) decyduje osobno, czy materiał trafia do alertów / widoku „powyżej progu”.
+export const RISK_BANDS = { high: 70, mid: 30 };
+export const riskLevel = (score) => (score == null ? null : score >= RISK_BANDS.high ? 'wysokie' : score >= RISK_BANDS.mid ? 'średnie' : 'niskie');
+// eslint-disable-next-line no-unused-vars
+export const riskSql = (alias = 'a', _param = '$1') =>
+  `CASE WHEN ${alias}.score >= ${RISK_BANDS.high} THEN 'wysokie' WHEN ${alias}.score >= ${RISK_BANDS.mid} THEN 'średnie' ELSE 'niskie' END`;
+
+// Czy wynik przekracza próg alertów (parametr zapytania – zwykle $1)
+export const aboveSql = (alias = 'a', param = '$1') => `(${alias}.score >= ${param}::numeric)`;

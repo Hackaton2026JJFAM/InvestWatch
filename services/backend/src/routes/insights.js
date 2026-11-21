@@ -6,7 +6,7 @@ import { emit } from '../realtime.js';
 import { analyzer } from '../services.js';
 import { requireAdmin } from '../auth.js';
 import { enrichEntity, krsCandidates } from '../enrichment.js';
-import { parse, riskSql } from '../validate.js';
+import { parse, aboveSql, riskSql } from '../validate.js';
 
 const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
@@ -33,7 +33,7 @@ r.get('/dashboard/stats', async (_req, res) => {
       WHERE f.status = 'fail' GROUP BY f.rule_id, f.title ORDER BY n DESC LIMIT 12`);
   const byPlatform = await q(`SELECT coalesce(platform, 'web') AS platform, count(*)::int AS n FROM materials GROUP BY 1 ORDER BY n DESC`);
   const recent = await q(
-    `SELECT m.id, m.title, m.url, m.platform, m.status, m.fetched_at, a.score, a.modules, ${riskSql()} AS risk
+    `SELECT m.id, m.title, m.url, m.platform, m.status, m.fetched_at, a.score, a.modules, ${riskSql()} AS risk, ${aboveSql()} AS above_threshold
        FROM materials m ${LATEST} ORDER BY m.fetched_at DESC LIMIT 10`, [t]);
   res.json({ threshold: t, totals: { ...totals, ...alerts }, trend, byModule, byRule, byPlatform, recent });
 });
@@ -138,7 +138,7 @@ r.get('/entities/:id', async (req, res) => {
   if (!e) return res.status(404).json({ error: 'Nie znaleziono podmiotu' });
   const registry = await q('SELECT DISTINCT ON (registry) * FROM registry_records WHERE entity_id = $1 ORDER BY registry, checked_at DESC', [id]);
   const materials = await q(
-    `SELECT m.id, m.title, m.url, m.platform, m.fetched_at, me.role, a.score, ${riskSql()} AS risk
+    `SELECT m.id, m.title, m.url, m.platform, m.fetched_at, me.role, a.score, ${riskSql()} AS risk, ${aboveSql()} AS above_threshold
        FROM material_entities me JOIN materials m ON m.id = me.material_id ${LATEST}
       WHERE me.entity_id = $2 ORDER BY m.fetched_at DESC`, [t, id]);
   const persons = await q(

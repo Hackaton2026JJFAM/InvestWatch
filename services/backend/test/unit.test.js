@@ -16,10 +16,13 @@ test('parse: poprawne dane i czytelny błąd 400', () => {
   assert.throws(() => parse(schema, { threshold: 101 }), (err) => err instanceof BadRequest && err.status === 400 && err.details[0].path === 'threshold');
 });
 
-test('riskSql: kategorie względem progu', () => {
+test('poziom ryzyka w stałej skali 0–100, próg alertów osobno', async () => {
+  const { riskLevel, aboveSql } = await import('../src/validate.js');
   const sql = riskSql('a', '$1');
-  assert.match(sql, /a\.score >= \$1 THEN 'wysokie'/);
-  assert.match(sql, /\$1 \* 0\.6 THEN 'średnie'/);
+  assert.match(sql, /a\.score >= 70 THEN 'wysokie'/);
+  assert.match(sql, /a\.score >= 30 THEN 'średnie'/);
+  assert.deepEqual([riskLevel(89), riskLevel(50), riskLevel(10), riskLevel(null)], ['wysokie', 'średnie', 'niskie', null]);
+  assert.equal(aboveSql('a', '$1'), '(a.score >= $1::numeric)');
 });
 
 test('parseRedisUrl: hasło, użytkownik, baza i TLS', async () => {

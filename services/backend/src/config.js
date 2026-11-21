@@ -35,6 +35,10 @@ export const config = {
   seedDemo: env('SEED_DEMO', 'true') === 'true',
   samplesDir: env('SAMPLES_DIR', '/app/samples'),
   concurrency: Number(env('WORKER_CONCURRENCY', '2')),
+  // wideo (Whisper na CPU) – osobny tor kolejki; zwiększać razem z liczbą replik scrapera
+  videoConcurrency: Number(env('VIDEO_WORKER_CONCURRENCY', '1')),
+  // proaktywne wyszukiwanie popularnych wideo po tagach/frazach
+  watchCron: env('WATCH_CRON', '15 */3 * * *'),
   // Dozwolone Origin dla WebSocket poza tym samym hostem (np. https://investwatch.local)
   allowedOrigins: csv(env('ALLOWED_ORIGINS', '')),
   // Hasło administratora (próg, źródła, próbki, usuwanie). Puste = operacje administracyjne wyłączone.

@@ -76,6 +76,29 @@ const MIGRATIONS = [
   'ALTER TABLE company_crisis_behavior ADD COLUMN IF NOT EXISTS data JSONB',
   'ALTER TABLE company_crisis_behavior ADD COLUMN IF NOT EXISTS computed_at TIMESTAMPTZ',
   'CREATE UNIQUE INDEX IF NOT EXISTS company_crisis_uq ON company_crisis_behavior (entity_id, crisis_id)',
+  // zasięg, tagi i profil (płatna promocja / oszustwo / doradca) – filtrowanie i priorytet „ryzyko × zasięg”
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS views BIGINT',
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS likes BIGINT',
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS followers BIGINT',
+  "ALTER TABLE materials ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}'",
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS profile_type TEXT',
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS scam_score INT',
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS watch_id INT',
+  'CREATE INDEX IF NOT EXISTS materials_views ON materials (views DESC NULLS LAST)',
+  'CREATE INDEX IF NOT EXISTS materials_tags ON materials USING GIN (tags)',
+  'CREATE INDEX IF NOT EXISTS materials_profile ON materials (profile_type)',
+  'CREATE INDEX IF NOT EXISTS materials_url ON materials (url)',
+  `UPDATE materials SET views = NULLIF(raw->'layout'->'video'->'meta'->>'view_count', '')::bigint,
+          likes = NULLIF(raw->'layout'->'video'->'meta'->>'like_count', '')::bigint,
+          followers = NULLIF(raw->'layout'->'video'->'meta'->>'channel_follower_count', '')::bigint
+    WHERE views IS NULL AND jsonb_typeof(raw->'layout'->'video'->'meta') = 'object'`,
+  // tagi ze spacjami (opisowe tagi YouTube) nie są hashtagami – usuwane z zapisanych materiałów
+  "UPDATE materials SET tags = ARRAY(SELECT t FROM unnest(tags) t WHERE t !~ '[[:space:]]') WHERE EXISTS (SELECT 1 FROM unnest(tags) t WHERE t ~ '[[:space:]]')",
+  `CREATE TABLE IF NOT EXISTS watch_queries (
+     id SERIAL PRIMARY KEY, platform TEXT NOT NULL, kind TEXT NOT NULL, query TEXT NOT NULL, sort TEXT NOT NULL DEFAULT 'views',
+     min_views BIGINT NOT NULL DEFAULT 10000, max_per_run INT NOT NULL DEFAULT 10, enabled BOOLEAN NOT NULL DEFAULT TRUE,
+     last_run_at TIMESTAMPTZ, last_found INT, last_queued INT, last_error TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+     UNIQUE (platform, kind, query))`,
 ];
 
 export async function migrate() {

@@ -89,13 +89,18 @@ LAYOUT_JS = r"""
     const bg = bgOf(block); const L1 = lum(color.slice(0,3)), L2 = lum(bg);
     const contrast = (Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);
     const opacity = opacityOf(block);
+    const docY0 = r.top + window.scrollY;
     let occluded = false;
     if (visible && r.width > 0 && r.height > 0) {
       const docY = r.top + window.scrollY; window.scrollTo(0, Math.max(0, docY - vh/2));
       const rr = block.getBoundingClientRect();
       const cx = Math.min(Math.max(rr.left + rr.width/2, 1), vw-1), cy = Math.min(Math.max(rr.top + rr.height/2, 1), vh-1);
       const hit = document.elementFromPoint(cx, cy);
-      occluded = !!hit && hit !== block && !block.contains(hit) && !hit.contains(block);
+      // pusta przezroczysta warstwa (widżet, kotwica skryptu) niczego nie zasłania wizualnie
+      const hcs = hit ? getComputedStyle(hit) : null;
+      const ghost = !!hit && !(hit.innerText || '').trim() && hcs.backgroundImage === 'none'
+        && (hcs.backgroundColor === 'rgba(0, 0, 0, 0)' || hcs.backgroundColor === 'transparent' || Number(hcs.opacity) < 0.05);
+      occluded = !!hit && !ghost && hit !== block && !block.contains(hit) && !hit.contains(block);
     }
     const cs = getComputedStyle(block);
     const clipped = (block.scrollWidth > block.clientWidth + 2 && ['hidden','clip'].includes(cs.overflowX)) || cs.textOverflow === 'ellipsis' && block.scrollWidth > block.clientWidth;
@@ -109,7 +114,10 @@ LAYOUT_JS = r"""
       x: Math.round(docX), y: Math.round(docY), w: Math.round(r.width), h: Math.round(r.height),
       visible, occluded, clipped: !!clipped, clipped_y: !!clippedY, shown_fraction: Math.round(shown * 100) / 100,
       offscreen_x: r.right > vw + 2 || r.left < -2,
-      in_footer: !!block.closest('footer,[class*="footer" i],[id*="footer" i],[class*="legal" i],[id*="legal" i],[class*="disclaimer" i]'),
+      // „legal/disclaimer” = stopka tylko w dolnej połowie strony; przyklejony pasek ostrzeżenia u góry jest wyeksponowany
+      in_footer: !!block.closest('footer,[class*="footer" i],[id*="footer" i]')
+        || (!!block.closest('[class*="legal" i],[id*="legal" i],[class*="disclaimer" i]') && docY0 > document.documentElement.scrollHeight * 0.5
+            && !['fixed', 'sticky'].includes(getComputedStyle(block.closest('[class*="legal" i],[id*="legal" i],[class*="disclaimer" i]')).position)),
       in_fine_print: !!block.closest('small,sup,sub,[class*="fine" i],[class*="footnote" i],[class*="przypis" i]'),
       in_collapsed: !!block.closest('details:not([open]),[aria-hidden="true"],[hidden],[class*="collapse" i]:not(.show),[class*="accordion" i] [class*="content" i]'),
       in_modal: !!block.closest('[role="dialog"],dialog,[class*="modal" i]'),
@@ -153,19 +161,77 @@ IMAGES_JS = r"""
 """
 
 
+# Nakładki zgód na cookies (CMP) zasłaniają stopkę i ostrzeżenia – bez tego reguła 5 zgłaszała
+# „przesłonięcie” na większości prawdziwych stron. Ukrywamy je (niczego nie akceptujemy) i odnotowujemy.
+CONSENT_JS = r"""
+() => {
+  const SEL = ['#onetrust-consent-sdk', '#onetrust-banner-sdk', '#CybotCookiebotDialog', '#usercentrics-root', '#didomi-host',
+    '.qc-cmp2-container', '#cmpbox', '#cmpwrapper', '.cc-window', '#cookiescript_injected', '#cookie-law-info-bar', '.cky-consent-container',
+    '[id*="cookie" i][class*="banner" i]', '[class*="cookie-consent" i]', '[class*="cookie-banner" i]', '[class*="cookiebar" i]',
+    '[id*="cookie-banner" i]', '[id*="cookie-consent" i]', '[class*="consent-banner" i]', '[id*="consent" i][role="dialog"]',
+    '[aria-label*="cookie" i][role="dialog"]', '[class*="gdpr" i]', '[id*="gdpr" i]', '[class*="rodo" i]'];
+  let hidden = 0;
+  for (const el of document.querySelectorAll(SEL.join(','))) {
+    const cs = getComputedStyle(el);
+    const overlay = ['fixed', 'sticky'].includes(cs.position) || Number(cs.zIndex) > 100 || el.closest('[style*="position: fixed"]');
+    if (overlay && el.offsetParent !== undefined) { el.style.setProperty('display', 'none', 'important'); hidden++; }
+  }
+  // nakładki rozpoznane po treści (np. <div class="warnings"> z informacją o cookies) – bez ostrzeżeń o ryzyku
+  const COOKIE = /cookie|ciasteczk|plik[óo]w cookies|polityk\w* prywatno|zgod\w* na przetwarzanie|rodo\b/i;
+  const RISK = /ryzyk|traci|utrat|risk|lose/i;
+  for (const el of document.querySelectorAll('body *')) {
+    const cs = getComputedStyle(el);
+    if (!['fixed', 'sticky'].includes(cs.position) || cs.display === 'none') continue;
+    const r = el.getBoundingClientRect();
+    const txt = (el.innerText || '').trim();
+    if (txt && COOKIE.test(txt.slice(0, 600)) && !RISK.test(txt) && r.height < innerHeight * 0.9) {
+      el.style.setProperty('display', 'none', 'important'); hidden++; continue;
+    }
+    // pusta, przezroczysta warstwa na cały ekran (widżety czatu/marketingu) – przechwytuje elementFromPoint
+    const transparent = (cs.backgroundColor === 'rgba(0, 0, 0, 0)' || cs.backgroundColor === 'transparent') && cs.backgroundImage === 'none';
+    if (!txt && transparent && r.width * r.height > innerWidth * innerHeight * 0.5) {
+      el.style.setProperty('pointer-events', 'none', 'important'); hidden++;
+    }
+  }
+  // zablokowane przewijanie pod modalem zgody
+  for (const el of [document.documentElement, document.body]) {
+    if (el && getComputedStyle(el).overflow === 'hidden') el.style.setProperty('overflow', 'visible', 'important');
+  }
+  return hidden;
+}
+"""
+
+
 class Renderer:
     def __init__(self) -> None:
         self._pw = None
         self._browser: Browser | None = None
         self.available = False
+        self.error: str | None = None
 
     async def start(self) -> None:
         try:
             self._pw = await async_playwright().start()
             self._browser = await self._pw.chromium.launch(args=["--no-sandbox"])
             self.available = True
+            self.error = None
         except Exception as exc:  # brak przeglądarki = tryb tylko-tekst
-            log.warning("Playwright niedostępny, reguły wizualne wyłączone: %s", exc)
+            msg = str(exc)
+            self.error = ("brak przeglądarki Chromium – uruchom: python -m playwright install chromium"
+                          if "Executable doesn't exist" in msg or "playwright install" in msg else f"{type(exc).__name__}: {msg[:200]}")
+            log.error("Playwright niedostępny, reguły wizualne 4–8 wyłączone: %s", self.error)
+
+    async def _ensure_browser(self) -> None:
+        """Ponowne uruchomienie Chromium, jeśli proces przeglądarki padł (np. brak pamięci)."""
+        if self._browser is not None and self._browser.is_connected():
+            return
+        log.warning("Chromium rozłączony – ponowne uruchomienie")
+        try:
+            self._browser = await self._pw.chromium.launch(args=["--no-sandbox"])
+        except Exception as exc:
+            self.available = False
+            self.error = f"Chromium nie uruchamia się: {type(exc).__name__}"
+            raise
 
     async def stop(self) -> None:
         if self._browser:
@@ -173,9 +239,11 @@ class Renderer:
         if self._pw:
             await self._pw.stop()
 
-    async def render(self, url: str | None = None, html: str | None = None) -> dict:
+    async def render(self, url: str | None = None, html: str | None = None, lite: bool = False) -> dict:
+        """lite=True: druga próba dla wolnych stron – czekamy tylko na początek odpowiedzi i 4 s na skrypty."""
         if not self.available:
             return {"engine": "none", "reason": "playwright_unavailable"}
+        await self._ensure_browser()
         proxy = next_proxy()
         context = await self._browser.new_context(
             user_agent=random_ua(), viewport=VIEWPORTS["desktop"], locale="pl-PL",
@@ -198,14 +266,21 @@ class Renderer:
             if html is not None:
                 await page.set_content(html, wait_until="load", timeout=20000)
             else:
-                response = await page.goto(url, wait_until="domcontentloaded", timeout=25000)
+                response = await page.goto(url, wait_until="commit" if lite else "domcontentloaded", timeout=45000 if lite else 25000)
                 if response is not None and response.status >= 400:
                     raise SourceHttpError(response.status)
-                try:
-                    await page.wait_for_load_state("networkidle", timeout=5000)
-                except Exception:
-                    pass
+                if lite:
+                    await page.wait_for_timeout(4000)
+                else:
+                    try:
+                        await page.wait_for_load_state("networkidle", timeout=5000)
+                    except Exception:
+                        pass
             final_url = page.url
+            try:
+                consent_hidden = await page.evaluate(CONSENT_JS)
+            except Exception:
+                consent_hidden = 0
             page_html = await page.content()
             viewports = {}
             screenshot = None
@@ -222,7 +297,7 @@ class Renderer:
                     screenshot = "data:image/jpeg;base64," + base64.b64encode(shot).decode()
                     viewports[name]["screenshot_height"] = shot_h
                     images = await self._image_shots(page, viewports[name]["page_height"])
-            return {"engine": "playwright", "final_url": final_url, "html": page_html,
+            return {"engine": "playwright", "final_url": final_url, "html": page_html, "consent_hidden": consent_hidden,
                     "viewports": viewports, "screenshot": screenshot, "_images": images}
         finally:
             await context.close()

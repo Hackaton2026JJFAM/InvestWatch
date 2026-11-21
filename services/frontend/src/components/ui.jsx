@@ -6,10 +6,27 @@ export const STATUS_LABEL = { fail: 'niespełnione', warn: 'do weryfikacji', pas
 export const MODULES = { m1: 'M1 Finfluencerzy', m2: 'M2 Ryzyko/zgodność', m3: 'M3 Shadow Advisory' };
 export const MAT_STATUS = { NEW: 'Nowy', REVIEWED: 'Zweryfikowany', ESCALATED: 'Eskalowany', DISMISSED: 'Odrzucony' };
 
-export function riskOf(score, threshold) {
-  if (score == null || threshold == null) return null;
-  return score >= threshold ? 'wysokie' : score >= threshold * 0.6 ? 'średnie' : 'niskie';
+// Poziom ryzyka w stałej skali 0–100: 0–29 niskie, 30–69 średnie, 70–100 wysokie.
+// Próg alertów (kalibracja) jest osobny – decyduje o alercie i widoku „powyżej progu”.
+// eslint-disable-next-line no-unused-vars
+export function riskOf(score, _threshold) {
+  if (score == null) return null;
+  return score >= 70 ? 'wysokie' : score >= 30 ? 'średnie' : 'niskie';
 }
+
+// Profil publikującego / materiału (analyzer: profile.primary)
+export const PROFILE = {
+  podejrzenie_oszustwa: { label: 'Podejrzenie oszustwa', tone: 'high' },
+  płatna_promocja: { label: 'Płatna promocja', tone: 'mid' },
+  doradca_finansowy: { label: 'Doradca / oferta doradcza', tone: 'info' },
+  edukacja: { label: 'Edukacja', tone: 'low' },
+  informacja: { label: 'Informacja', tone: 'neutral' },
+};
+export function ProfileChip({ type }) {
+  const p = PROFILE[type];
+  return p ? <span className={`chip ${p.tone}`}>{p.label}</span> : null;
+}
+export const fmtCount = (n) => (n == null ? '–' : Number(n).toLocaleString('pl-PL', { notation: Number(n) >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }));
 
 export function Panel({ title, meta, actions, children, className = '' }) {
   return (

@@ -12,6 +12,10 @@ Materiały można dodawać jako adres URL, HTML, tekst albo **obraz reklamy** (P
 
 **Wideo i reels** (TikTok, Instagram, YouTube/Shorts, Facebook, X, Threads, LinkedIn, Vimeo, Twitch, Reddit, Dailymotion, Rumble i in., albo wgrany plik do 250 MB): yt-dlp pobiera publiczny materiał, faster-whisper przepisuje mowę, a OCR czyta napisy z klatek. Na wynik działają te same reguły, plus czas wyświetlania ostrzeżenia (poniżej 3 s to naruszenie) i ostrzeżenie wypowiedziane, ale nie pokazane na ekranie. Materiały wymagające zalogowania kończą się komunikatem „wgraj plik ręcznie”.
 
+**Oszustwa i finfluencerzy:** każdy materiał (strona, post, wideo po transkrypcji i OCR) dostaje profil publikującego: podejrzenie oszustwa, płatna promocja, doradca, edukacja albo informacja. Do tego sygnały z cytatami (presja czasu, WhatsApp/Telegram, bot AI, „zacznij od 250 zł”, wizerunek znanych osób) i ocena realizmu obietnic przeliczona na rok („2% dziennie” ≈ 730% rocznie). Oficjalne strony firm i strony własne usługodawców nie są traktowane jak podmiot trzeci, a zadeklarowana licencja doradcy obniża M3 do „do weryfikacji”.
+
+**Monitoring popularnych treści:** strona „Monitoring wideo” pokazuje popularne tagi i wyszukuje kandydatów: YouTube po hashtagu, frazie (po wyświetleniach) lub kanale, TikTok po profilu. Ma próg wyświetleń, a zapisane zapytania uruchamia według harmonogramu, więc system działa profilaktycznie, a nie tylko na zgłoszenia. Wyniki można filtrować po zasięgu, tagu, typie publikującego i rodzaju materiału, a sortowanie „priorytet” to ryzyko × zasięg.
+
 **Rynek:** strona „Rezerwy giełd (PoR)” pokazuje raport Proof of Reserves OKX (pokrycie per aktywo, alert przy pokryciu < 1:1 lub braku nowego raportu > 45 dni; to deklaracja giełdy, nie audyt). Karta podmiotu ma panel „Zachowanie w kryzysach (GPW)”: kurs spółki wobec WIG w okresie krachu COVID-19 lub wybuchu wojny w Ukrainie (maks. spadek, dni do odrobienia strat, beta, zmienność) z archiwum notowań gpw.pl.
 
 Każdy wynik ma przesłanki: `rule_id`, podstawę prawną, uzasadnienie i cytowany fragment. Wynik to sygnał do weryfikacji, nie stwierdzenie naruszenia.
@@ -75,6 +79,9 @@ Wideo: model Whisper `small` zajmuje ~0,5 GB (wolumen `whisper`, pobierany przy 
 | `WHISPER_PRELOAD` | true | Ładowanie modelu w tle przy starcie scrapera |
 | `VIDEO_MAX_SECONDS`, `VIDEO_MAX_MB` | 900, 250 | Limity długości i rozmiaru wideo |
 | `SCRAPER_COOKIES_FILE` | – | Opcjonalny plik cookies (format Netscape) dla materiałów wymagających logowania |
+| `WATCH_CRON` | `15 */3 * * *` | Uruchamianie zapisanych zapytań monitoringu wideo |
+| `WORKER_CONCURRENCY`, `VIDEO_WORKER_CONCURRENCY` | 2, 1 | Równoległość torów kolejki: strony / wideo (Whisper) – zwiększaj razem z `--scale scraper=N` |
+| `VIDEO_REFRESH_DAYS` | 7 | Wideo przeanalizowane w tym okresie nie jest pobierane ponownie |
 | `RESERVES_CRON` | `30 6 * * *` | Odczyt raportu Proof of Reserves (OKX); działa przy `ENRICH_AUTO=true` |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | –, `gemma3:4b` | LLM do podsumowań |
 | `ENRICH_AUTO` | true | Automatyczne wzbogacanie nowych spółek (KRS, GLEIF, listy) – wymaga internetu z analizatora |
