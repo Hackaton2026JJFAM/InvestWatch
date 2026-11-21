@@ -16,10 +16,12 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 
 ## Następne kroki (priorytet)
 - [ ] (!) Pierwsze uruchomienie `docker compose up --build` i test całego stosu (lokalnie nie było Dockera)
-- [ ] (!) Sprawdzić w przeglądarce: konsola bez błędów, toasty WebSocket, panel kalibracji
+- [x] Wykonać testy przeglądarkowe: 10/12 zaliczonych; toast WebSocket i zapis progu działają.
+- [ ] (!) Naprawić listę materiałów i filtry (HTTP 502), odświeżanie licznika alertów oraz ponownie sprawdzić konsolę.
 - [ ] (!) Na hackathonie: wczytać próbki od UKNF (pendrive) przez „Import materiału”, oznaczyć je i przeliczyć kalibrację
 - [ ] Code-splitting frontendu (bundle 835 kB, dynamiczny import Recharts)
-- [ ] Test backendu (node --test) na bazie w kontenerze
+- [x] Przetestować REST i zapis na osobnym PostgreSQL 16: 40/51 zaliczonych w wariancie diagnostycznym.
+- [ ] (!) Dodać brakujący sterownik `ioredis` do aplikacji i powtórzyć test backendu w docelowym Compose.
 - [ ] Podświetlanie fragmentu ostrzeżenia na zrzucie ekranu (bbox z layoutu)
 - [ ] Prawie-duplikaty: porównanie `simhash` w backendzie (pole już liczone w analyzerze)
 
@@ -43,3 +45,10 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Film do 3 minut (opcjonalnie)
 - ❓ Repo publiczne czy prywatne na czas oceny
 - ❓ Model LLM na demo (`gemma3:4b` vs mniejszy) – zależy od sprzętu
+
+## Stan audytu i CI
+
+- [x] Uruchomić istniejące testy analyzera (14/14), ewaluację 18 próbek (precyzja 1,00; pełność 0,92 przy progu 45) i audyty npm/pip (0 zgłoszeń w dniu audytu).
+- [x] Wykonać zestawy audytowe: 161 przypadków, 130 zaliczonych i 31 niezaliczonych. [Raport i reprodukcje](docs/AUDIT_REPORT.md), [wyniki](audit_tests/results/summary.json).
+- [x] Poprawić przyczyny nieudanego CI na `test/audit`: niespójny lockfile frontendu i brak instalacji `pip-audit`.
+- [ ] Usunąć pozostałe błędy audytu; zielone CI nie zastępuje testu pełnego stosu ani nie oznacza zaliczenia wszystkich przypadków audytowych.
