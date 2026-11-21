@@ -43,6 +43,16 @@ def main() -> None:
                 res = c.post(f"{args.analyzer}/analyze", json=r.json()).json()
                 rows.append((name, meta["ground_truth"], res))
                 continue
+            if name.lower().endswith((".mp4", ".webm", ".mov")):
+                # wideo – Whisper + OCR klatek w scraperze (plik w treści żądania)
+                r = c.post(f"{args.scraper}/scrape/video/file", params={"url": meta.get("url", f"upload://{name}"), "platform": meta.get("platform")},
+                           content=(root / name).read_bytes(), headers={"content-type": "video/mp4"}, timeout=900)
+                if r.status_code == 501:
+                    print(f"POMINIĘTO {name}: {r.json().get('detail')}")
+                    continue
+                res = c.post(f"{args.analyzer}/analyze", json=r.json()).json()
+                rows.append((name, meta["ground_truth"], res))
+                continue
             raw = (root / name).read_text(encoding="utf-8")
             if name.endswith(".json"):
                 d = json.loads(raw)

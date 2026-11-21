@@ -45,6 +45,16 @@ async function rawRequest(method, path, body) {
   return data;
 }
 
+// Surowy plik (np. wideo) w treści żądania; metadane w parametrach zapytania.
+export async function uploadFile(path, file, params = {}) {
+  const res = await fetch(`/api${path}${qs(params)}`, {
+    method: 'POST', headers: { 'content-type': file.type || 'application/octet-stream' }, body: file,
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+  return data;
+}
+
 export const api = {
   get: (p) => request('GET', p),
   post: (p, b) => request('POST', p, b ?? {}),

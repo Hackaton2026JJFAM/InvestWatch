@@ -12,6 +12,7 @@ from .net import next_proxy, random_ua, validate_url
 log = logging.getLogger("scraper.render")
 
 SHOT_MAX_H = 4000
+IMG_MAX = 6          # ile największych grafik ze strony przechodzi OCR (banery z tekstem w obrazie)
 
 
 class SourceHttpError(Exception):
@@ -121,6 +122,37 @@ LAYOUT_JS = r"""
 """
 
 
+# Duże, widoczne grafiki (img, picture, canvas, tło CSS) – kandydaci do OCR: reklamy często mają
+# ostrzeżenie „wtopione” w baner, niewidoczne dla analizy DOM.
+IMAGES_JS = r"""
+(maxH) => {
+  const out = [];
+  const seen = new Set();
+  const add = (el, kind, src) => {
+    const r = el.getBoundingClientRect();
+    if (r.width < 250 || r.height < 100) return;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === 'hidden' || cs.display === 'none' || Number(cs.opacity) < 0.05) return;
+    const x = r.left + scrollX, y = r.top + scrollY;
+    if (y > maxH) return;
+    const key = Math.round(x) + ':' + Math.round(y) + ':' + Math.round(r.width);
+    if (seen.has(key)) return; seen.add(key);
+    out.push({ kind, src: (src || '').slice(0, 500), alt: (el.getAttribute('alt') || '').slice(0, 300),
+      x: Math.round(x), y: Math.round(y), w: Math.round(r.width), h: Math.round(Math.min(r.height, 2000)),
+      in_footer: !!el.closest('footer,[class*="footer" i],[id*="footer" i],[class*="legal" i]'),
+      is_link: !!el.closest('a'), href: el.closest('a') ? el.closest('a').href : null });
+  };
+  document.querySelectorAll('img').forEach(el => { if (el.complete && el.naturalWidth >= 200) add(el, 'img', el.currentSrc || el.src); });
+  document.querySelectorAll('canvas,video[poster]').forEach(el => add(el, el.tagName.toLowerCase(), el.getAttribute('poster')));
+  document.querySelectorAll('div,section,a,span,header,aside').forEach(el => {
+    const bg = getComputedStyle(el).backgroundImage;
+    if (bg && bg.startsWith('url(') && !el.querySelector('img')) add(el, 'background', bg.slice(4, -1).replace(/["']/g, ''));
+  });
+  return out.sort((a, b) => b.w * b.h - a.w * a.h);
+}
+"""
+
+
 class Renderer:
     def __init__(self) -> None:
         self._pw = None
@@ -177,6 +209,7 @@ class Renderer:
             page_html = await page.content()
             viewports = {}
             screenshot = None
+            images: list[dict] = []
             for name, size in VIEWPORTS.items():
                 await page.set_viewport_size(size)
                 await page.wait_for_timeout(150)
@@ -188,7 +221,25 @@ class Renderer:
                                                  clip={"x": 0, "y": 0, "width": size["width"], "height": shot_h})
                     screenshot = "data:image/jpeg;base64," + base64.b64encode(shot).decode()
                     viewports[name]["screenshot_height"] = shot_h
+                    images = await self._image_shots(page, viewports[name]["page_height"])
             return {"engine": "playwright", "final_url": final_url, "html": page_html,
-                    "viewports": viewports, "screenshot": screenshot}
+                    "viewports": viewports, "screenshot": screenshot, "_images": images}
         finally:
             await context.close()
+
+    async def _image_shots(self, page, page_h: int) -> list[dict]:
+        """Zrzuty największych grafik strony (w skali 1:1 renderu) do OCR."""
+        try:
+            cands = await page.evaluate(IMAGES_JS, min(page_h, SHOT_MAX_H * 2))
+        except Exception as exc:
+            log.warning("image scan failed: %s", exc)
+            return []
+        out = []
+        for c in cands[:IMG_MAX]:
+            try:
+                png = await page.screenshot(type="png", full_page=True,
+                                            clip={"x": c["x"], "y": c["y"], "width": c["w"], "height": c["h"]})
+            except Exception:
+                continue
+            out.append({**c, "png": png})
+        return out

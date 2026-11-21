@@ -33,8 +33,23 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] (!) Na hackathonie: wczytać próbki od UKNF (pendrive) przez „Import wielu plików” (HTML, tekst, JSON, CSV z URL, **obrazy przez OCR**), oznaczyć je i przeliczyć kalibrację
 - [x] Konsola bez ostrzeżeń WebSocket (jedno połączenie Socket.io na aplikację)
 - [x] Import obrazów reklam (OCR: Tesseract pol+eng w kontenerze scrapera) – PNG/JPG/WebP do 10 MB; tekst z pozycją, wysokością liter i kontrastem, więc reguły 4–6 działają na obrazach; 2. przebieg OCR wyłapuje blady drobny druk; próbka demo nr 19
-- [ ] OCR lokalnie na Windows (dev) – dziś tylko w Dockerze; lokalnie obraz kończy się czytelnym błędem 501
+- [ ] OCR lokalnie na Windows (dev) – dziś tylko w Dockerze; lokalnie obraz kończy się czytelnym błędem 501 (transkrypcja Whisper działa lokalnie)
+- [x] OCR grafik na stronach: największe banery/obrazy (img, canvas, tło CSS; do 6 na stronę) przechodzą OCR – tekst „wtopiony” w baner trafia do reguł z położeniem i rozmiarem liter w px renderu
+- [x] Bezpośredni link do grafiki/zdjęcia (`.png/.jpg/.webp…` albo `Content-Type: image/*`) w „Analiza adresów URL” → OCR
 - [x] Przycisk „Usuń” na karcie materiału (z potwierdzeniem; operacja administratora)
+
+## Wideo / reels (Whisper + OCR klatek)
+- [x] Scraper `app/video.py`: yt-dlp 2026.10.26 (bez logowania; opcjonalnie `SCRAPER_COOKIES_FILE`) → faster-whisper 1.2.1 (`WHISPER_MODEL=small`, CPU int8, wykrywanie języka, VAD) → klatki co ~T/24 s (PyAV) z pominięciem identycznych → OCR (Tesseract, 2 przebiegi) → te same reguły M1–M3
+- [x] Platformy: TikTok, Instagram (reels/posty), YouTube (filmy, Shorts), Facebook (watch/reels/fb.watch), X/Twitter, Threads, LinkedIn, Vimeo, Twitch, Reddit, Dailymotion, Rumble, Kick, VK, Pinterest, Bilibili, Streamable, Telegram + bezpośrednie `.mp4/.webm/.mov`
+- [x] Sprawdzone w Dockerze: YouTube (tytuł, autor, data, wyświetlenia, transkrypcja), TikTok (opis + metadane); Vimeo i część Instagrama/Facebooka wymagają logowania → czytelny błąd 422 „wgraj plik ręcznie”
+- [x] Upload pliku wideo (do 250 MB): „Import wielu plików” lub `POST /api/scans/video` (surowa treść, metadane w query); nginx 260 MB tylko dla tej ścieżki
+- [x] Reguły wideo: ostrzeżenie na ekranie krócej niż 3 s → reguła 5; ostrzeżenie tylko w mowie (brak napisu) → reguła 6 (ostrzeżenie); „dolna krawędź kadru” w regule 6; 7 = nie dotyczy, 8 = nieocenione
+- [x] Karta materiału: transkrypcja z czasami, napisy z ekranu z czasem widoczności, plansza klatek z podświetleniami, metadane (wyświetlenia, obserwujący)
+- [x] Próbka demo nr 20 (`tools/make_sample_video.ps1`: syntezator pl-PL + napisy; ostrzeżenie drobnym drukiem przez ~1,5 s) – wynik 98: reguły 4/5/6 i G1 naruszone
+- [x] Docker: ffmpeg + Deno (yt-dlp/YouTube) w obrazie scrapera, model Whisper w wolumenie `whisper` (ładowany w tle przy starcie, `WHISPER_PRELOAD`)
+- [ ] Mowa z wielu głosów / muzyka: ewentualnie `WHISPER_MODEL=medium` na mocniejszym sprzęcie (small ≈ 6 s na 11 s nagrania na CPU)
+- [ ] Relacje (stories) i transmisje na żywo – pomijane (limit `VIDEO_MAX_SECONDS=900`, `!is_live`)
+- [ ] Napisy wypalone w wideo w ruchu (scrolling) – OCR klatek co ~1,5 s może je pominąć
 
 ## Should
 - [x] Adapter KRS (api-krs.ms.gov.pl, bez klucza; limitów nie publikuje – bufor 6 h, kolejka 1 podmiot/2 s): kapitał, adres, NIP/REGON, zarząd, prokurenci, wspólnicy → `persons`, `person_links`. **Dane osób zanonimizowane w publicznym API** – brak łączenia osób między spółkami
@@ -42,7 +57,9 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [x] Lista ostrzeżeń publicznych KNF (669 wpisów, domeny/KRS/NIP) – przesłanki M1.5 i M3.4
 - [x] Rejestr MiCA ESMA: 409 CASP + 217 podmiotów niezgodnych – przesłanki M1.6 (bez licencji) i M1.7 (licencja CASP / brak w rejestrze)
 - [x] KRS bez znajomości numeru: nazwa → GLEIF (urząd RA000484) → numer KRS → odpis; dopasowanie rekordu LEI z uwzględnieniem kraju z formy prawnej
-- [x] Wszystkie dane z rejestrów: odpis KRS aktualny (6 działów) i pełny z historią, rekord LEI z relacjami (dominujący bezpośredni/najwyższy, zależne), drzewo danych z filtrem; strona „Rejestry”
+- [x] Wszystkie dane z rejestrów: odpis KRS aktualny (6 działów) i pełny z historią, rekord LEI z relacjami (dominujący bezpośredni/najwyższy, zależne), drzewo danych z filtrem
+- [x] Jedna wyszukiwarka „Wyszukiwarka (KRS, LEI)”: rozpoznaje numer KRS (10 cyfr), LEI (20 znaków) lub nazwę; zakładki podmioty/materiały/rejestr KNF/rejestry zewnętrzne; panel szczegółów z odpisem KRS i rekordem LEI; „Utwórz kartę podmiotu i monitoruj”
+- [x] Ciemny motyw (Auto/Jasny/Ciemny, zapamiętany) i ujednolicone wykresy (paleta sprawdzona dla obu motywów, legendy, gradienty, ciągła oś 30 dni)
 - [x] Rejestr KNF: skróty 3-literowe (np. XTB) dopasowywane jako nazwa własna wielkimi literami; krótkie nazwy jednowyrazowe tylko z wielkiej litery
 - [ ] Ostrzeżenia zagranicznych organów nadzoru (strona KNF) i IOSCO I-SCAN jako kolejne listy
 - [ ] Harmonogram odświeżania snapshotów list (dziś: `python -m tools.watchlists_import`)
@@ -51,10 +68,10 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Embeddingi (Ollama `nomic-embed-text`) do grupowania podobnych reklam
 
 ## Could
-- [ ] Zachowanie w kryzysach dla 1 okresu i 1 podmiotu (dane GPW)
-- [ ] Proof of reserves dla 1 giełdy (parser raportu, alert przy pokryciu < 1:1)
-- [ ] Wideo/reels: ffmpeg → faster-whisper → OCR (Tesseract/PaddleOCR) → te same reguły
-- [ ] Listy sankcji UE dla osób (status „wymaga weryfikacji”)
+- [ ] Zachowanie w kryzysach dla 1 okresu i 1 podmiotu (archiwum notowań GPW – bez stooq, który ma blokadę dla botów)
+- [~] Proof of reserves dla 1 giełdy (OKX): parser raportu i pokrycie per aktywo w analyzerze (`GET /reserves/okx`, testy) – [ ] zapis w bazie, harmonogram, alert przy pokryciu < 1:1 / braku raportu > 45 dni, panel w UI (`backend/src/reserves.js` napisany, niepodłączony)
+- [x] Wideo/reels: yt-dlp → faster-whisper → OCR klatek → te same reguły (sekcja „Wideo / reels”)
+- [x] Lista sankcji UE (6303 wpisy, osoby i podmioty) – przesłanka M1.8 zawsze „wymaga weryfikacji”, nigdy naruszenie; panel na karcie podmiotu
 
 ## Formalności
 - [ ] Prezentacja PDF

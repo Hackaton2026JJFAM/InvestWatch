@@ -38,6 +38,7 @@ CATALOG = {
     "G1": ("Obietnice zysku bez ryzyka", f"art. 44 ust. 2 lit. b {R} (rzetelny, niewprowadzający w błąd przekaz)", 70),
 }
 VISUAL_RULES = {"4", "5", "6", "7", "8"}
+MIN_WARNING_SECONDS = 3   # wideo: minimalny czas wyświetlania ostrzeżenia (czytelność planszy)
 
 
 def F(rule_id: str, status: str, explanation: str, evidence: list[dict] | None = None, severity: int | None = None) -> Finding:
@@ -344,10 +345,15 @@ def r5(c: Ctx) -> Finding:
         problems.append(f"obniżona przezroczystość ({best['opacity']})")
     profit_blocks = [b for b in _vis(c.doc.blocks("desktop")) if T.has(T.PROFIT, b["text"])]
     vh = (c.doc.layout["viewports"]["desktop"] or {}).get("height", 768)
-    if profit_blocks and min(b["y"] for b in rb) - min(b["y"] for b in profit_blocks) > 2 * vh:
+    if c.doc.is_video:
+        # w wideo „dwa ekrany niżej” nie ma sensu (klatki ułożone jedna pod drugą) – liczy się czas na ekranie
+        longest = max((b.get("seen_s") or 0) for b in rb)
+        if longest and longest < MIN_WARNING_SECONDS:
+            problems.append(f"ostrzeżenie na ekranie zbyt krótko – ok. {longest:.1f} s (min. {MIN_WARNING_SECONDS} s do przeczytania)")
+    elif profit_blocks and min(b["y"] for b in rb) - min(b["y"] for b in profit_blocks) > 2 * vh:
         problems.append("ostrzeżenie umieszczone ponad dwa ekrany niżej niż twierdzenia o zyskach")
     evid = [ev(best["text"], "ostrzeżenie", contrast=best["contrast"], color=best["color"], bg=best["bg"], y=best["y"])]
-    if any("bardzo niski" in p or "przesłonięte" in p for p in problems) or len(problems) >= 2:
+    if any("bardzo niski" in p or "przesłonięte" in p or "zbyt krótko" in p for p in problems) or len(problems) >= 2:
         return F("5", FAIL, "; ".join(problems).capitalize() + ".", evid)
     if problems:
         return F("5", WARN, problems[0].capitalize() + ".", evid)
@@ -357,6 +363,10 @@ def r5(c: Ctx) -> Finding:
 def r6(c: Ctx) -> Finding:
     all_rb = c.risk_blocks.get("desktop", [])
     rb = _vis(all_rb)
+    if c.doc.is_video and not all_rb and is_risk_warning(c.doc.spoken):
+        said = next((x.text for x in c.doc.sentences if is_risk_warning(x.text) and x.text in c.doc.spoken), c.doc.spoken[:200])
+        return F("6", WARN, "Ostrzeżenie o ryzyku pada wyłącznie w ścieżce dźwiękowej – brak napisu na ekranie "
+                 "(widz oglądający bez dźwięku go nie zobaczy).", [ev(said, "mowa (transkrypcja)")])
     if not all_rb:
         return F("6", NOT_CHECKED if not c.doc.has_layout else NA, "Brak ostrzeżenia w treści strony.")
     if not rb:
@@ -364,13 +374,15 @@ def r6(c: Ctx) -> Finding:
     prominent = [b for b in rb if not b.get("in_footer") and not b.get("in_fine_print")]
     if prominent:
         return F("6", PASS, "Ostrzeżenie występuje poza stopką i przypisami.", [ev(prominent[0]["text"], "treść główna")])
-    where = "przypisie/drobnym druku" if any(b.get("in_fine_print") for b in all_rb) else "stopce/sekcji „Legal”"
+    where = "przypisie/drobnym druku" if any(b.get("in_fine_print") for b in all_rb) else         ("dolnej krawędzi kadru" if c.doc.is_video else "stopce/sekcji „Legal”")
     return F("6", FAIL, f"Ostrzeżenie o ryzyku znajduje się wyłącznie w {where}.", [ev(b["text"], where) for b in all_rb[:3]])
 
 
 def r7(c: Ctx) -> Finding:
     if not c.doc.has_layout:
         return F("7", NOT_CHECKED, "Brak renderu strony.")
+    if c.doc.is_video:
+        return F("7", NA, "Wideo – brak elementów do rozwinięcia; widoczność i czas ekspozycji oceniają reguły 4–6.")
     if c.doc.is_image:
         return F("7", NA, "Obraz statyczny – brak elementów do rozwinięcia; widoczność oceniają reguły 4–6.")
     all_rb = c.risk_blocks.get("desktop", [])
@@ -390,8 +402,8 @@ def r7(c: Ctx) -> Finding:
 def r8(c: Ctx) -> Finding:
     if not c.doc.has_layout:
         return F("8", NOT_CHECKED, "Brak renderu strony.")
-    if c.doc.is_image:
-        return F("8", NOT_CHECKED, "Obraz w jednym rozmiarze – responsywności nie da się ocenić.")
+    if c.doc.is_image or c.doc.is_video:
+        return F("8", NOT_CHECKED, f"{'Wideo' if c.doc.is_video else 'Obraz'} w jednym formacie – responsywności nie da się ocenić.")
     desk = _vis(c.risk_blocks.get("desktop", []))
     if not desk:
         return F("8", NA, "Brak widocznego ostrzeżenia na desktopie.")
@@ -452,6 +464,10 @@ def run(doc: Doc) -> list[Finding]:
     out = [r1(c), r2(c), r3(c), g1(c)]
     if doc.has_layout:
         out += [r4(c), r5(c), r6(c), r7(c), r8(c)]
+    elif doc.is_video:
+        # wideo bez napisów na ekranie (albo bez OCR) – ocenić można tylko ostrzeżenie wypowiedziane
+        out += [F(r, NOT_CHECKED, "Wideo bez rozpoznanego tekstu na ekranie – reguła wymaga napisów w kadrze.") for r in ("4", "5", "7", "8")]
+        out.append(r6(c))
     else:
         out += [F(r, NOT_CHECKED, "Brak renderu wizualnego (materiał tekstowy) – reguła wymaga Playwright.") for r in ("4", "5", "6", "7", "8")]
     out += [r9(c), r10(c), r11(c), r12a(c), r12b(c), r13(c), r14(c), r15(c), r16(c), *r17_18(c)]

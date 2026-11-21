@@ -262,8 +262,8 @@ def test_samples_real_render_and_scoring():
     for name, meta in labels.items():
         if name.startswith("_"):
             continue
-        if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
-            continue  # grafiki reklam idą przez OCR (/scrape/image) – poza zakresem tego testu renderu HTML
+        if name.lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".mp4", ".webm", ".mov")):
+            continue  # grafiki i wideo idą przez OCR (/scrape/image) – poza zakresem tego testu renderu HTML
         raw = (root / name).read_text(encoding="utf-8")
         if name.endswith(".json"):
             material = post(SCR, "/scrape/text", json.loads(raw))

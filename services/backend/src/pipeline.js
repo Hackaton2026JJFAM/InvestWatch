@@ -6,6 +6,7 @@ import { analyzer, scraper, UpstreamError } from './services.js';
 import { emit } from './realtime.js';
 import { scheduleEnrichment } from './enrichment.js';
 import { findSimilar, NEAR_DUP_BITS } from './similarity.js';
+import { removeUpload } from './video.js';
 
 const normName = (s) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/\s+/g, ' ').trim();
 
@@ -14,6 +15,10 @@ async function fetchMaterial(data) {
   if (data.kind === 'html') {
     const meta = Object.fromEntries(Object.entries({ title: data.title, author: data.author, platform: data.platform }).filter(([, v]) => v));
     return scraper.html(data.html, data.url, meta);
+  }
+  if (data.kind === 'video') {
+    const meta = Object.fromEntries(Object.entries({ url: data.url, title: data.title, author: data.author, platform: data.platform }).filter(([, v]) => v));
+    return scraper.videoFile(data.file, meta);
   }
   if (data.kind === 'image') {
     const meta = Object.fromEntries(Object.entries({ title: data.title, author: data.author, platform: data.platform }).filter(([, v]) => v));
@@ -76,8 +81,10 @@ export async function processScan(job) {
   try {
     material = await fetchMaterial(data);
   } catch (err) {
+    if (data.kind === 'video' && !(err instanceof UpstreamError && err.retryable)) await removeUpload(data.file);
     return fail(jobId, err, job);
   }
+  if (data.kind === 'video') await removeUpload(data.file); // plik nie jest już potrzebny
 
   // duplikat = ten sam URL, ta sama treść i ten sam wygląd ostrzeżeń; zmiana samego CSS tworzy nową wersję
   const dup = await one('SELECT id FROM materials WHERE url = $1 AND content_hash = $2 AND layout_hash IS NOT DISTINCT FROM $3',

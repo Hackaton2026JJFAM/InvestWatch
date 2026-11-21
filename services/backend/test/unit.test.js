@@ -68,3 +68,14 @@ test('pickGleif: nie przypisuje rekordu z kraju niezgodnego z formą prawną', a
   assert.equal(pickGleif(onlyPl, 'XTB Ltd'), null);
   assert.equal(pickGleif(onlyPl, 'XTB'), onlyPl[0]);
 });
+
+test('isVideoUrl: filmy z platform tak, profile i zwykłe strony nie', async () => {
+  const { isVideoUrl } = await import('../src/video.js');
+  for (const u of ['https://www.tiktok.com/@a/video/1', 'https://vm.tiktok.com/ZM1/', 'https://youtu.be/x', 'https://www.youtube.com/shorts/x',
+    'https://www.instagram.com/reel/C1/', 'https://www.facebook.com/reel/1', 'https://x.com/a/status/1', 'https://clips.twitch.tv/x', 'https://cdn.example/a.mp4']) {
+    assert.equal(isVideoUrl(u), true, u);
+  }
+  for (const u of ['https://www.tiktok.com/@a', 'https://www.instagram.com/konto/', 'https://x.com/a', 'https://przyklad.pl/oferta', 'nie-url']) {
+    assert.equal(isVideoUrl(u), false, u);
+  }
+});

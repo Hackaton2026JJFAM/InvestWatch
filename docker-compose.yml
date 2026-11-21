@@ -31,6 +31,15 @@ services:
     environment:
       SCRAPER_PROXIES: ${SCRAPER_PROXIES:-}
       SCRAPER_ALLOW_PRIVATE: ${SCRAPER_ALLOW_PRIVATE:-false}
+      # wideo: model Whisper (tiny/base/small/medium), limity i opcjonalny plik cookies analityka
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      WHISPER_PRELOAD: ${WHISPER_PRELOAD:-true}
+      WHISPER_CACHE: /models/whisper
+      VIDEO_MAX_SECONDS: ${VIDEO_MAX_SECONDS:-900}
+      VIDEO_MAX_MB: ${VIDEO_MAX_MB:-250}
+      SCRAPER_COOKIES_FILE: ${SCRAPER_COOKIES_FILE:-}
+    volumes:
+      - whisper:/models/whisper
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 10s
@@ -88,6 +97,7 @@ services:
       - ollama:/root/.ollama
 
 volumes:
+  whisper:
   pgdata:
   redisdata:
   ollama:

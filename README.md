@@ -8,7 +8,9 @@ System monitorowania reklam i ofert inwestycyjnych dla UKNF (HackNation 2026). P
 
 Wzbogacanie danych podmiotów: **KRS** (kapitał, adres, NIP/REGON, zarząd, prokurenci, wspólnicy), **GLEIF** (kody LEI), **lista ostrzeżeń publicznych KNF** (669 wpisów) i **rejestr MiCA ESMA** (409 autoryzowanych CASP, 217 podmiotów bez licencji). Trafienia z list są przesłankami M1/M3 (dopasowanie po domenie, KRS, NIP lub nazwie). Numer KRS nie jest wymagany – dla polskich spółek z kodem LEI system odczytuje go z GLEIF. Strona **Rejestry** pozwala sprawdzić dowolny podmiot (odpis KRS aktualny lub pełny z historią, rekord LEI ze strukturą grupy), a karta podmiotu pokazuje wszystkie dane z rejestrów z wyszukiwarką.
 
-Materiały można dodawać jako adres URL, HTML, tekst albo **obraz reklamy** (PNG/JPG/WebP, OCR Tesseract w kontenerze scrapera). Tekst z obrazu dostaje pozycję, wysokość liter i kontrast, więc reguły wizualne (rozmiar czcionki ostrzeżenia, kontrast, stopka) działają także na grafikach.
+Materiały można dodawać jako adres URL, HTML, tekst albo **obraz reklamy** (PNG/JPG/WebP, OCR Tesseract w kontenerze scrapera). Tekst z obrazu dostaje pozycję, wysokość liter i kontrast, więc reguły wizualne (rozmiar czcionki ostrzeżenia, kontrast, stopka) działają także na grafikach. Banery z tekstem w obrazie na renderowanych stronach również przechodzą OCR.
+
+**Wideo i reels** (TikTok, Instagram, YouTube/Shorts, Facebook, X, Threads, LinkedIn, Vimeo, Twitch, Reddit, Dailymotion, Rumble i in., albo wgrany plik do 250 MB): yt-dlp pobiera publiczny materiał, faster-whisper przepisuje mowę, a OCR czyta napisy z klatek. Na wynik działają te same reguły, plus czas wyświetlania ostrzeżenia (poniżej 3 s to naruszenie) i ostrzeżenie wypowiedziane, ale nie pokazane na ekranie. Materiały wymagające zalogowania kończą się komunikatem „wgraj plik ręcznie”.
 
 Każdy wynik ma przesłanki: `rule_id`, podstawę prawną, uzasadnienie i cytowany fragment. Wynik to sygnał do weryfikacji, nie stwierdzenie naruszenia.
 
@@ -19,7 +21,7 @@ cp .env.example .env        # ustaw POSTGRES_PASSWORD i ADMIN_PASSWORD
 docker compose up -d --build
 ```
 
-Dashboard: http://localhost:8080 (domyślnie tylko z tego komputera, `WEB_BIND`). Przy pierwszym starcie ładowanych jest 19 oznaczonych próbek demo (w tym grafika reklamy do OCR) (`data/samples`) i fikcyjne podmioty DEMO. Wyłącza to `SEED_DEMO=false`.
+Dashboard: http://localhost:8080 (domyślnie tylko z tego komputera, `WEB_BIND`). Przy pierwszym starcie ładowanych jest 20 oznaczonych próbek demo (w tym grafika reklamy do OCR i reels do transkrypcji) (`data/samples`) i fikcyjne podmioty DEMO. Wyłącza to `SEED_DEMO=false`.
 
 Przeglądanie i import materiałów nie wymagają logowania. Zmiana progu, zarządzanie źródłami, ładowanie próbek i usuwanie materiałów wymagają hasła administratora (`ADMIN_PASSWORD`).
 
@@ -40,13 +42,15 @@ Bez Ollamy podsumowanie powstaje z szablonu na podstawie tych samych przesłanek
 | Podstawowy (bez LLM) | 2 rdzenie | 4 GB | 5 GB (obraz Playwright ~2 GB) |
 | Z Ollamą (`gemma3:4b`) | 4 rdzenie | 10 GB | 10 GB; GPU opcjonalne |
 
+Wideo: model Whisper `small` zajmuje ~0,5 GB (wolumen `whisper`, pobierany przy pierwszym starcie) i ~1 GB RAM. Na CPU przetwarza nagranie w czasie ~0,5× jego długości.
+
 ## Serwisy
 
 | Serwis | Technologia | Port wewn. | Rola |
 |---|---|---|---|
 | `frontend` | React 19 + Vite, Recharts, Socket.io, nginx | 80 → `WEB_PORT` | Dashboard, proxy `/api` i `/socket.io` |
 | `backend` | Node 22, Express 5, BullMQ, node-cron, zod | 4000 | API, kolejka z ponawianiem, harmonogram, WebSocket, zapis do bazy |
-| `scraper` | Python, FastAPI, Playwright, BeautifulSoup, Tesseract | 8001 | Pobieranie, render 3 viewportów, OCR obrazów, ekstrakcja treści i metadanych, ochrona SSRF, rotacja UA/proxy |
+| `scraper` | Python, FastAPI, Playwright, BeautifulSoup, Tesseract, yt-dlp, faster-whisper | 8001 | Pobieranie, render 3 viewportów, OCR obrazów i banerów, wideo (transkrypcja + OCR klatek), ekstrakcja treści i metadanych, ochrona SSRF, rotacja UA/proxy |
 | `analyzer` | Python, FastAPI, scikit-learn, RapidFuzz | 8002 | Moduły 1–3, klasyfikator zdań, scoring, rejestr KNF, podsumowanie |
 | `postgres` | PostgreSQL 16 (pg_trgm, unaccent) | 5432 | Materiały, analizy, przesłanki, alerty, podmioty |
 | `redis` | Valkey 8 (BSD, protokół Redis) | 6379 | Kolejka zadań |
@@ -65,6 +69,10 @@ Bez Ollamy podsumowanie powstaje z szablonu na podstawie tych samych przesłanek
 | `DEFAULT_THRESHOLD` | 45 | Początkowy próg ryzyka 0–100 (później zmiana w panelu kalibracji) |
 | `SCRAPER_PROXIES` | – | Lista proxy rozdzielona przecinkami |
 | `SCRAPER_ALLOW_PRIVATE` | false | Zezwolenie na adresy prywatne (domyślnie blokada SSRF) |
+| `WHISPER_MODEL` | small | Model transkrypcji wideo (`tiny`, `base`, `small`, `medium`) |
+| `WHISPER_PRELOAD` | true | Ładowanie modelu w tle przy starcie scrapera |
+| `VIDEO_MAX_SECONDS`, `VIDEO_MAX_MB` | 900, 250 | Limity długości i rozmiaru wideo |
+| `SCRAPER_COOKIES_FILE` | – | Opcjonalny plik cookies (format Netscape) dla materiałów wymagających logowania |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | –, `gemma3:4b` | LLM do podsumowań |
 | `ENRICH_AUTO` | true | Automatyczne wzbogacanie nowych spółek (KRS, GLEIF, listy) – wymaga internetu z analizatora |
 | `SEED_DEMO` | true | Próbki przy pustej bazie i fikcyjne podmioty DEMO w rejestrze (oznaczone jako DEMO, nigdy jako wpis KNF) |

@@ -41,12 +41,21 @@ class Doc:
 
     @property
     def has_layout(self) -> bool:
-        return self.layout.get("engine") in ("playwright", "ocr") and bool(self.layout.get("viewports"))
+        return self.layout.get("engine") in ("playwright", "ocr", "video") and bool(self.layout.get("viewports"))
 
     @property
     def is_image(self) -> bool:
         """Materiał z OCR obrazu – jeden statyczny kadr (brak warstw i innych rozmiarów ekranu)."""
         return self.layout.get("engine") == "ocr"
+
+    @property
+    def is_video(self) -> bool:
+        """Wideo: napisy z klatek (OCR) ułożone jak strona + transkrypcja mowy."""
+        return self.layout.get("engine") == "video" or bool(self.meta.get("transcript"))
+
+    @property
+    def spoken(self) -> str:
+        return ((self.meta.get("transcript") or {}).get("text") or "").strip()
 
     def blocks(self, viewport: str = "desktop") -> list[dict]:
         return (self.layout.get("viewports", {}).get(viewport) or {}).get("blocks", [])
@@ -67,7 +76,7 @@ class Doc:
             url=url, title=title, text=text, content_text=content or text, sentences=split_sentences(text),
             lang=(m.get("lang") or detect_lang(content or text)), platform=m.get("platform") or "web",
             author=m.get("author"), publisher=m.get("publisher"), domain=host, links=m.get("links") or [],
-            layout=m.get("layout") or {"engine": "none"}, meta={k: m.get(k) for k in ("social_handle", "published_at", "description")},
+            layout=m.get("layout") or {"engine": "none"}, meta={k: m.get(k) for k in ("social_handle", "published_at", "description", "transcript")},
         )
 
 

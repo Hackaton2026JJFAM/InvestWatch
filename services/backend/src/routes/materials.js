@@ -60,10 +60,20 @@ r.get('/materials/:id', async (req, res) => {
   const entities = await q(
     `SELECT e.id, e.name, e.kind, e.registry_status, me.role FROM material_entities me JOIN entities e ON e.id = me.entity_id WHERE me.material_id = $1`, [id]);
   const alerts = await q('SELECT * FROM alerts WHERE material_id = $1 ORDER BY id DESC', [id]);
-  const { layout = {}, content_text: _c, full_text: _f, ...meta } = m.raw ?? {};
+  const { layout = {}, content_text: _c, full_text: _f, transcript: _t, ...meta } = m.raw ?? {};
+  // wideo: transkrypcja z czasami i napisy z klatek z czasem widoczności na ekranie
+  const video = layout.video ? {
+    duration: layout.video.duration, frames_sampled: layout.video.frames_sampled, frames_with_text: layout.video.frames_with_text,
+    frame_times: layout.video.frame_times ?? [], meta: layout.video.meta ?? null,
+    transcript: layout.video.transcript ? { language: layout.video.transcript.language, model: layout.video.transcript.model,
+      segments: layout.video.transcript.segments ?? [], no_audio: layout.video.transcript.no_audio ?? false } : null,
+    captions: (layout.viewports?.desktop?.blocks ?? []).filter((b) => b.video_t != null)
+      .map((b) => ({ text: b.text, t: b.video_t, seen_s: b.seen_s, font_size: b.font_size, contrast: b.contrast })),
+  } : null;
   const viewports = Object.fromEntries(Object.entries(layout.viewports ?? {}).map(([k, v]) => [k, { width: v.width, height: v.height, page_height: v.page_height, screenshot_height: v.screenshot_height ?? null, blocks: v.blocks?.length ?? 0 }]));
   res.json({
-    material: { ...m, raw: undefined, meta: { ...meta, links: undefined }, screenshot: layout.screenshot ?? null, layout_engine: layout.engine ?? 'none', viewports },
+    material: { ...m, raw: undefined, meta: { ...meta, links: undefined }, screenshot: layout.screenshot ?? null, layout_engine: layout.engine ?? 'none', viewports,
+      video, image_ocr: layout.image_ocr ?? null },
     analysis: analyses[0] ? { ...analyses[0], result: latest.result } : null,
     history: analyses, findings, entities, alerts, threshold,
     similar: await findSimilar(m.simhash, { excludeId: m.id }),

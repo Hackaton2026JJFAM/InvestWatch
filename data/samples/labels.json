@@ -75,5 +75,11 @@
   "url": "upload://19_grafika_cfd_ocr.png",
   "platform": "instagram",
   "title": "Grafika reklamy CFD (OCR)"
+ },
+ "20_reels_krypto_wideo.mp4": {
+  "ground_truth": true,
+  "url": "upload://20_reels_krypto_wideo.mp4",
+  "platform": "tiktok",
+  "title": "Reels: kryptowaluty, 30% miesięcznie (wideo, Whisper + OCR)"
  }
 }

@@ -6,8 +6,10 @@ import { config } from './config.js';
 import { one } from './db.js';
 import { log } from './log.js';
 import { enqueue } from './queue.js';
+import { saveUpload } from './video.js';
 
 const IMAGE_EXT = new Set(['.png', '.jpg', '.jpeg', '.webp']);
+const VIDEO_EXT = new Set(['.mp4', '.webm', '.mov']);
 
 export async function seedSamples({ force = false } = {}) {
   if (!force) {
@@ -30,6 +32,14 @@ export async function seedSamples({ force = false } = {}) {
       const b64 = (await fs.readFile(path.join(config.samplesDir, file))).toString('base64');
       await enqueue({ kind: 'image', image: `data:image/${ext === '.jpg' ? 'jpeg' : ext.slice(1)};base64,${b64}`, url: meta.url ?? `upload://${file}`,
         title: meta.title, platform: meta.platform, groundTruth: meta.ground_truth }, 'seed');
+      queued++;
+      continue;
+    }
+    if (VIDEO_EXT.has(ext)) {
+      // reels – transkrypcja (Whisper) + OCR klatek w scraperze; kopia pliku, bo zadanie usuwa go po przetworzeniu
+      const saved = await saveUpload(await fs.readFile(path.join(config.samplesDir, file)));
+      await enqueue({ kind: 'video', file: saved, url: meta.url ?? `upload://${file}`, title: meta.title, platform: meta.platform,
+        groundTruth: meta.ground_truth }, 'seed');
       queued++;
       continue;
     }

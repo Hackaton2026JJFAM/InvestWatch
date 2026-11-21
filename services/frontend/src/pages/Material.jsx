@@ -47,6 +47,43 @@ function AnnotatedShot({ src, vp, boxes }) {
   );
 }
 
+const mmss = (s) => `${Math.floor((s ?? 0) / 60)}:${String(Math.floor((s ?? 0) % 60)).padStart(2, '0')}`;
+const RISK_RE = /ryzyk|strat|utrat|risk|loss|lose/i;
+
+// Wideo: transkrypcja z czasami + napisy z ekranu z czasem widoczności (ostrzeżenie < 3 s = za krótko).
+function VideoPanel({ video }) {
+  const segs = video.transcript?.segments ?? [];
+  const caps = [...(video.captions ?? [])].sort((a, b) => a.t - b.t);
+  const meta = video.meta ?? {};
+  return (
+    <div className="grid g2" style={{ marginTop: 12 }}>
+      <Panel title="Transkrypcja mowy" meta={video.transcript ? `Whisper ${video.transcript.model} · język ${video.transcript.language ?? '?'}` : ''}>
+        <dl className="kv" style={{ marginBottom: 10 }}>
+          <dt>Długość</dt><dd>{video.duration ? mmss(video.duration) : '–'}</dd>
+          <dt>Klatki</dt><dd>{video.frames_sampled ?? 0} próbek · {video.frames_with_text ?? 0} z nowym tekstem</dd>
+          {meta.view_count != null && <><dt>Wyświetlenia</dt><dd>{Number(meta.view_count).toLocaleString('pl-PL')}</dd></>}
+          {meta.channel_follower_count != null && <><dt>Obserwujący</dt><dd>{Number(meta.channel_follower_count).toLocaleString('pl-PL')}</dd></>}
+        </dl>
+        {video.transcript?.no_audio && <Empty>Nagranie bez ścieżki dźwiękowej.</Empty>}
+        {segs.length > 0 ? (
+          <div className="transcript">{segs.map((s, i) => (
+            <div key={i} className={`seg ${RISK_RE.test(s.text) ? 'risk' : ''}`}><span className="mono muted">{mmss(s.start)}</span> {s.text}</div>
+          ))}</div>
+        ) : !video.transcript?.no_audio && <Empty>Nie rozpoznano mowy.</Empty>}
+      </Panel>
+      <Panel title="Napisy na ekranie" meta="pierwsze pojawienie · czas widoczności">
+        {caps.length ? <table><tbody>{caps.map((c, i) => {
+          const risk = RISK_RE.test(c.text);
+          return (
+            <tr key={i}><td className="mono small">{mmss(c.t)}</td><td>{c.text}</td>
+              <td><span className={`chip ${risk && c.seen_s < 3 ? 'high' : risk ? 'low' : 'neutral'}`}>{c.seen_s?.toFixed(1)} s</span></td></tr>
+          );
+        })}</tbody></table> : <Empty>Brak tekstu na ekranie (lub OCR niedostępny).</Empty>}
+      </Panel>
+    </div>
+  );
+}
+
 function Summary({ materialId, analysis, tick }) {
   const { data, reload } = useData(`/summary/${materialId}`, `${tick}-${analysis?.id}`);
   return (
@@ -135,8 +172,9 @@ export default function Material() {
 
       {tab === 'Reguły zgodności (M2)' && (
         <Panel title="18 reguł UKNF – informacja o ryzyku" meta={`render: ${m.layout_engine}`}>
+          {m.video && <div className="notice" style={{ marginBottom: 8 }}>Wideo – mowa przepisana przez Whisper, napisy z klatek odczytane OCR. Reguły 4–6 oceniają wielkość, kontrast, położenie w kadrze i czas wyświetlania ostrzeżenia (min. 3 s); ostrzeżenie tylko w mowie oznaczane jest w regule 6.</div>}
           {m.layout_engine === 'ocr' && <div className="notice" style={{ marginBottom: 8 }}>Obraz reklamy (OCR) – reguły 4–6 ocenione na podstawie wysokości liter, kontrastu i położenia tekstu na obrazie; reguły 7–8 nie dotyczą obrazu statycznego.</div>}
-          {!['playwright', 'ocr'].includes(m.layout_engine) && <div className="notice" style={{ marginBottom: 8 }}>Materiał tekstowy – reguły wizualne 4–8 wymagają renderu strony i nie zostały ocenione.</div>}
+          {!['playwright', 'ocr', 'video'].includes(m.layout_engine) && !m.video && <div className="notice" style={{ marginBottom: 8 }}>Materiał tekstowy – reguły wizualne 4–8 wymagają renderu strony i nie zostały ocenione.</div>}
           <FindingsTable findings={byModule('m2')} />
         </Panel>
       )}
@@ -172,8 +210,9 @@ export default function Material() {
 
       {tab === 'Materiał' && (
         <div className="grid g2">
-          <Panel title={m.layout_engine === 'ocr' ? 'Obraz reklamy (OCR)' : 'Zrzut ekranu (desktop)'} meta="ramki: czerwona = ostrzeżenie o ryzyku, niebieska = obietnica zysku">
-            {m.screenshot ? <AnnotatedShot src={m.screenshot} vp={m.viewports?.desktop} boxes={r.doc?.highlights ?? []} /> : <Empty>Brak zrzutu (materiał tekstowy).</Empty>}
+          <Panel title={m.layout_engine === 'video' ? 'Klatki wideo z tekstem (OCR)' : m.layout_engine === 'ocr' ? 'Obraz reklamy (OCR)' : 'Zrzut ekranu (desktop)'} meta="ramki: czerwona = ostrzeżenie o ryzyku, niebieska = obietnica zysku">
+            {m.screenshot ? <AnnotatedShot src={m.screenshot} vp={m.viewports?.desktop} boxes={r.doc?.highlights ?? []} /> : <Empty>{m.video ? 'Brak tekstu na ekranie – analiza na podstawie mowy.' : 'Brak zrzutu (materiał tekstowy).'}</Empty>}
+            {m.image_ocr?.blocks > 0 && <p className="small muted">OCR grafik na stronie: {m.image_ocr.blocks} napisów z {m.image_ocr.images} grafik (banery z tekstem w obrazie).</p>}
             {Object.keys(m.viewports ?? {}).length > 0 && (
               <p className="small muted">Viewporty: {Object.entries(m.viewports).map(([k, v]) => `${k} ${v.width}×${v.height} (${v.blocks} bloków)`).join(' · ')}</p>
             )}
@@ -190,6 +229,8 @@ export default function Material() {
           </Panel>
         </div>
       )}
+
+      {tab === 'Materiał' && m.video && <VideoPanel video={m.video} />}
 
       {tab === 'Historia' && (
         <Panel title="Historia analiz">

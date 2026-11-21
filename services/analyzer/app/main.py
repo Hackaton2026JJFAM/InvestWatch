@@ -55,6 +55,9 @@ class Block(BaseModel):
     in_modal: bool = False
     is_link: bool = False
     href: str | None = None
+    in_image: bool = False             # napis odczytany OCR z grafiki na stronie
+    video_t: float | None = None       # wideo: sekunda pierwszego pojawienia się napisu
+    seen_s: float | None = None        # wideo: przez ile sekund napis był na ekranie
 
     model_config = {"extra": "ignore"}
 
@@ -71,6 +74,7 @@ class Layout(BaseModel):
     engine: str = "none"
     reason: str | None = None
     viewports: dict[str, Viewport] = {}
+    video: dict | None = None
 
     model_config = {"extra": "ignore"}
 
@@ -95,6 +99,7 @@ class Material(BaseModel):
     full_text: str | None = Field(default=None, max_length=2_000_000)
     links: list[Link] = Field(default=[], max_length=2000)
     layout: Layout = Layout()
+    transcript: dict | None = None     # wideo: transkrypcja mowy (Whisper)
 
     model_config = {"extra": "ignore"}
 

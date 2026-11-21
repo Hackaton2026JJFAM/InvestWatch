@@ -173,3 +173,30 @@ def test_eu_sanctions_name_is_verification_signal_only():
 def test_single_word_or_partial_name_does_not_hit_sanctions():
     r = run("Hussein i Saddam to popularne imiona. Inwestowanie wiąże się z ryzykiem.")
     assert "M1.8" not in r["by_rule"]
+
+
+def _video(blocks, spoken=""):
+    from app.main import Material
+    text = "\n".join([*(b["text"] for b in blocks), spoken]).strip()
+    layout = {"engine": "video", "viewports": {"desktop": {"width": 1366, "height": 2428, "page_height": 2428 * 3,
+                                                           "screenshot_height": 2428 * 3, "blocks": blocks}}} if blocks else {"engine": "none"}
+    m = Material(url="https://www.tiktok.com/@x/video/1", platform="tiktok", content_text=text, full_text=text, layout=layout,
+                 transcript={"text": spoken, "segments": [], "language": "pl"})
+    r = analyze_material(m.model_dump())
+    return {f["rule_id"]: f for f in r["findings"]}
+
+
+def test_video_warning_flashed_too_briefly():
+    f = _video([
+        {"text": "ZYSK 30% MIESIĘCZNIE", "font_size": 70, "contrast": 12, "x": 100, "y": 1000, "w": 1100, "h": 80, "seen_s": 6.0, "video_t": 1},
+        {"text": "Inwestowanie wiąże się z ryzykiem utraty kapitału.", "font_size": 30, "contrast": 9, "x": 200, "y": 7000,
+         "w": 900, "h": 30, "seen_s": 1.5, "video_t": 9.75},
+    ], spoken="Zarobisz nawet trzydzieści procent miesięcznie.")
+    assert f["5"]["status"] == "fail" and "zbyt krótko" in f["5"]["explanation"]
+    assert f["7"]["status"] == "na" and f["8"]["status"] == "not_checked"
+
+
+def test_video_warning_only_spoken():
+    f = _video([], spoken="Zarabiaj dwadzieścia procent rocznie. Inwestowanie wiąże się z ryzykiem utraty kapitału.")
+    assert f["6"]["status"] == "warn" and "dźwiękowej" in f["6"]["explanation"]
+    assert f["4"]["status"] == "not_checked"

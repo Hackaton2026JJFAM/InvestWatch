@@ -1,5 +1,6 @@
 // Klienci HTTP do serwisów Python (scraper, analyzer). Timeout + czytelne błędy.
 import { config } from './config.js';
+import { isVideoUrl, longPost } from './video.js';
 
 export class UpstreamError extends Error {
   constructor(service, status, detail) {
@@ -31,8 +32,23 @@ async function call(base, service, path, { method = 'POST', body, timeoutMs = 90
   }
 }
 
+async function callLong(path, opts) {
+  try {
+    const { status, data } = await longPost(config.scraperUrl, path, opts);
+    if (status >= 400) throw new UpstreamError('scraper', status, typeof data.detail === 'string' ? data.detail : undefined);
+    return data;
+  } catch (err) {
+    if (err instanceof UpstreamError) throw err;
+    throw new UpstreamError('scraper', 0, err.name === 'AbortError' ? 'przekroczono czas odpowiedzi (wideo)' : 'serwis niedostępny');
+  }
+}
+
 export const scraper = {
-  url: (url) => call(config.scraperUrl, 'scraper', '/scrape', { body: { url, render: true } }),
+  // adresy wideo (TikTok, Reels, YouTube, …): pobranie + Whisper + OCR klatek trwa minuty
+  url: (url) => (isVideoUrl(url)
+    ? callLong('/scrape/video', { json: { url } })
+    : call(config.scraperUrl, 'scraper', '/scrape', { body: { url, render: true } })),
+  videoFile: (file, meta = {}) => callLong(`/scrape/video/file?${new URLSearchParams(Object.entries(meta).filter(([, v]) => v))}`, { file }),
   html: (html, url, meta = {}) => call(config.scraperUrl, 'scraper', '/scrape/html', { body: { html, url, ...meta } }),
   text: (payload) => call(config.scraperUrl, 'scraper', '/scrape/text', { body: payload }),
   image: (payload) => call(config.scraperUrl, 'scraper', '/scrape/image', { body: payload, timeoutMs: 120000 }),

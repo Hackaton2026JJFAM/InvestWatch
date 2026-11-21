@@ -49,7 +49,7 @@ export default function Scan() {
         <Panel title="Analiza adresów URL">
           <textarea placeholder={'https://przyklad.pl/oferta\nhttps://www.tiktok.com/@konto/video/…'} value={urls} onChange={(e) => setUrls(e.target.value)} />
           <div className="btn-row" style={{ marginTop: 8, justifyContent: 'space-between' }}>
-            <span className="small muted">Jeden adres w linii (maks. 50). Adresy prywatne/lokalne są blokowane (SSRF).</span>
+            <span className="small muted">Jeden adres w linii (maks. 50). Wideo z TikToka, Instagrama, YouTube, Facebooka, X, Threads, LinkedIn, Vimeo i in. – transkrypcja mowy + OCR klatek; link do grafiki/zdjęcia – OCR. Adresy prywatne/lokalne są blokowane (SSRF).</span>
             <button className="btn primary" onClick={submitUrls}>Analizuj</button>
           </div>
         </Panel>
