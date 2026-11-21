@@ -82,6 +82,7 @@ cd services/frontend && npx vite                                         # http:
 ```bash
 python -m venv .venv && .venv/Scripts/pip install -r services/analyzer/requirements-dev.txt -r services/scraper/requirements.txt
 cd services/analyzer && ../../.venv/Scripts/python -m pytest -q
+cd services/backend && npm test                                          # integracyjne wymagają działającego stosu
 python -m tools.evaluate --samples ../../data/samples --threshold 45   # wymaga scrapera i analyzera
 python -m tools.knf_import --out app/data/knf_registry.json            # odświeżenie rejestru KNF
 ```
