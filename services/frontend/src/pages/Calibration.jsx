@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { Empty, Panel, pct, StatCard } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
+import { HelpTip } from '../components/HelpTip.jsx';
 
 // Próg nie zmienia wyników klasyfikatora – zmienia tylko decyzję, co zostanie oznaczone.
 function confusion(items, t) {
@@ -47,7 +48,7 @@ export default function Calibration() {
           <b style={{ fontSize: '2rem', minWidth: 60 }}>{t}</b>
           <input type="range" className="slider" min={0} max={100} value={t} onChange={(e) => setT(Number(e.target.value))} aria-label="Próg ryzyka" />
         </div>
-        <p className="small muted" style={{ margin: '6px 0 0' }}>Kategorie: wysokie ≥ {t} · średnie ≥ {Math.round(t * 0.6)} · niskie poniżej. Zmiana progu nie zmienia wyników klasyfikatora, tylko decyzję o oznaczeniu.</p>
+        <p className="small muted" style={{ margin: '6px 0 0' }}>Kategorie: wysokie ≥ {t} · średnie ≥ {Math.round(t * 0.6)} · niskie poniżej. Zmiana progu nie zmienia wyników klasyfikatora, tylko decyzję o oznaczeniu. <HelpTip term="risk_threshold" label="próg ryzyka" /></p>
       </Panel>
       <div className="grid g4" style={{ marginTop: 16 }}>
         <StatCard label="Materiały powyżej progu (alerty)" value={c.flagged} sub={`przy obecnym progu ${data.current}: ${cur.flagged}`} tone="high" />
@@ -57,15 +58,15 @@ export default function Calibration() {
           <span className="small muted">Macierz pomyłek (dane testowe)</span>
           <div className="confusion" style={{ marginTop: 6 }}>
             <div style={{ background: 'var(--low-bg)' }}><b>{c.tp}</b>TP</div>
-            <div style={{ background: 'var(--high-bg)' }}><b>{c.fp}</b>False Positive</div>
-            <div style={{ background: 'var(--mid-bg)' }}><b>{c.fn}</b>False Negative</div>
+            <div style={{ background: 'var(--high-bg)' }}><b>{c.fp}</b><span>Wynik fałszywie dodatni <HelpTip term="false_positive" label="wynik fałszywie dodatni" /></span></div>
+            <div style={{ background: 'var(--mid-bg)' }}><b>{c.fn}</b><span>Wynik fałszywie ujemny <HelpTip term="false_negative" label="wynik fałszywie ujemny" /></span></div>
             <div style={{ background: 'var(--na-bg)' }}><b>{c.tn}</b>TN</div>
           </div>
         </div>
       </div>
       <div className="grid g2" style={{ marginTop: 16 }}>
         <Panel title="Wpływ progu na decyzje" meta="krok 5 punktów">
-          <Legend items={[{ label: 'Alerty (powyżej progu)', color: col.s1 }, { label: 'False Positive', color: col.s2 }, { label: 'False Negative', color: col.s3 }]} />
+          <Legend items={[{ label: 'Alerty (powyżej progu)', color: col.s1 }, { label: 'Wyniki fałszywie dodatnie', color: col.s2 }, { label: 'Wyniki fałszywie ujemne', color: col.s3 }]} />
           <ResponsiveContainer width="100%" height={270}>
             <LineChart data={data.curve} margin={{ left: -18, right: 12, top: 14 }}>
               <ChartGrid c={col} />
@@ -74,8 +75,8 @@ export default function Calibration() {
               <Tooltip cursor={cursorStyle(col)} content={<ChartTooltip labelFormatter={(l) => `próg ${l}`} />} />
               <ReferenceLine x={Math.round(t / 5) * 5} stroke={col.axis} strokeDasharray="4 4" label={{ value: `próg ${t}`, fontSize: 11, fill: col.text, position: 'top' }} />
               <Line type="monotone" dataKey="flagged" name="Alerty" stroke={col.s1} dot={false} strokeWidth={2} activeDot={{ r: 4, stroke: col.surface, strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="fp" name="False Positive" stroke={col.s2} dot={false} strokeWidth={2} activeDot={{ r: 4, stroke: col.surface, strokeWidth: 2 }} />
-              <Line type="monotone" dataKey="fn" name="False Negative" stroke={col.s3} dot={false} strokeWidth={2} activeDot={{ r: 4, stroke: col.surface, strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="fp" name="Wyniki fałszywie dodatnie" stroke={col.s2} dot={false} strokeWidth={2} activeDot={{ r: 4, stroke: col.surface, strokeWidth: 2 }} />
+              <Line type="monotone" dataKey="fn" name="Wyniki fałszywie ujemne" stroke={col.s3} dot={false} strokeWidth={2} activeDot={{ r: 4, stroke: col.surface, strokeWidth: 2 }} />
             </LineChart>
           </ResponsiveContainer>
         </Panel>

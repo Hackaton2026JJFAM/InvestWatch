@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AreaGradient, axisProps, barCursor, ChartGrid, ChartTooltip, cursorStyle, Legend, useChartColors } from '../components/charts.jsx';
 import { Empty, fmtDate, MODULES, ModuleChips, Panel, RiskBadge, Score, StatCard } from '../components/ui.jsx';
@@ -21,7 +21,6 @@ export default function Dashboard() {
   const { tick } = useLive();
   const c = useChartColors();
   const { data, error } = useData('/dashboard/stats', tick);
-  const nav = useNavigate();
   const trend = useMemo(() => fillDays(data?.trend ?? []), [data]);
   if (error) return <Empty>Nie udało się pobrać statystyk: {error.message}</Empty>;
   if (!data) return <Empty>Ładowanie…</Empty>;
@@ -78,8 +77,8 @@ export default function Dashboard() {
             <div className="table-wrap"><table>
               <thead><tr><th>Materiał</th><th>Moduły</th><th>Wynik</th><th>Ryzyko</th><th>Data</th></tr></thead>
               <tbody>{recent.map((m) => (
-                <tr key={m.id} className="click" onClick={() => nav(`/materials/${m.id}`)}>
-                  <td className="truncate" style={{ maxWidth: 260 }}>{m.title || m.url}</td>
+                <tr key={m.id}>
+                  <td className="truncate" style={{ maxWidth: 260 }}><Link to={`/materials/${m.id}`}>{m.title || m.url}</Link></td>
                   <td><ModuleChips modules={m.modules} /></td>
                   <td><Score score={m.score} threshold={threshold} /></td>
                   <td><RiskBadge risk={m.risk} /></td>
