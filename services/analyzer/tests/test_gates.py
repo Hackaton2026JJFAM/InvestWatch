@@ -74,3 +74,43 @@ def test_summary_names_advertised_firm():
     line = advertised_line(r)
     assert line and "XTB S.A." in line and "@krypto" in line and "tiktok" in line
     assert advertised_line(run(BONDS)) is None
+
+
+# ------------------------------------------------------------------ fałszywe sygnały oszustwa (filmy sponsorowane przez XTB)
+def _signals(text):
+    return {s["key"] for s in run(text, url="https://www.youtube.com/watch?v=x", platform="youtube", author="Kanał")["profile"]["signals"]}
+
+
+def test_narrative_hurry_is_not_time_pressure():
+    assert "presja_czasu" not in _signals("Sprzedający bardzo spieszył się ze sprzedażą mieszkania, więc kupiłem taniej i zarobiłem na inwestycji.")
+    assert "presja_czasu" in _signals("Pospiesz się, zainwestuj w nasz fundusz i zarabiaj!")
+
+
+def test_capital_gains_noun_is_not_recovery_scam():
+    assert "odzyskiwanie" not in _signals("Nowe przepisy o opodatkowaniu odzysków kapitałowych mogą zmienić decyzje inwestorów na giełdzie.")
+    assert "odzyskiwanie" in _signals("Straciłeś na inwestycji? Odzyskamy Twoje środki od brokera w 48 godzin.")
+
+
+def test_double_bottom_is_not_doubling_money():
+    r = run("Na wykresie kursu akcji widać podwójne dno, a potem wybicie i zysk. To klasyczna formacja podwójnego szczytu.",
+            url="https://www.youtube.com/watch?v=x", platform="youtube", author="Kanał")
+    assert not any(c.get("multiplier") for c in r["profile"]["returns"])
+
+
+def test_100_percent_idiom_is_not_return():
+    r = run("Jestem w 100% przekonany, że od początku roku zarobiłem dużo pieniędzy dzięki inwestycjom na giełdzie.",
+            url="https://www.youtube.com/watch?v=x", platform="youtube", author="Kanał")
+    assert not r["profile"]["returns"]
+
+
+def test_treasury_bonds_without_risk_are_not_scam_guarantee():
+    keys = _signals("Kupuję obligacje indeksowane inflacją co miesiąc i zarabiam na odsetkach. "
+                    "Cała kwota jest wysoko oprocentowana bez żadnego ryzyka.")
+    assert "gwarancja" not in keys
+    # obligacje korporacyjne „bez ryzyka” nadal są sygnałem
+    assert "gwarancja" in _signals("Nasze obligacje korporacyjne dają 15% rocznie zysku bez żadnego ryzyka.")
+
+
+def test_bond_rate_from_ocr_is_not_unrealistic():
+    keys = _signals("Zobacz list emisyjny > Sprzedaż: 01.05.2026 - 31.05.2026 55% w pierwszym roku odsetkowym, zysk z obligacji.")
+    assert "nierealne_zyski" not in keys
