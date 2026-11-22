@@ -1,5 +1,6 @@
 // Przetwarzanie zadania: scraper -> deduplikacja -> analyzer -> zapis -> alert -> WebSocket.
 import { verifiedAdvisorFor } from './advisors.js';
+import { excludedBy, getExcludes } from './exclude.js';
 import { UnrecoverableError } from 'bullmq';
 import { getThreshold, one, q, tx } from './db.js';
 import { log } from './log.js';
@@ -92,6 +93,21 @@ export async function processScan(job) {
     }
   }
 
+  // monitoring / wyszukiwanie: wykluczone słowa (np. gry) – najpierw po tytule z wyszukiwania (bez pobierania),
+  // potem po pełnym tytule, opisie i tagach pobranego materiału. Ręcznie zlecona analiza nie jest filtrowana.
+  const auto = Boolean(data.watchId || data.discover);
+  const excludes = auto ? await getExcludes() : [];
+  const skip = async (word) => {
+    await q("UPDATE scan_jobs SET status = 'excluded', error = $2, finished_at = now() WHERE id = $1", [jobId, `wykluczone słowo: ${word}`]);
+    emit('scan:update', { id: jobId, status: 'excluded' });
+    log.info('scan excluded', { jobId, url: data.url, word });
+    return { excluded: word };
+  };
+  if (auto && data.title) {
+    const w = excludedBy({ title: data.title }, excludes);
+    if (w) return skip(w);
+  }
+
   let material;
   try {
     material = await fetchMaterial(data);
@@ -100,6 +116,11 @@ export async function processScan(job) {
     return fail(jobId, err, job);
   }
   if (data.kind === 'video') await removeUpload(data.file); // plik nie jest już potrzebny
+  if (auto) {
+    const meta = material.video_meta ?? material.layout?.video?.meta ?? {};
+    const w = excludedBy({ title: material.title, author: material.author, description: material.description, tags: meta.tags ?? [] }, excludes);
+    if (w) return skip(w);
+  }
 
   // duplikat = ten sam URL, ta sama treść i ten sam wygląd ostrzeżeń; zmiana samego CSS tworzy nową wersję
   const dup = await one('SELECT id FROM materials WHERE url = $1 AND content_hash = $2 AND layout_hash IS NOT DISTINCT FROM $3',

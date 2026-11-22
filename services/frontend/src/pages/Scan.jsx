@@ -6,8 +6,8 @@ import { Empty, fmtDate, Panel } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
-const JOB = { queued: 'na', running: 'mid', done: 'pass', duplicate: 'neutral', failed: 'fail' };
-const JOB_LABEL = { queued: 'w kolejce', running: 'w toku', done: 'gotowe', duplicate: 'duplikat', failed: 'błąd' };
+const JOB = { queued: 'na', running: 'mid', done: 'pass', duplicate: 'neutral', excluded: 'neutral', failed: 'fail' };
+const JOB_LABEL = { queued: 'w kolejce', running: 'w toku', done: 'gotowe', duplicate: 'duplikat', excluded: 'wykluczone', failed: 'błąd' };
 
 export default function Scan() {
   const { tick, toast } = useLive();

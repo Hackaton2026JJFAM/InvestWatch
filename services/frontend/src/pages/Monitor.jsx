@@ -39,6 +39,16 @@ export default function Monitor() {
   const [newWord, setNewWord] = useState('');
   const [showExcluded, setShowExcluded] = useState(false);
   const words = excl.data?.words ?? [];
+  const junk = useData(editExcl ? '/materials-excluded' : null, `${tick}-${words.join(',')}`);
+  const purge = async () => {
+    const n = junk.data?.length ?? 0;
+    if (!n || !window.confirm(`Usunąć ${n} już pobranych materiałów z wykluczonymi słowami (razem z analizami i alertami)? Tej operacji nie można cofnąć.`)) return;
+    try {
+      const r = await api.del('/materials-excluded');
+      toast({ kind: 'info', title: 'Usunięto', text: `${r.deleted} materiałów z wykluczonymi słowami.` });
+      junk.reload();
+    } catch (e) { if (e.auth !== 'cancelled') toast({ kind: 'error', title: 'Nie usunięto', text: e.message }); }
+  };
   const saveWords = async (list) => {
     try { await api.put('/settings/exclude-keywords', { words: list }); excl.reload(); } catch (e) { toast({ kind: 'error', title: 'Wykluczenia', text: e.message }); }
   };
@@ -168,6 +178,12 @@ export default function Monitor() {
               <button className="btn" onClick={() => saveWords(excl.data?.defaults ?? [])} title="Przywróć domyślną listę (gry)">Przywróć domyślne</button>
               <button className="btn" onClick={() => setEditExcl(false)}>Zamknij</button>
             </div>
+            {junk.data?.length > 0 && (
+              <div className="small">
+                Już pobrane materiały z tymi słowami: <b>{junk.data.length}</b> ({junk.data.slice(0, 3).map((m) => `„${(m.title || m.url).slice(0, 40)}”`).join(', ')}{junk.data.length > 3 ? '…' : ''}){' '}
+                <button className="btn danger" onClick={purge}>Usuń je</button>
+              </div>
+            )}
           </div>
         )}
 

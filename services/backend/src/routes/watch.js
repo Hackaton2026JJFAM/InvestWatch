@@ -1,12 +1,13 @@
 // Monitoring popularnych treści: tagi, wyszukiwanie kandydatów, zapisane zapytania.
 import { Router } from 'express';
-import { DEFAULT_EXCLUDE, getExcludes, setExcludes } from '../exclude.js';
+import { DEFAULT_EXCLUDE, excludedBy, getExcludes, setExcludes } from '../exclude.js';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { one, q } from '../db.js';
 import { enqueue, priorityFor } from '../queue.js';
 import { normTag, PL_SCAM_PHRASES, PRESET_TAGS, WATCH_PRESETS } from '../reach.js';
 import { parse } from '../validate.js';
+import { emit } from '../realtime.js';
 import { discoverCandidates, getWatch, runWatch } from '../watch.js';
 import { refreshTags, trendingTags } from '../tags.js';
 
@@ -52,11 +53,28 @@ r.put('/settings/exclude-keywords', async (req, res) => {
   res.json({ words: await setExcludes(words) });
 });
 
+// Materiały z wykluczonymi słowami w tytule/opisie/tagach (np. gry pobrane przed dodaniem słowa do listy).
+// GET = podgląd, DELETE (administrator) = usunięcie razem z analizami i alertami.
+async function excludedMaterials() {
+  const words = await getExcludes();
+  const rows = await q(`SELECT id, title, url, author, tags, raw->>'description' AS description,
+                               raw->'layout'->'video'->'meta'->'tags' AS meta_tags FROM materials`);
+  return rows.map((m) => ({ ...m, word: excludedBy({ ...m, tags: [...(m.tags ?? []), ...(Array.isArray(m.meta_tags) ? m.meta_tags : [])] }, words) }))
+    .filter((m) => m.word).map(({ id, title, url, word }) => ({ id, title, url, word }));
+}
+r.get('/materials-excluded', async (_req, res) => res.json(await excludedMaterials()));
+r.delete('/materials-excluded', requireAdmin, async (_req, res) => {
+  const list = await excludedMaterials();
+  if (list.length) await q('DELETE FROM materials WHERE id = ANY($1)', [list.map((m) => m.id)]);
+  emit('material:deleted', { ids: list.map((m) => m.id) });
+  res.json({ deleted: list.length, items: list });
+});
+
 // Kolejkowanie wybranych kandydatów z priorytetem wg wyświetleń
 r.post('/discover/video/enqueue', async (req, res) => {
   const b = parse(z.object({ items: z.array(z.object({ url: z.url({ protocol: /^https?$/ }).max(2048), views: z.number().int().nullable().optional(), title: z.string().max(500).nullable().optional() })).min(1).max(50) }), req.body);
   const jobs = [];
-  for (const i of b.items) jobs.push(await enqueue({ kind: 'url', url: i.url, title: i.title ?? undefined }, 'discover', { priority: priorityFor(i.views) }));
+  for (const i of b.items) jobs.push(await enqueue({ kind: 'url', url: i.url, title: i.title ?? undefined, discover: true }, 'discover', { priority: priorityFor(i.views) }));
   res.status(202).json({ jobs });
 });
 

@@ -69,6 +69,7 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 
 ## Wykluczenia i sprawdzeni doradcy (22.11.2026)
 - [x] Filtr wykluczeń w wyszukiwaniu kandydatów: stała lista słów (domyślnie gry: gta, gta5, roblox, fortnite, minecraft…; edycja w Monitoringu) + dodatkowe słowa dla pojedynczego wyszukiwania; dopasowanie w tytule/opisie/autorze/tagach, także początek słowa (gta5 → gta5rp); wykluczone nie trafiają do analizy ani do stałego monitoringu, w wynikach ukryte z licznikiem i opcją „pokaż”
+- [x] Wykluczenia także po pobraniu: zadania z monitoringu/wyszukiwania sprawdzane po tytule z wyszukiwania (przed pobraniem) i po pełnym tytule, opisie i tagach pobranego materiału – status „wykluczone”, bez analizy i alertu; sprzątanie już pobranych (`/api/materials-excluded`, przycisk w panelu wykluczeń); usunięte 8 materiałów z gier (GTA Online, Fortnite, Roblox, Minecraft) wciągniętych przez frazę „darmowa kasa”
 - [x] Sprawdzeni doradcy: analityk oznacza publikującego (konto, domena lub nr licencji) jako sprawdzonego w rejestrze KNF → przesłanki o braku/niepotwierdzonych uprawnieniach (M3.1–M3.3) nie liczą się, także dla przyszłych materiałów; M3.4 (lista ostrzeżeń) i M3.5 (nierealne obietnice) nadal się liczą; cofnięcie przelicza materiały ponownie
 
 ## Stabilność scrapera (22.11.2026)
