@@ -118,8 +118,8 @@ export default function Monitor() {
   };
   const run = async (w) => {
     try {
-      const r = await api.post(`/watch/${w.id}/run`);
-      toast({ kind: 'info', title: `Sprawdzono: ${w.query}`, text: `Znaleziono ${r.found}, do analizy: ${r.queued}` });
+      await api.post(`/watch/${w.id}/run`);
+      toast({ kind: 'info', title: `Sprawdzam: ${w.query}`, text: 'Przeszukiwanie platform trwa do kilku minut – wynik pojawi się w kolumnie „Ostatnio sprawdzono”.' });
     } catch (e) { toast({ kind: 'error', title: 'Monitoring', text: e.message }); }
     watches.reload();
   };

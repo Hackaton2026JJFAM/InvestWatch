@@ -8,6 +8,7 @@ import { q, tx } from './db.js';
 import { log } from './log.js';
 import { emit } from './realtime.js';
 import { PRESET_TAGS } from './reach.js';
+import { excludedBy, getExcludes } from './exclude.js';
 
 // tagi zbyt ogólne, by monitorować je automatycznie (dużo treści spoza finansów)
 const GENERIC = new Set(['fyp', 'foryou', 'foryoupage', 'viral', 'dc', 'xyzbca', 'polska', 'poland', 'shorts', 'short', 'reels', 'tiktok',
@@ -16,6 +17,12 @@ const GENERIC = new Set(['fyp', 'foryou', 'foryoupage', 'viral', 'dc', 'xyzbca',
   'reklama', 'ad', 'ads', 'sponsored', 'sponsor', 'sponsorowane', 'wspolpraca', 'współpraca', 'partner', 'partnership', 'paidpartnership']);
 
 export async function refreshTagStats({ days = 30 } = {}) {
+  // materiały z wykluczonymi słowami (np. gry) nie zasilają rankingu – inaczej automatyczny monitoring
+  // „uczyłby się” tagów z gier (gtav, dlc, bunkier…) i wciągał kolejne takie treści
+  const words = await getExcludes();
+  const rows = await q(`SELECT id, title, author, tags, raw->>'description' AS description FROM materials
+                         WHERE fetched_at > now() - make_interval(days => $1) AND lang = 'pl'`, [days]);
+  const allowed = rows.filter((m) => !excludedBy(m, words)).map((m) => m.id);
   // popularność = log zasięgu + liczba materiałów, wzmocniona ryzykiem; trend = ostatnie 7 dni vs poprzednie 7
   // pełne przeliczenie w jednej transakcji – tagi, które wypadły z okna, znikają z rankingu
   await tx(async (t) => {
@@ -31,10 +38,11 @@ export async function refreshTagStats({ days = 30 } = {}) {
        FROM materials m CROSS JOIN LATERAL unnest(m.tags) t
        JOIN LATERAL (SELECT score FROM analyses WHERE material_id = m.id ORDER BY created_at DESC LIMIT 1) a ON TRUE
       WHERE m.fetched_at > now() - make_interval(days => $1) AND m.lang = 'pl'   -- monitoring nastawiony na treści polskie
+        AND m.id = ANY($2::int[])
       GROUP BY t
      ON CONFLICT (tag) DO UPDATE SET materials = EXCLUDED.materials, views = EXCLUDED.views, avg_score = EXCLUDED.avg_score,
        scams = EXCLUDED.scams, recent = EXCLUDED.recent, previous = EXCLUDED.previous, popularity = EXCLUDED.popularity, updated_at = now()`,
-    [days]);
+    [days, allowed]);
   });
 }
 
@@ -51,9 +59,10 @@ export async function trendingTags(limit = 40) {
 export async function syncAutoWatches() {
   const k = config.tagAutoWatch;
   if (!k) return { added: 0, paused: 0 };
-  let top = (await trendingTags(k * 2)).map((t) => t.tag).filter((t) => !GENERIC.has(t)).slice(0, k);
+  const words = await getExcludes();
+  let top = (await trendingTags(k * 3)).map((t) => t.tag).filter((t) => !GENERIC.has(t) && !excludedBy({ title: t }, words)).slice(0, k);
   // zimny start (pusta baza): polskie tagi finansowe jako punkt wyjścia – zastępowane danymi, gdy się pojawią
-  if (top.length < k) top = [...new Set([...top, ...PRESET_TAGS.filter((t) => !GENERIC.has(t))])].slice(0, k);
+  if (top.length < k) top = [...new Set([...top, ...PRESET_TAGS.filter((t) => !GENERIC.has(t) && !excludedBy({ title: t }, words))])].slice(0, k);
   const added = await q(
     `INSERT INTO watch_queries (platform, kind, query, sort, min_views, max_per_run, polish, auto)
      SELECT 'all', 'hashtag', t, 'views', $2, 5, TRUE, TRUE FROM unnest($1::text[]) t

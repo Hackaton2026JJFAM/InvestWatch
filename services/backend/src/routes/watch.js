@@ -146,12 +146,16 @@ r.post('/watch/:id/run', async (req, res) => {
   const { id } = parse(idParam, req.params);
   const w = await getWatch(id);
   if (!w) return res.status(404).json({ error: 'Nie znaleziono zapytania' });
-  try {
-    const out = await runWatch(w);
-    res.json({ found: out.found, queued: out.queued });
-  } catch (err) {
-    res.status(502).json({ error: err.message });
+  if (req.query.wait === '1') {
+    try {
+      const out = await runWatch(w);
+      return res.json({ found: out.found, queued: out.queued });
+    } catch (err) {
+      return res.status(502).json({ error: err.message });
+    }
   }
+  runWatch(w).catch(() => {});   // błąd zapisuje się w last_error
+  res.status(202).json({ started: true });
 });
 
 export default r;
