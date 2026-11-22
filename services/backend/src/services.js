@@ -55,7 +55,8 @@ export const scraper = {
   // kandydaci do monitoringu (tylko metadane): YouTube fraza/hashtag/kanał, TikTok profil
   discoverVideo: (body) => call(config.scraperUrl, 'scraper', '/discover/video', { body, timeoutMs: 120000 }),
   discover: (url, limit = 10) => call(config.scraperUrl, 'scraper', '/discover', { body: { url, limit } }),
-  health: () => call(config.scraperUrl, 'scraper', '/health', { method: 'GET', timeoutMs: 3000 }),
+  // przy transkrypcji wideo scraper odpowiada wolniej – dłuższy czas niż dla analizatora
+  health: () => call(config.scraperUrl, 'scraper', '/health', { method: 'GET', timeoutMs: config.scraperHealthTimeoutMs }),
 };
 
 export const analyzer = {

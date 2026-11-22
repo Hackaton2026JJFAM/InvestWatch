@@ -35,6 +35,11 @@ MAX_BYTES = int(os.getenv("VIDEO_MAX_MB", "250")) * 1024 * 1024
 MAX_FRAMES = int(os.getenv("VIDEO_MAX_FRAMES", "24"))
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small")
 WHISPER_LANG = os.getenv("WHISPER_LANG") or None                     # None = wykrywanie języka
+# wątki CPU dla Whispera – domyślnie połowa rdzeni, żeby scraper nadal odpowiadał (render stron, health)
+WHISPER_THREADS = int(os.getenv("WHISPER_THREADS") or max(1, (os.cpu_count() or 2) // 2))
+# wyłącznik transkrypcji (np. słaby sprzęt na prezentacji): z filmów liczą się wtedy napisy (OCR) i opis
+TRANSCRIBE = os.getenv("VIDEO_TRANSCRIBE", "true").lower() not in ("0", "false", "no", "off")
+RETRY_PL_MAX_S = 90   # druga próba po polsku tylko dla krótkich klipów (koszt CPU)
 COOKIES = os.getenv("SCRAPER_COOKIES_FILE") or None
 TARGET_W = ocr.TARGET_W
 SHEET_W = 480                                                         # szerokość podglądu klatek
@@ -65,6 +70,10 @@ VIDEO_EXT = re.compile(r"\.(mp4|m4v|webm|mov|mkv|avi|mpeg|mpg|3gp)$", re.I)
 
 class VideoUnavailable(RuntimeError):
     """Brak narzędzi (whisper/ffmpeg) albo materiału nie da się pobrać."""
+
+
+class PlatformBlocked(Exception):
+    """Platforma odmówiła dostępu (403, blokada IP, region) – ponawianie nic nie da, potrzebny plik od analityka."""
 
 
 class NoVideoInPost(RuntimeError):
@@ -106,7 +115,7 @@ def capabilities() -> dict:
             return False
     return {"yt_dlp": has("yt_dlp"), "whisper": has("faster_whisper"), "av": has("av"),
             "ffmpeg": bool(shutil.which("ffmpeg")), "ocr": ocr.available(), "js_runtime": bool(shutil.which("deno") or shutil.which("node")),
-            "model": WHISPER_MODEL}
+            "model": WHISPER_MODEL, "transcribe": TRANSCRIBE, "whisper_threads": WHISPER_THREADS}
 
 
 # ---------------------------------------------------------------------------- pobieranie
@@ -166,6 +175,10 @@ def download(url: str, workdir: str) -> tuple[str, dict]:
             raise VideoUnavailable("Platforma wymaga zalogowania lub materiał jest prywatny – wgraj plik wideo ręcznie") from exc
         if "unsupported url" in low:
             raise VideoRejected("Nieobsługiwany adres wideo") from exc
+        if any(k in low for k in ("ip address is blocked", "http error 403", "forbidden", "video not available", "status code 0",
+                                  "not available in your country", "geo restrict")):
+            raise PlatformBlocked("Platforma zablokowała pobranie tego materiału (ochrona przed botami lub ograniczenie regionalne) – "
+                                  "wgraj plik wideo ręcznie") from exc
         if "does not pass filter" in low or "skipping" in low:
             raise VideoRejected(f"Materiał przekracza limit {MAX_DURATION // 60} min albo jest transmisją na żywo") from exc
         if "larger than max-filesize" in low or "file is larger" in low:
@@ -198,12 +211,15 @@ def _whisper():
             except ImportError as exc:
                 raise VideoUnavailable("Brak faster-whisper w środowisku scrapera") from exc
             log.info("loading whisper model %s", WHISPER_MODEL)
-            _model = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8",
+            _model = WhisperModel(WHISPER_MODEL, device="cpu", compute_type="int8", cpu_threads=WHISPER_THREADS,
                                   download_root=os.getenv("WHISPER_CACHE") or None)
         return _model
 
 
 def preload() -> None:
+    if not TRANSCRIBE:
+        log.info("video transcription disabled (VIDEO_TRANSCRIBE=false)")
+        return
     try:
         _whisper()
         log.info("whisper model %s ready", WHISPER_MODEL)
@@ -233,6 +249,8 @@ def _keep_segment(s) -> bool:
 
 
 def transcribe(path: str, limit_s: float | None = None) -> dict:
+    if not TRANSCRIBE:
+        return {"language": None, "language_probability": None, "segments": [], "text": "", "model": None, "disabled": True}
     if not has_audio(path):
         return {"language": None, "language_probability": None, "segments": [], "text": "", "model": WHISPER_MODEL, "no_audio": True}
     model = _whisper()
@@ -244,7 +262,7 @@ def transcribe(path: str, limit_s: float | None = None) -> dict:
 
     kept, info = run(WHISPER_LANG)
     # niepewne wykrycie języka (krótki klip, muzyka w tle) – monitoring nastawiony na polskie treści: druga próba po polsku
-    if not WHISPER_LANG and info.language != "pl" and (info.language_probability or 0) < 0.6:
+    if not WHISPER_LANG and info.language != "pl" and (info.language_probability or 0) < 0.6 and (info.duration or 0) <= RETRY_PL_MAX_S:
         kept_pl, info_pl = run("pl")
         if sum(len(s.text) for s in kept_pl) >= sum(len(s.text) for s in kept):
             kept, info = kept_pl, info_pl
@@ -518,8 +536,17 @@ def discover(platform: str, kind: str, query: str, limit: int = 20, sort: str = 
     if COOKIES and os.path.exists(COOKIES):
         opts["cookiefile"] = COOKIES
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(target, download=False)
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(target, download=False)
+        except DownloadError as first:
+            # mniej popularne tagi nie mają strony /hashtag/ („Unable to recognize tab page”) – szukamy „#tag” w wyszukiwarce YouTube
+            if (platform, kind) != ("youtube", "hashtag"):
+                raise
+            log.info("youtube hashtag page unavailable for %s, falling back to search: %s", query, str(first)[:120])
+            target = DISCOVER_SOURCES[("youtube", "search")](f"#{query.lstrip('#')}", limit, sort)
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(target, download=False)
     except DownloadError as exc:
         msg = str(exc).lower()
         if "login" in msg or "cookies" in msg or "sign in" in msg:

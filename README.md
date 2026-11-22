@@ -77,9 +77,12 @@ Wideo: model Whisper `small` zajmuje ~0,5 GB (wolumen `whisper`, pobierany przy 
 | `DEFAULT_THRESHOLD` | 45 | Początkowy próg ryzyka 0–100 (później zmiana w panelu kalibracji) |
 | `SCRAPER_PROXIES` | – | Lista proxy rozdzielona przecinkami |
 | `SCRAPER_ALLOW_PRIVATE` | false | Zezwolenie na adresy prywatne (domyślnie blokada SSRF) |
-| `WHISPER_MODEL` | small | Model transkrypcji wideo (`tiny`, `base`, `small`, `medium`) |
+| `WHISPER_MODEL` | small | Model transkrypcji wideo (`tiny`, `base`, `small`, `medium`); na słabszym sprzęcie `base` (~3× szybszy) |
+| `WHISPER_THREADS` | połowa rdzeni | Wątki CPU dla Whispera – reszta zostaje dla renderu stron i odpowiedzi API |
+| `VIDEO_TRANSCRIBE` | true | `false` wyłącza transkrypcję mowy (z filmów liczą się wtedy napisy z OCR i opis) |
+| `SCRAPER_HEALTH_TIMEOUT_MS` | 10000 | Czas oczekiwania backendu na `/health` scrapera; brak odpowiedzi przy pracy = „zajęty”, nie awaria |
 | `WHISPER_PRELOAD` | true | Ładowanie modelu w tle przy starcie scrapera |
-| `VIDEO_MAX_SECONDS`, `VIDEO_MAX_MB` | 900, 250 | Limity długości i rozmiaru wideo |
+| `VIDEO_MAX_SECONDS`, `VIDEO_MAX_MB` | 900, 250 | Analizowany fragment wideo (dłuższe filmy – pierwsze N sekund) i limit rozmiaru pliku |
 | `SCRAPER_COOKIES_FILE` | – | Opcjonalny plik cookies (format Netscape) dla materiałów wymagających logowania |
 | `WATCH_CRON` | `15 */3 * * *` | Uruchamianie zapisanych zapytań monitoringu wideo |
 | `WORKER_CONCURRENCY`, `VIDEO_WORKER_CONCURRENCY` | 2, 1 | Równoległość torów kolejki: strony / wideo (Whisper) – zwiększaj razem z `--scale scraper=N` |

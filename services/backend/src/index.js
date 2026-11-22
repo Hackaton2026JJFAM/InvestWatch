@@ -29,11 +29,30 @@ app.use(express.json({ limit: '16mb' })); // obrazy reklam do 10 MB (base64)
 app.get('/api/live', (_req, res) => res.json({ ok: true }));
 
 // Readiness: wszystkie usługi krytyczne; 503, gdy którakolwiek nie działa.
+// Scraper przetwarzający wideo (Whisper + OCR) może nie zdążyć z odpowiedzią – to „zajęty”, nie awaria:
+// zwracamy ostatni znany stan z flagą busy. „Wyłączony” = brak połączenia albo brak odpowiedzi od dawna.
+let lastScraper = null;
+let lastScraperAt = 0;
 app.get('/api/health', async (_req, res) => {
   const [db, scr, ana, queue] = await Promise.allSettled([pool.query('SELECT 1'), scraper.health(), analyzer.health(), queueHealth()]);
+  let scraperState = 'up';
+  let scraperBody = null;
+  if (scr.status === 'fulfilled') {
+    scraperBody = scr.value;
+    lastScraper = scr.value;
+    lastScraperAt = Date.now();
+  } else {
+    const timedOut = /przekroczono czas/.test(scr.reason?.message ?? '');
+    const recent = lastScraper && Date.now() - lastScraperAt < 15 * 60 * 1000;
+    if (timedOut && recent) {
+      scraperState = 'busy';
+      scraperBody = { ...lastScraper, busy: true };
+    } else scraperState = 'down';
+  }
   const body = {
     db: db.status === 'fulfilled',
-    scraper: scr.status === 'fulfilled' ? scr.value : null,
+    scraper: scraperBody,
+    scraper_state: scraperState,
     analyzer: ana.status === 'fulfilled' ? ana.value : null,
     queue: queue.status === 'fulfilled' ? queue.value : { ok: false },
   };

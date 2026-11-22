@@ -81,3 +81,23 @@ def test_whisper_hallucinations_are_dropped():
     assert not _keep_segment(S(text="Dziękuję za uwagę.", no_speech_prob=0.1, avg_logprob=-0.3))
     assert not _keep_segment(S(text="la la", no_speech_prob=0.9, avg_logprob=-1.0))
     assert _keep_segment(S(text="Zarabiam trzydzieści procent miesięcznie z tym botem", no_speech_prob=0.1, avg_logprob=-0.3))
+
+
+def test_platform_block_is_not_a_scraper_failure(monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import main, video
+    def throttled(*a, **k):
+        raise video.VideoUnavailable("Wyszukiwarka tymczasowo ograniczyła zapytania")
+    monkeypatch.setattr(video, "discover", throttled)
+    r = TestClient(main.app).post("/discover/video", json={"platform": "tiktok", "kind": "hashtag", "query": "darmowakasa"})
+    assert r.status_code == 200 and r.json()["blocked"] is True and r.json()["items"] == []
+    # pojedynczy film zablokowany przez platformę: 422 (bez ponawiania), nie 502
+    assert main._video_error(video.PlatformBlocked("blokada")).status_code == 422
+
+
+def test_transcription_switch(monkeypatch):
+    from app import video
+    monkeypatch.setattr(video, "TRANSCRIBE", False)
+    t = video.transcribe("nie-ma-pliku.mp4")
+    assert t["disabled"] is True and t["text"] == ""
+    assert video.capabilities()["transcribe"] is True or video.capabilities()["transcribe"] is False

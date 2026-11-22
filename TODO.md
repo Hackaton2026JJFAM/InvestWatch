@@ -67,6 +67,12 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Instagram: zasięg (wyświetlenia) bez logowania niedostępny – tylko polubienia/opis; Facebook: metadane ograniczone
 - [ ] Rejestr licencjonowanych doradców inwestycyjnych KNF – dziś licencja „zadeklarowana, do weryfikacji” (numer wyciągany z treści)
 
+## Stabilność scrapera (22.11.2026)
+- [x] „Scraper nie odpowiada” przy transkrypcji: health scrapera z czasem 10 s (`SCRAPER_HEALTH_TIMEOUT_MS`), przekroczony czas przy wcześniej działającym scraperze = stan „zajęty” (informacja, nie błąd); healthcheck kontenera backendu na `/api/live`; zmierzone pod obciążeniem (transkrypcja 25-min filmu): health ≤ 40 ms, zawsze „up”
+- [x] Whisper ograniczony do połowy rdzeni (`WHISPER_THREADS`), druga próba po polsku tylko dla klipów ≤ 90 s; wyłącznik `VIDEO_TRANSCRIBE=false`
+- [x] Blokady platform: wyszukiwanie zwraca 200 z informacją o blokadzie zamiast 502 (ostrzeżenie w logu, nie błąd); film zablokowany przez platformę (403 / blokada IP / region) – czytelny komunikat „wgraj plik”, bez ponawiania; YouTube: brak strony hashtagu → wyszukiwanie „#tag”
+- [ ] `--workers` w uvicorn świadomie pominięte: każdy proces ładuje własny model Whisper i Chromium, limit „1 wideo naraz” i odstępy zapytań do wyszukiwarki działałyby osobno w każdym procesie; przy potrzebie skalowania – osobny kontener do wideo
+
 ## Wideo i monitoring – poprawki (22.11.2026)
 - [x] Dłuższe filmy (np. YouTube > 15 min) nie są już odrzucane („Pobieranie pominięte”): pobierany i analizowany jest pierwszy fragment (`VIDEO_MAX_SECONDS`), w materiale widać pełną długość i analizowany zakres; przy błędzie przycinania ffmpeg automatyczna druga próba z prostszym formatem
 - [x] Whisper: odfiltrowane „halucynacje” na muzyce/ciszy (np. „Thanks for having me.”), segmenty bez mowy; przy niepewnym wykryciu języka druga próba po polsku

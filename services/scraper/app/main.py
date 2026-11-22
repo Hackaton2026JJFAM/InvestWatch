@@ -218,6 +218,9 @@ def _video_error(exc: Exception) -> HTTPException:
         return HTTPException(400, str(exc))
     if isinstance(exc, video.VideoRejected):
         return HTTPException(422, str(exc))
+    if isinstance(exc, video.PlatformBlocked):
+        log.warning("platform blocked download: %s", exc)
+        return HTTPException(422, str(exc))  # nie 502 – to nie awaria scrapera, ponawianie nic nie da
     if isinstance(exc, video.VideoUnavailable) and "zalogowania" in str(exc):
         return HTTPException(422, str(exc))  # ponawianie nic nie zmieni – potrzebny plik od analityka
     if isinstance(exc, video.VideoUnavailable):
@@ -442,6 +445,12 @@ async def discover_video(req: VideoDiscoverReq):
     """Kandydaci do analizy (tylko metadane: wyświetlenia, autor, czas) – bez pobierania filmów."""
     try:
         return await asyncio.to_thread(video.discover, req.platform, req.kind, req.query, req.limit, req.sort, req.polish)
+    except (video.VideoUnavailable, video.PlatformBlocked) as exc:
+        if str(exc).startswith("Brak "):
+            raise _video_error(exc)
+        # blokada wyszukiwarki/platformy to normalna sytuacja, nie awaria scrapera – pusty wynik z informacją
+        log.warning("discover blocked %s/%s: %s", req.platform, req.kind, exc)
+        return {"platform": req.platform, "kind": req.kind, "query": req.query, "count": 0, "items": [], "blocked": True, "error": str(exc)}
     except Exception as exc:
         raise _video_error(exc)
 

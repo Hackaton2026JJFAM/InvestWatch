@@ -23,7 +23,8 @@ function platformsFor(platform, kind, query) {
 
 async function discoverOne(platform, kind, query, sort, limit, polish) {
   try {
-    return { items: (await scraper.discoverVideo({ platform, kind, query, sort, limit, polish })).items, error: null };
+    const r = await scraper.discoverVideo({ platform, kind, query, sort, limit, polish });
+    return { items: r.items ?? [], error: r.blocked ? r.error : null };
   } catch (err) {
     return { items: [], error: err.message };
   }
