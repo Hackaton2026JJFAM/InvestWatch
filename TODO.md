@@ -168,7 +168,7 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 
 ## Formalności
 - [ ] Prezentacja PDF
-- [ ] Szczegółowy opis projektu i tytuł
+- [x] Szczegółowy opis projektu i tytuł – [docs/OPIS_PROJEKTU.md](docs/OPIS_PROJEKTU.md) („TrustLens – automatyczny nadzór nad reklamą inwestycyjną w internecie i mediach społecznościowych”); README skrócone do Quick Start, wymagań sprzętowych, serwisów i konfiguracji
 - [ ] Film do 3 minut (opcjonalnie)
 - ❓ Repo publiczne czy prywatne na czas oceny
 - ❓ Model LLM na demo (`gemma3:4b` vs mniejszy) – zależy od sprzętu

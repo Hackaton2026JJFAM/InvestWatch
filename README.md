@@ -1,26 +1,10 @@
-# InvestWatch
+# TrustLens
 
-System monitorowania reklam i ofert inwestycyjnych dla UKNF (HackNation 2026). Pobiera treści z internetu i mediów społecznościowych, analizuje je w trzech modułach i pokazuje wyniki na dashboardzie z alertami w czasie rzeczywistym.
+**Automatyczny nadzór nad reklamą inwestycyjną w internecie i mediach społecznościowych** – zadanie UKNF #InvestWatch (HackNation 2026). Nazwa robocza w kodzie: InvestWatch.
 
-- **M1 Finfluencerzy i podmioty trzecie**: firma z rejestru KNF, reklamujący, treść i URL; kody polecające; brak oznaczenia współpracy.
-- **M2 Zgodność i informacja o ryzyku**: 18 reguł z załącznika UKNF (art. 44 rozp. 2017/565), w tym reguły wizualne 4–8 mierzone w przeglądarce (czcionka, kontrast WCAG, przesłonięcie, ukrycie, desktop/tablet/telefon).
-- **M3 Shadow Advisory**: oferta indywidualnego doradztwa (art. 76 u.o.i.f.) vs materiał edukacyjny, weryfikacja podmiotu w rejestrze.
+System wyszukuje reklamy i oferty finansowe (strony WWW, TikTok, Instagram, Facebook, YouTube, X i inne; tekst, grafika, wideo), ocenia je w trzech modułach – M1 finfluencerzy i podmioty trzecie, M2 informacja o ryzyku (18 wymogów z załącznika), M3 doradztwo bez zezwolenia – i pokazuje wyniki z alertami w czasie rzeczywistym oraz panelem kalibracji progu. Działa lokalnie, na otwartym oprogramowaniu, bez płatnych API.
 
-Wzbogacanie danych podmiotów: **KRS** (kapitał, adres, NIP/REGON, zarząd, prokurenci, wspólnicy), **GLEIF** (kody LEI), **lista ostrzeżeń publicznych KNF** (669 wpisów) i **rejestr MiCA ESMA** (409 autoryzowanych CASP, 217 podmiotów bez licencji). Trafienia z list są przesłankami M1/M3 (dopasowanie po domenie, KRS, NIP lub nazwie). Numer KRS nie jest wymagany – dla polskich spółek z kodem LEI system odczytuje go z GLEIF. Strona **Rejestry** pozwala sprawdzić dowolny podmiot (odpis KRS aktualny lub pełny z historią, rekord LEI ze strukturą grupy), a karta podmiotu pokazuje wszystkie dane z rejestrów z wyszukiwarką.
-
-Materiały można dodawać jako adres URL, HTML, tekst albo **obraz reklamy** (PNG/JPG/WebP, OCR Tesseract w kontenerze scrapera). Tekst z obrazu dostaje pozycję, wysokość liter i kontrast, więc reguły wizualne (rozmiar czcionki ostrzeżenia, kontrast, stopka) działają także na grafikach. Banery z tekstem w obrazie na renderowanych stronach również przechodzą OCR.
-
-**Wideo i reels** (TikTok, Instagram, YouTube/Shorts, Facebook, X, Threads, LinkedIn, Vimeo, Twitch, Reddit, Dailymotion, Rumble i in., albo wgrany plik do 250 MB): yt-dlp pobiera publiczny materiał, faster-whisper przepisuje mowę, a OCR czyta napisy z klatek. Na wynik działają te same reguły, plus czas wyświetlania ostrzeżenia (poniżej 3 s to naruszenie) i ostrzeżenie wypowiedziane, ale nie pokazane na ekranie. Materiały wymagające zalogowania kończą się komunikatem „wgraj plik ręcznie”.
-
-**Oszustwa i finfluencerzy:** każdy materiał (strona, post, wideo po transkrypcji i OCR) dostaje profil publikującego: podejrzenie oszustwa, płatna promocja, doradca, edukacja albo informacja. Do tego sygnały z cytatami (presja czasu, WhatsApp/Telegram, bot AI, „zacznij od 250 zł”, wizerunek znanych osób) i ocena realizmu obietnic przeliczona na rok („2% dziennie” ≈ 730% rocznie). Oficjalne strony firm i strony własne usługodawców nie są traktowane jak podmiot trzeci, a zadeklarowana licencja doradcy obniża M3 do „do weryfikacji”.
-
-**Monitoring popularnych treści:** strona „Monitoring wideo” pokazuje popularne polskie hashtagi i frazy-przynęty oszustów („darmowa kasa”, „szybki zarobek”, „gwarantowany zysk”…). Wyszukuje kandydatów po #hashtagu lub frazie na YouTube, TikToku, Instagramie, X i Facebooku (YouTube natywnie z regionem PL, pozostałe przez publiczny indeks wyszukiwarki, bo strony tagów platform wymagają logowania), a także po profilu twórcy (YouTube, TikTok). Domyślnie tylko treści po polsku. Ranking hashtagów przelicza się co godzinę z danych (zasięg, liczba materiałów, ryzyko, trend), a najpopularniejsze tagi są automatycznie monitorowane na wszystkich platformach i wstrzymywane, gdy wypadną z czołówki.
-
-**Weryfikacja analityka:** w podsumowaniu ikona ołówka włącza tryb edycji, w którym można odrzucić wybrane punkty. System przelicza wtedy wynik po weryfikacji i generuje nowe podsumowanie bez nich, a decyzja obowiązuje także po ponownej analizie. Ma próg wyświetleń, a zapisane zapytania uruchamia według harmonogramu, więc system działa profilaktycznie, a nie tylko na zgłoszenia. Wyniki można filtrować po zasięgu, tagu, typie publikującego i rodzaju materiału, a sortowanie „priorytet” to ryzyko × zasięg.
-
-**Rynek:** strona „Rezerwy giełd (PoR)” pokazuje raport Proof of Reserves OKX (pokrycie per aktywo, alert przy pokryciu < 1:1 lub braku nowego raportu > 45 dni; to deklaracja giełdy, nie audyt). Karta podmiotu ma panel „Zachowanie w kryzysach (GPW)”: kurs spółki wobec WIG w okresie krachu COVID-19 lub wybuchu wojny w Ukrainie (maks. spadek, dni do odrobienia strat, beta, zmienność) z archiwum notowań gpw.pl.
-
-Każdy wynik ma przesłanki: `rule_id`, podstawę prawną, uzasadnienie i cytowany fragment. Wynik to sygnał do weryfikacji, nie stwierdzenie naruszenia.
+Szczegółowy opis projektu: [docs/OPIS_PROJEKTU.md](docs/OPIS_PROJEKTU.md).
 
 ## Quick Start
 
@@ -59,7 +43,7 @@ Wideo: model Whisper `small` zajmuje ~0,5 GB (wolumen `whisper`, pobierany przy 
 | `frontend` | React 19 + Vite, Recharts, Socket.io, nginx | 80 → `WEB_PORT` | Dashboard, proxy `/api` i `/socket.io` |
 | `backend` | Node 22, Express 5, BullMQ, node-cron, zod | 4000 | API, kolejka z ponawianiem, harmonogram, WebSocket, zapis do bazy |
 | `scraper` | Python, FastAPI, Playwright, BeautifulSoup, Tesseract, yt-dlp, faster-whisper | 8001 | Pobieranie, render 3 viewportów, OCR obrazów i banerów, wideo (transkrypcja + OCR klatek), ekstrakcja treści i metadanych, ochrona SSRF, rotacja UA/proxy |
-| `analyzer` | Python, FastAPI, scikit-learn, RapidFuzz | 8002 | Moduły 1–3, klasyfikator zdań, scoring, rejestr KNF, podsumowanie |
+| `analyzer` | Python, FastAPI, scikit-learn, RapidFuzz | 8002 | Moduły 1–3, klasyfikator zdań, embeddingi, scoring, rejestr KNF, podsumowanie |
 | `postgres` | PostgreSQL 16 (pg_trgm, unaccent) | 5432 | Materiały, analizy, przesłanki, alerty, podmioty |
 | `redis` | Valkey 8 (BSD, protokół Redis) | 6379 | Kolejka zadań |
 | `ollama` | profil `llm` | 11434 | Lokalny model do podsumowań |
@@ -127,16 +111,8 @@ python -m tools.watchlists_import                                      # odświe
 
 Bezpieczeństwo łańcucha dostaw: wersje zależności są przypięte; CI (`.github/workflows/ci.yml`) uruchamia `pip-audit` i `npm audit`; obrazy Node przerywają build przy podatnościach wysokiego ryzyka (`npm audit --audit-level=high`). `GET /api/health` to gotowość całego stosu (503, gdy brakuje bazy, kolejki, scrapera lub analizatora), `GET /api/live` – sam proces. Sekrety są tylko w `.env`, poza repozytorium.
 
-Architektura: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Proces pracy z asystentami AI: [docs/AI_WORKFLOW.md](docs/AI_WORKFLOW.md). Lista zadań: [TODO.md](TODO.md).
+## Dokumentacja
 
-## Dane i ograniczenia
-
-- Publiczne API KRS anonimizuje imiona, nazwiska i PESEL członków organów – osób nie łączymy między spółkami; każda pozycja ma status „wymaga weryfikacji”.
-- Trafienie na liście ostrzeżeń po samej nazwie to słabszy sygnał (WARN) niż po domenie, KRS lub NIP (FAIL).
-- Rejestr KNF to snapshot publicznych list (domy maklerskie, banki, oddziały i notyfikowane firmy zagraniczne; 752 podmioty). Brak podmiotu w rejestrze nie oznacza nielegalnej działalności.
-- Próbki demo używają fikcyjnych podmiotów i domen `.example`.
-- Poziom ryzyka: 0–30 niskie, 31–70 średnie, 71–100 wysokie. Próg alertu (panel kalibracji) jest osobny i decyduje tylko o alercie.
-- Oficjalny materiał firmy (plik/tekst bez autora i domeny, podpisany przez firmę z rejestru KNF) nie jest oceniany w Module 1 – moduł dotyczy podmiotów trzecich i finfluencerów. Materiał edukacyjny bez wezwań do działania nie podlega regułom 1–2 Modułu 2.
-- Duplikaty: odcisk simhash (64 bity) i odległość Hamminga w PostgreSQL, potwierdzane podobieństwem treści (`pg_trgm`); ta sama treść na kilku portalach albo z kilkoma zmienionymi słowami jest oznaczana jako duplikat (≤ 3 bity albo treść podobna ≥ 85%). Duplikat nie jest zapisywany: jego adres trafia do listy lokalizacji oryginału, a w kolejce skanowania ma status „duplikat – pominięty”.
-- Monitoring zbiera tylko materiały polskojęzyczne (ustawienie `polish_only`); ręczna analiza działa dla każdego języka.
-- Treści z platform społecznościowych są pobierane z publicznych metadanych lub importowane ręcznie. System nie obchodzi zabezpieczeń platform.
+- [Szczegółowy opis projektu](docs/OPIS_PROJEKTU.md) – problem, moduły 1–3, kalibracja, architektura, ograniczenia
+- [Architektura](docs/ARCHITECTURE.md) – przepływ zadania, kontrakt danych, scoring, źródła danych
+- [Proces z asystentami AI](docs/AI_WORKFLOW.md) · [Raport audytu](docs/AUDIT_REPORT.md) · [Lista zadań](TODO.md)
