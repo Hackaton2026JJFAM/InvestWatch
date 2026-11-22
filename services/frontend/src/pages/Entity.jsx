@@ -9,7 +9,7 @@ import { GleifRelations, GleifSummary, KrsSummary } from '../components/Registry
 import { Empty, fmtDate, Panel, RecordDetails, RiskBadge, Score, shortMaterialTitle, StatCard } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
-import { KIND, REG } from './Entities.jsx';
+import { EntityVerification, KIND, REG } from './Entities.jsx';
 import { HelpTip } from '../components/HelpTip.jsx';
 
 const SourceLink = ({ url, label = 'źródło' }) => (url ? <a href={url} target="_blank" rel="noreferrer noopener">{label}</a> : null);
@@ -294,6 +294,7 @@ export default function Entity() {
       <div className="page-head">
         <div><h1>{entity.name}</h1><p>{KIND[entity.kind] ?? entity.kind} · <span className={`chip ${REG[entity.registry_status]?.[0]}`}>{REG[entity.registry_status]?.[1]}</span>
           {entity.lei && <> · LEI <span className="mono">{entity.lei}</span></>}</p></div>
+        <EntityVerification entity={entity} onChange={() => setRefresh((n) => n + 1)} />
       </div>
       <div className="notice" style={{ marginBottom: 16 }}>Wzmianka w materiale lub automatyczne dopasowanie nie potwierdzają współpracy. Brak wpisu w rejestrze nie jest dowodem nielegalnej działalności.</div>
       <div className="tabs" role="group" aria-label="Sekcje profilu podmiotu">
