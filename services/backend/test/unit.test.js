@@ -19,9 +19,11 @@ test('parse: poprawne dane i czytelny błąd 400', () => {
 test('poziom ryzyka w stałej skali 0–100, próg alertów osobno', async () => {
   const { riskLevel, aboveSql } = await import('../src/validate.js');
   const sql = riskSql('a', '$1');
-  assert.match(sql, /a\.score >= 70 THEN 'wysokie'/);
-  assert.match(sql, /a\.score >= 30 THEN 'średnie'/);
+  assert.match(sql, /round\(a\.score\) > 70 THEN 'wysokie'/);
+  assert.match(sql, /round\(a\.score\) > 30 THEN 'średnie'/);
   assert.deepEqual([riskLevel(89), riskLevel(50), riskLevel(10), riskLevel(null)], ['wysokie', 'średnie', 'niskie', null]);
+  // granice: 0–30 niskie, 31–70 średnie, 71–100 wysokie
+  assert.deepEqual([riskLevel(30), riskLevel(31), riskLevel(70), riskLevel(71)], ['niskie', 'średnie', 'średnie', 'wysokie']);
   assert.equal(aboveSql('a', '$1'), '(a.score >= $1::numeric)');
 });
 

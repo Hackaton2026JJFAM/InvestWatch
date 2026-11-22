@@ -135,4 +135,8 @@ Architektura: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Proces pracy z asyst
 - Trafienie na liście ostrzeżeń po samej nazwie to słabszy sygnał (WARN) niż po domenie, KRS lub NIP (FAIL).
 - Rejestr KNF to snapshot publicznych list (domy maklerskie, banki, oddziały i notyfikowane firmy zagraniczne; 752 podmioty). Brak podmiotu w rejestrze nie oznacza nielegalnej działalności.
 - Próbki demo używają fikcyjnych podmiotów i domen `.example`.
+- Poziom ryzyka: 0–30 niskie, 31–70 średnie, 71–100 wysokie. Próg alertu (panel kalibracji) jest osobny i decyduje tylko o alercie.
+- Oficjalny materiał firmy (plik/tekst bez autora i domeny, podpisany przez firmę z rejestru KNF) nie jest oceniany w Module 1 – moduł dotyczy podmiotów trzecich i finfluencerów. Materiał edukacyjny bez wezwań do działania nie podlega regułom 1–2 Modułu 2.
+- Duplikaty: odcisk simhash (64 bity) i odległość Hamminga w PostgreSQL; ta sama treść na kilku portalach jest oznaczana jako duplikat (≤ 3 bity).
+- Monitoring zbiera tylko materiały polskojęzyczne (ustawienie `polish_only`); ręczna analiza działa dla każdego języka.
 - Treści z platform społecznościowych są pobierane z publicznych metadanych lub importowane ręcznie. System nie obchodzi zabezpieczeń platform.

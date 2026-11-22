@@ -18,11 +18,12 @@ export function parse(schema, input) {
 
 // Poziom ryzyka w stałej skali 0–100 (niezależny od progu alertów): 0–29 niskie, 30–69 średnie, 70–100 wysokie.
 // Próg alertów (kalibracja) decyduje osobno, czy materiał trafia do alertów / widoku „powyżej progu”.
+// 0–30 niskie, 31–70 średnie, 71–100 wysokie (granice należą do niższego przedziału)
 export const RISK_BANDS = { high: 70, mid: 30 };
-export const riskLevel = (score) => (score == null ? null : score >= RISK_BANDS.high ? 'wysokie' : score >= RISK_BANDS.mid ? 'średnie' : 'niskie');
+export const riskLevel = (score) => (score == null ? null : Math.round(score) > RISK_BANDS.high ? 'wysokie' : Math.round(score) > RISK_BANDS.mid ? 'średnie' : 'niskie');
 // eslint-disable-next-line no-unused-vars
 export const riskSql = (alias = 'a', _param = '$1') =>
-  `CASE WHEN ${alias}.score >= ${RISK_BANDS.high} THEN 'wysokie' WHEN ${alias}.score >= ${RISK_BANDS.mid} THEN 'średnie' ELSE 'niskie' END`;
+  `CASE WHEN round(${alias}.score) > ${RISK_BANDS.high} THEN 'wysokie' WHEN round(${alias}.score) > ${RISK_BANDS.mid} THEN 'średnie' ELSE 'niskie' END`;
 
 // Ostatnia analiza materiału; „score” = wynik po weryfikacji analityka, gdy istnieje (odrzucone punkty,
 // problemy dodane ręcznie), inaczej wynik klasyfikatora; „classifier_score” = zawsze wynik klasyfikatora.

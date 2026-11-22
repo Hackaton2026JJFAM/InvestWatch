@@ -1,6 +1,6 @@
 // Przetwarzanie zadania: scraper -> deduplikacja -> analyzer -> zapis -> alert -> WebSocket.
 import { verifiedAdvisorFor } from './advisors.js';
-import { excludedBy, getExcludes } from './exclude.js';
+import { excludedBy, foreignLang, getExcludes, getPolishOnly } from './exclude.js';
 import { UnrecoverableError } from 'bullmq';
 import { getThreshold, one, q, tx } from './db.js';
 import { log } from './log.js';
@@ -97,8 +97,9 @@ export async function processScan(job) {
   // potem po pełnym tytule, opisie i tagach pobranego materiału. Ręcznie zlecona analiza nie jest filtrowana.
   const auto = Boolean(data.watchId || data.discover);
   const excludes = auto ? await getExcludes() : [];
-  const skip = async (word) => {
-    await q("UPDATE scan_jobs SET status = 'excluded', error = $2, finished_at = now() WHERE id = $1", [jobId, `wykluczone słowo: ${word}`]);
+  const polishOnly = auto && await getPolishOnly();
+  const skip = async (word, reason = `wykluczone słowo: ${word}`) => {
+    await q("UPDATE scan_jobs SET status = 'excluded', error = $2, finished_at = now() WHERE id = $1", [jobId, reason]);
     emit('scan:update', { id: jobId, status: 'excluded' });
     log.info('scan excluded', { jobId, url: data.url, word });
     return { excluded: word };
@@ -120,6 +121,8 @@ export async function processScan(job) {
     const meta = material.video_meta ?? material.layout?.video?.meta ?? {};
     const w = excludedBy({ title: material.title, author: material.author, description: material.description, tags: meta.tags ?? [] }, excludes);
     if (w) return skip(w);
+    const l = polishOnly && foreignLang(material.lang);
+    if (l) return skip(`język ${l}`, `nie po polsku (język: ${l}) – monitoring zbiera tylko polskie materiały`);
   }
 
   // duplikat = ten sam URL, ta sama treść i ten sam wygląd ostrzeżeń; zmiana samego CSS tworzy nową wersję
@@ -138,6 +141,10 @@ export async function processScan(job) {
   } catch (err) {
     return fail(jobId, err, job);
   }
+
+  // język ustalony dopiero przez analizator (strony bez atrybutu lang, krótkie opisy)
+  const lang = polishOnly && foreignLang(result.doc?.lang);
+  if (lang) return skip(`język ${lang}`, `nie po polsku (język: ${lang}) – monitoring zbiera tylko polskie materiały`);
 
   const threshold = await getThreshold();
   const simhash = result.doc?.simhash ?? null;

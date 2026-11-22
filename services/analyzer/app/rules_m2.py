@@ -475,9 +475,35 @@ def highlights(doc: Doc, limit: int = 40) -> list[dict]:
     return out
 
 
-def run(doc: Doc) -> list[Finding]:
+# Bramka edukacyjna: artykuł objaśniający (definicje, mechanizmy, porównania pojęć) bez wezwań do działania
+# nie jest materiałem marketingowym – reguły 1 (identyfikacja firmy) i 2 (oznaczenie reklamy) nie dotyczą.
+EXPLAIN = T.rx(r"\b(?:to|jest|sa) (?:papier\w*|instrument\w*|rodzaj\w*|form\w*|sposob\w*|zobowiazani\w*|umow\w*|dluzn\w*|pojeci\w*)",
+               r"\bczym (?:jest|sa|sie rozni\w*)", r"\bpolega\w* na\b", r"\bwyjasni\w*", r"\boznacza\w*", r"\brozni\w* sie\b",
+               r"\bwyrozni\w*", r"\bdziala\w*\b", r"\bnazyw\w* sie\b", r"\bdefinicj\w*", r"\bna przyklad\b", r"\bnp\.", r"\bprzyklad\w*",
+               r"\bporadnik\w*", r"\bwarto (?:poznac|wiedziec|sprawdzic|zrozumiec)", r"\bmechanizm\w*", r"\bzasad\w* (?:dzialania|wykupu|naliczania)",
+               r"\bzalezy od\b", r"\bgdy rosn\w*", r"\bgdy spad\w*", r"\bemitent\w*", r"\bkupon\w*", r"\bzapadalnos\w*", r"\brentownos\w*",
+               r"\bwhat is\b", r"\bhow (?:does|do) .{0,30} work\b", r"\bmeans\b")
+EDU_SHARE = 0.6
+
+
+def education_index(doc: Doc) -> dict:
+    """Udział zdań objaśniających + czy są wezwania do działania (CTA)."""
+    from .m3 import EDUCATION
+    s = doc.sentences
+    edu = [x for x in s if T.has(EXPLAIN, x.text) or T.has(EDUCATION, x.text) or x.labels.get("education", 0) > 0.5]
+    cta = [x for x in s if T.has(T.CTA, x.text)]
+    share = len(edu) / len(s) if s else 0.0
+    return {"share": round(share, 2), "cta": len(cta), "educational": share > EDU_SHARE and not cta,
+            "examples": [x.text[:160] for x in edu[:2]], "cta_examples": [x.text[:160] for x in cta[:2]]}
+
+
+def run(doc: Doc, education: dict | None = None) -> list[Finding]:
     c = Ctx(doc)
     out = [r1(c), r2(c), r3(c), g1(c)]
+    if education and education["educational"]:
+        why = (f"Nie dotyczy – materiał edukacyjny: {round(education['share'] * 100)}% zdań objaśnia pojęcia i mechanizmy, "
+               "brak wezwań do działania (otwórz konto, zainwestuj, kod polecający). To nie jest materiał marketingowy.")
+        out = [F(f.rule_id, NA, why, [ev(t, "fragment edukacyjny") for t in education["examples"]]) if f.rule_id in ("1", "2") else f for f in out]
     if doc.has_layout:
         out += [r4(c), r5(c), r6(c), r7(c), r8(c)]
     elif doc.is_video:

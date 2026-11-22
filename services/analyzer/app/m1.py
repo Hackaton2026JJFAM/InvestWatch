@@ -41,6 +41,44 @@ BROKER_TALK = T.rx(r"\bbroker\w*", r"\bplatform\w* (?:inwestycyjn|tradingow|tran
                    r"\brachun\w* inwestycyjn\w*", r"\bgield\w* kryptowalut\w*", r"\bexchange\b")
 
 
+# Reguła Oficjalnego Materiału: sama firma podpisuje materiał („Materiał przygotowany przez XTB S.A.”, „Materiał informacyjny XTB”)
+OFFICIAL_SIGN = T.rx(r"\bmaterial\w* (?:zostal\w* )?(?:przygotowan|opracowan|sporzadzon|wydan)\w* przez\b",
+                     r"\bmaterial\w* (?:informacyjn|marketingow|reklamow|promocyjn|edukacyjn)\w*\b", r"\bwydawc\w*:",
+                     r"\bkomunikat\w* marketingow\w*\b", r"\bprepared by\b", r"\bmarketing communication (?:of|by|from)\b")
+OFFICIAL_LEAD = 2   # pełna nazwa firmy z rejestru w pierwszych N zdaniach
+
+
+def official_material(doc: Doc, firms: list[dict]) -> tuple[str, str] | None:
+    """Oficjalny materiał firmy z rejestru KNF -> (nazwa firmy, uzasadnienie) albo None.
+
+    Dotyczy materiałów bez ustalonego, innego autora (plik wgrany z dysku, strona bez autora). Gdy znany autor
+    w social media pisze „materiał przygotowany przez XTB”, to raczej oznaczenie współpracy – bramka się nie włącza.
+    """
+    real = [f for f in firms if not f.get("demo")] or firms
+    if not real:
+        return None
+    reg = get_registry()
+    lead = doc.sentences[:OFFICIAL_LEAD]
+    for x in doc.sentences[:5]:
+        if T.has(OFFICIAL_SIGN, x.text):
+            named = reg.find_in_text(x.text)
+            if named:
+                return named[0]["name"], f"podpis „{x.text[:120]}”"
+    for x in lead:
+        sent = _words(x.text)
+        for f in reg.find_in_text(x.text):
+            # pełna nazwa z rejestru razem z formą prawną („XTB S.A.”, „X-Trade Brokers Dom Maklerski S.A.”) – sam skrót „XTB” nie wystarczy
+            full = _words(f["name"])
+            if len(full) >= 4 and f" {full} " in f" {sent} ":
+                return f["name"], f"pełna nazwa firmy z rejestru na początku materiału („{x.text[:120]}”)"
+    return None
+
+
+def _words(s: str) -> str:
+    import re
+    return " ".join(re.findall(r"\w+", T.fold(s or "")))
+
+
 def publisher_type(doc: Doc, firms: list[dict]) -> tuple[str, str | None]:
     """Zwraca (typ, nazwa): firma | podmiot_trzeci | nieustalone."""
     author = doc.author or doc.meta.get("social_handle")
@@ -76,6 +114,14 @@ def run(doc: Doc) -> dict:
     firms = reg.find_in_text(doc.text, doc.domain)
     instruments = [name for name, pat in T.INSTRUMENTS.items() if T.has(pat, doc.text)]
     ptype, pname = publisher_type(doc, firms)
+    official = None
+    # tylko materiał bez źródła (plik z dysku, wklejony tekst): bez autora i bez domeny. Stronę WWW rozpoznaje domena firmy
+    # (publisher_type) – podpis „XTB S.A.” na domenie xtb-bonus.com to podszywanie się, nie oficjalny materiał.
+    no_source = not (doc.author or doc.meta.get("social_handle") or doc.publisher) and (not doc.domain or doc.url.startswith("upload://"))
+    if ptype == "nieustalone" and no_source:
+        official = official_material(doc, firms)
+        if official:
+            ptype, pname = "firma", official[0]
     affiliate = [x for x in doc.sentences if T.has(AFFILIATE, x.text)]
     disclosure = [x for x in doc.sentences if T.has(DISCLOSURE, x.text)]
     broker_talk = [x for x in doc.sentences if T.has(BROKER_TALK, x.text)]
@@ -87,9 +133,13 @@ def run(doc: Doc) -> dict:
         findings.append(Finding("m1", "M1.1", "Reklama firmy inwestycyjnej", NA, 0, None,
                                 "Nie wykryto reklamy firmy inwestycyjnej ani jej instrumentów."))
         return {"findings": findings, "firms": firms, "instruments": instruments,
-                "publisher": {"type": ptype, "name": pname, "platform": doc.platform}}
+                "publisher": {"type": ptype, "name": pname, "platform": doc.platform, "official": False}}
 
-    if ptype == "własne_usługi":
+    if official:
+        findings.append(Finding("m1", "M1.1", "Oficjalny materiał firmy inwestycyjnej", NA, 0, None,
+                                f"Materiał podpisany przez firmę z rejestru KNF ({official[0]}; {official[1]}). Moduł 1 dotyczy reklam "
+                                "podmiotów trzecich i finfluencerów – nie dotyczy. Treść oceniają Moduły 2 i 3.", [ev(official[0], "firma")]))
+    elif ptype == "własne_usługi":
         findings.append(Finding("m1", "M1.1", "Strona własna usługodawcy", PASS, 0, None,
                                 f"Publikujący ({pname}) promuje własne usługi – nie jest podmiotem trzecim reklamującym cudzą firmę. "
                                 "Treść oceniają Moduły 2 (informacja o ryzyku) i 3 (zakres doradztwa).", [ev(pname or "", "publikujący")]))
@@ -115,6 +165,9 @@ def run(doc: Doc) -> dict:
         else:
             findings.append(Finding("m1", "M1.3", "Brak oznaczenia współpracy", FAIL, 40, None,
                                     "Podmiot trzeci promuje firmę/instrument bez oznaczenia współpracy reklamowej (#reklama, #ad)."))
+    elif official:
+        findings.append(Finding("m1", "M1.3", "Oznaczenie współpracy", NA, 0, None,
+                                "Nie dotyczy – oficjalny materiał samej firmy, nie współpraca z podmiotem trzecim (#reklama/#ad wymagane od finfluencerów)."))
     if not firms and broker_talk:
         lang = doc.lang or T.detect_lang(doc.text)
         findings.append(Finding("m1", "M1.4", "Reklamowany podmiot spoza rejestru KNF", WARN, 35, None,
@@ -122,4 +175,4 @@ def run(doc: Doc) -> dict:
                                 f"{' (reklama polskojęzyczna – możliwa działalność transgraniczna)' if lang == 'pl' else ''}. Sygnał do weryfikacji.",
                                 [ev(x.text) for x in broker_talk[:3]]))
     return {"findings": findings, "firms": firms, "instruments": instruments,
-            "publisher": {"type": ptype, "name": pname, "platform": doc.platform}}
+            "publisher": {"type": ptype, "name": pname, "platform": doc.platform, "official": bool(official)}}

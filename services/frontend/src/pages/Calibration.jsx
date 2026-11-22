@@ -48,7 +48,7 @@ export default function Calibration() {
           <b style={{ fontSize: '2rem', minWidth: 60 }}>{t}</b>
           <input type="range" className="slider" min={0} max={100} value={t} onChange={(e) => setT(Number(e.target.value))} aria-label="Próg ryzyka" />
         </div>
-        <p className="small muted" style={{ margin: '6px 0 0' }}>Kategorie: wysokie ≥ {t} · średnie ≥ {Math.round(t * 0.6)} · niskie poniżej. Zmiana progu nie zmienia wyników klasyfikatora, tylko decyzję o oznaczeniu. <HelpTip term="risk_threshold" label="próg ryzyka" /></p>
+        <p className="small muted" style={{ margin: '6px 0 0' }}>Poziomy ryzyka (stałe): <span className="chip low">niskie 0–30</span> <span className="chip mid">średnie 31–70</span> <span className="chip high">wysokie 71–100</span> · próg alertu {t} decyduje tylko o alercie. Zmiana progu nie zmienia wyników klasyfikatora, tylko decyzję o oznaczeniu. <HelpTip term="risk_threshold" label="próg ryzyka" /></p>
       </Panel>
       <div className="grid g4" style={{ marginTop: 16 }}>
         <StatCard label="Materiały powyżej progu (alerty)" value={c.flagged} sub={`przy obecnym progu ${data.current}: ${cur.flagged}`} tone="high" />

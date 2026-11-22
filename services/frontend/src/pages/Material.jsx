@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, PROFILE, ProfileChip, RecordDetails, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
+import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, PROFILE, ProfileChip, RecordDetails, RiskBadge, riskOf, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
 import { HelpTip } from '../components/HelpTip.jsx';
 import { useData } from '../hooks.js';
 import { REG } from './Entities.jsx';
@@ -543,13 +543,24 @@ export default function Material() {
         <div className="panel stat"><span className="label">Sygnały oszustwa <HelpTip term="scam_signals" label="sygnały oszustwa" /></span>
           <span className="value"><span className={`score ${scam >= 55 ? 'high' : scam >= 30 ? 'mid' : 'low'}`}>{scam ?? '–'}</span><span className="muted small"> /100</span></span>
           <span className="sub">{scam >= 45 ? 'mocne – podnoszą ryzyko co najmniej do tego poziomu' : scam > 0 ? 'słabe – tylko informacyjnie' : 'brak wzorców oszustwa'}</span>
-          <span className="sub">Poziom ryzyka: <RiskBadge risk={risk} />{data.above_threshold && <span className="chip high" style={{ marginLeft: 6 }}>powyżej progu {threshold}</span>}</span></div>
+          <span className="sub">Poziom ryzyka: <RiskBadge risk={riskOf(score) ?? risk} />{data.above_threshold && <span className="chip high" style={{ marginLeft: 6 }}>powyżej progu {threshold}</span>}</span></div>
         <div className="panel stat"><span className="label">Status weryfikacji</span><span className="value" style={{ fontSize: '1.2rem' }}>{MAT_STATUS[m.status]}</span><span className="sub">opublikowano: <b>{m.published_at ? fmtDate(m.published_at) : 'brak danych'}</b> · pobrano {fmtDate(m.fetched_at)}</span></div>
         <div className="panel stat"><span className="label">Wyniki obszarów</span>
           {Object.entries(m.reviewed_modules ?? a?.module_scores ?? {}).map(([k, v]) => <span key={k} className="small">{MODULES[k]}: <b>{Math.round(v)}</b></span>)}
         </div>
       </div>
 
+      {similar.some((x) => x.distance <= 3) && (() => {
+        const dups = similar.filter((x) => x.distance <= 3);
+        const where = [...new Set(dups.map((x) => x.platform).filter(Boolean))];
+        return (
+          <div className="notice" style={{ marginTop: 12, borderLeftColor: 'var(--mid)' }}>
+            <b>Duplikat treści.</b> Ta sama (lub prawie ta sama) treść występuje w {dups.length} innych materiałach{where.length ? ` (${where.join(', ')})` : ''}:{' '}
+            {dups.slice(0, 5).map((x, i) => <Fragment key={x.id}>{i > 0 && ', '}<Link to={`/materials/${x.id}`}>#{x.id}</Link></Fragment>)}
+            {' '}– porównanie odcisków simhash (odległość Hamminga ≤ 3 bity).
+          </div>
+        );
+      })()}
       {r.context && !r.context.investment && (
         <div className="notice" style={{ marginTop: 12 }}>Treść nie dotyczy inwestycji ani instrumentów finansowych – reguły informacji o ryzyku (M2) i ocena obietnic zysku nie są stosowane. Wynik opiera się tylko na pozostałych sygnałach.</div>
       )}

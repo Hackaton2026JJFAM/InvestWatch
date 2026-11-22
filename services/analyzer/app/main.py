@@ -138,7 +138,8 @@ def analyze_material(m: dict) -> dict:
     clf = get_classifier()
     clf.label(doc.sentences)
     r1 = m1.run(doc)
-    f2 = rules_m2.run(doc)
+    edu = rules_m2.education_index(doc)
+    f2 = rules_m2.run(doc, edu)
     r3 = m3.run(doc)
     sig = signals.run(doc, r3["classification"])
     advertised = any(f.rule_id == "M1.1" and f.status != "na" for f in r1["findings"])
@@ -171,6 +172,7 @@ def analyze_material(m: dict) -> dict:
         "watchlists": sig["hits"],
         "ml": {"model": clf.version, "train_size": clf.n_train, **clf.document_profile(doc.sentences)},
         "context": ctx,
+        "education": edu,
         "doc": {"lang": doc.lang, "domain": doc.domain, "sentences": len(doc.sentences), "layout": doc.layout.get("engine"),
                 "simhash": simhash(doc.content_text), "highlights": rules_m2.highlights(doc),
                 "identifiers": sig["identifiers"]},

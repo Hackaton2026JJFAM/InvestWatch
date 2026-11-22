@@ -6,12 +6,13 @@ export const STATUS_LABEL = { fail: 'problem', warn: 'do sprawdzenia', pass: 'w 
 export const MODULES = { m1: 'M1 · Reklamy i finfluencerzy', m2: 'M2 · Informacja o ryzyku', m3: 'M3 · Doradztwo inwestycyjne' };
 export const MAT_STATUS = { NEW: 'Nowy', IN_REVIEW: 'W trakcie weryfikacji', REVIEWED: 'Zweryfikowany', ESCALATED: 'Eskalowany', DISMISSED: 'Odrzucony' };
 
-// Poziom ryzyka w stałej skali 0–100: 0–29 niskie, 30–69 średnie, 70–100 wysokie.
+// Poziom ryzyka w stałej skali 0–100: 0–30 niskie (zielony), 31–70 średnie (żółty), 71–100 wysokie (czerwony).
 // Próg alertów (kalibracja) jest osobny – decyduje o alercie i widoku „powyżej progu”.
 // eslint-disable-next-line no-unused-vars
 export function riskOf(score, _threshold) {
   if (score == null) return null;
-  return score >= 70 ? 'wysokie' : score >= 30 ? 'średnie' : 'niskie';
+  const s = Math.round(Number(score));
+  return s > 70 ? 'wysokie' : s > 30 ? 'średnie' : 'niskie';
 }
 
 // Profil publikującego / materiału (analyzer: profile.primary)

@@ -67,6 +67,13 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Instagram: zasięg (wyświetlenia) bez logowania niedostępny – tylko polubienia/opis; Facebook: metadane ograniczone
 - [ ] Rejestr licencjonowanych doradców inwestycyjnych KNF – dziś licencja „zadeklarowana, do weryfikacji” (numer wyciągany z treści)
 
+## Fałszywe alarmy i duplikaty – wymagania jury (22.11.2026)
+- [x] M1 – Reguła Oficjalnego Materiału (`analyzer/app/m1.py`, `official_material`): materiał bez autora i domeny (plik z dysku, wklejony tekst) podpisany przez firmę z rejestru KNF („Materiał przygotowany przez XTB S.A.”, „Materiał informacyjny XTB”) albo z pełną nazwą firmy z formą prawną w pierwszych 2 zdaniach → M1.1 i M1.3 „nie dotyczy”, M1 = 0 (tekst XTB: 49 → 0 w M1). Nie dotyczy stron WWW (decyduje domena – „XTB S.A.” na xtb-bonus.com to podszywanie się) ani kont w social media (tam „materiał przygotowany przez” to współpraca); sam skrót „XTB” nie wystarcza
+- [x] M2 – bramka edukacyjna (`rules_m2.education_index`): > 60% zdań objaśniających (definicje, mechanizmy, pojęcia; klasyfikator „education”) i brak wezwań do działania → reguły 1 i 2 „nie dotyczy”; pozostałe reguły (np. 3 – zysk bez ryzyka) działają dalej
+- [x] Poziomy ryzyka: 0–30 niskie (zielony), 31–70 średnie (żółty), 71–100 wysokie (czerwony) – backend (`validate.js`, także SQL), frontend (`riskOf`), poziom na karcie materiału liczony z wyświetlanego wyniku, legenda w panelu kalibracji
+- [x] Duplikaty (simhash): odległość Hamminga liczona w PostgreSQL (`bit_count` na `bit(64)`, cała baza), przy imporcie `near_duplicate_of` (≤ 3 bity), na karcie materiału widoczny komunikat „Duplikat treści” z listą kopii i platform. Sprawdzone: dwa identyczne teksty → odległość 0
+- [x] Monitoring tylko po polsku (ustawienie `polish_only`, domyślnie włączone, przełącznik w „Stałe wykluczenia”): obcojęzyczne materiały z monitoringu/wyszukiwania pomijane po pobraniu (status „pominięty”), już pobrane można usunąć razem z wykluczonymi; ręczna analiza bez ograniczeń
+
 ## Ryzyko naruszeń a sygnały oszustwa (22.11.2026)
 - [x] Interfejs: dwie podpisane liczby z objaśnieniem – „Ryzyko naruszeń reklamy” (M1–M3, najwyższy obszar) i „Sygnały oszustwa” (same wzorce oszustw); w wynikach „osz. N” przy wyniku
 - [x] Bramka „treść inwestycyjna” (`analyzer/app/context.py`): reguły M2 i ocena obietnic zysku (M1.9) tylko dla treści o inwestycjach (instrumenty – „akcja”/„fundusze” tylko w kontekście rynku, firmy z rejestru, oferta doradcza, słownictwo inwestycyjne, wzorce oszustw inwestycyjnych, stopa zwrotu w czasie); inaczej „nie dotyczy” – Steam 91 → 0, „darmowy towar” 74 → 0; kalibracja bez zmian (TP 14, FP 0, FN 1, TN 7)
@@ -127,7 +134,7 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [x] M3: zadeklarowana licencja doradcy / status agenta firmy inwestycyjnej → „do weryfikacji” (waga 10) zamiast „shadow advisory” 75; planowanie finansowe (budżet, cele, emerytura) bez rekomendacji instrumentów ≠ doradztwo inwestycyjne
 - [x] Reguła 3: ostrzeżenie obecne, ale nie przy twierdzeniach o zyskach → „do weryfikacji” z cytatem i miejscem (ekspozycję ocenia reguła 6), nie „niespełnione”
 - [x] Reguła 17: zaprzeczenia („KNF nie zatwierdza”) nie są aprobatą; uprawnienia KNF jako argument kompetencji → ostrzeżenie z tym cytatem (spójne uzasadnienie i dowód)
-- [x] UI: poziom ryzyka w stałej skali 0–29/30–69/70–100 (89 = wysokie), próg alertów osobno („powyżej progu”); przyciski statusu jako akcje z zaznaczonym bieżącym statusem
+- [x] UI: poziom ryzyka w stałej skali (od 22.11: 0–30/31–70/71–100; 89 = wysokie), próg alertów osobno („powyżej progu”); przyciski statusu jako akcje z zaznaczonym bieżącym statusem
 - [x] Sprawdzone w przeglądarce: próg 45 → 80 – lista „tylko powyżej progu” 18 → 11 bez odświeżania; alert z drugiego klienta – toast i nowy wiersz na liście alertów na żywo; blog „Jak zainwestować 100 tysięcy” – M3 = 75 (art. 76)
 - [x] Próbki 21–23 (licencjonowany doradca – brak alarmu, scam z botem AI, blog z płatnymi konsultacjami); kalibracja 22 próbek: TP 14, FP 0, FN 1, TN 7 (precyzja 1,00, pełność 0,93)
 

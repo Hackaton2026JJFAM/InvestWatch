@@ -17,6 +17,21 @@ export async function getExcludes() {
   return Array.isArray(row?.value) ? row.value : DEFAULT_EXCLUDE;
 }
 
+// Monitoring zbiera tylko polskojęzyczne materiały (rynek nadzorowany przez KNF); ręczna analiza bez ograniczeń.
+export async function getPolishOnly() {
+  const row = await one("SELECT value FROM settings WHERE key = 'polish_only'");
+  return row?.value !== false;
+}
+
+export async function setPolishOnly(on) {
+  await q(`INSERT INTO settings (key, value, updated_at) VALUES ('polish_only', $1, now())
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, [JSON.stringify(Boolean(on))]);
+  return Boolean(on);
+}
+
+/** Język pobranego materiału spoza polskiego (null = nieustalony, wtedy materiał zostaje). */
+export const foreignLang = (lang) => (lang && lang !== 'pl' ? lang : null);
+
 export async function setExcludes(words) {
   const list = normalizeWords(words);
   await q(`INSERT INTO settings (key, value, updated_at) VALUES ('exclude_keywords', $1, now())

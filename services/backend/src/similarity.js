@@ -1,4 +1,5 @@
-// Prawie-duplikaty: odległość Hamminga między 64-bitowymi odciskami simhash (hex).
+// Prawie-duplikaty: odległość Hamminga między 64-bitowymi odciskami simhash (hex), liczona w PostgreSQL.
+// Ten sam post na 5 portalach (albo z innym wstępem) ma odległość 0–3 bitów; podobne treści do 10.
 import { q } from './db.js';
 
 export const NEAR_DUP_BITS = 3;   // ta sama treść z drobnymi zmianami
@@ -11,12 +12,15 @@ export function hamming(a, b) {
   return n;
 }
 
+const HEX64 = /^[0-9a-f]{16}$/i;
+// bit_count(XOR) na bit(64) – cała baza, bez wczytywania materiałów do Node
+const DISTANCE = "bit_count(('x' || m.simhash)::bit(64) # ('x' || $1)::bit(64))";
+
 export async function findSimilar(simhash, { excludeId = null, maxBits = SIMILAR_BITS, limit = 10 } = {}) {
-  if (!simhash) return [];
-  const rows = await q('SELECT id, title, url, platform, author, simhash FROM materials WHERE simhash IS NOT NULL AND id IS DISTINCT FROM $1 ORDER BY id DESC LIMIT 5000', [excludeId]);
-  return rows
-    .map((r) => ({ id: r.id, title: r.title, url: r.url, platform: r.platform, author: r.author, distance: hamming(simhash, r.simhash) }))
-    .filter((r) => r.distance <= maxBits)
-    .sort((a, b) => a.distance - b.distance)
-    .slice(0, limit);
+  if (!simhash || !HEX64.test(simhash)) return [];
+  return q(
+    `SELECT * FROM (SELECT m.id, m.title, m.url, m.platform, m.author, m.fetched_at, ${DISTANCE}::int AS distance
+       FROM materials m WHERE m.simhash ~* '^[0-9a-f]{16}$' AND m.id IS DISTINCT FROM $2) s
+     WHERE distance <= $3 ORDER BY distance, id DESC LIMIT $4`,
+    [simhash, excludeId, maxBits, limit]);
 }

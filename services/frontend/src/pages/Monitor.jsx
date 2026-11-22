@@ -35,6 +35,10 @@ export default function Monitor() {
   const [text, setText] = useState('');
   const [opts, setOpts] = useState({ min_views: 0, limit: 20, polish: true, sort: 'views', exclude: '' });
   const excl = useData('/settings/exclude-keywords', tick);
+  const plOnly = useData('/settings/polish-only', tick);
+  const setPlOnly = async (on) => {
+    try { await api.put('/settings/polish-only', { on }); plOnly.reload(); junk.reload?.(); } catch (e) { toast({ kind: 'error', title: 'Język', text: e.message }); }
+  };
   const [editExcl, setEditExcl] = useState(false);
   const [newWord, setNewWord] = useState('');
   const [showExcluded, setShowExcluded] = useState(false);
@@ -42,7 +46,7 @@ export default function Monitor() {
   const junk = useData(editExcl ? '/materials-excluded' : null, `${tick}-${words.join(',')}`);
   const purge = async () => {
     const n = junk.data?.length ?? 0;
-    if (!n || !window.confirm(`Usunąć ${n} już pobranych materiałów z wykluczonymi słowami (razem z analizami i alertami)? Tej operacji nie można cofnąć.`)) return;
+    if (!n || !window.confirm(`Usunąć ${n} już pobranych materiałów z wykluczonymi słowami lub spoza języka polskiego (razem z analizami i alertami)? Tej operacji nie można cofnąć.`)) return;
     try {
       const r = await api.del('/materials-excluded');
       toast({ kind: 'info', title: 'Usunięto', text: `${r.deleted} materiałów z wykluczonymi słowami.` });
@@ -169,6 +173,7 @@ export default function Monitor() {
         {editExcl && (
           <div className="exclude-edit">
             <div className="small muted">Wyniki zawierające te słowa (w tytule, opisie, autorze, tagach – także jako początek słowa: „gta5” wyklucza „gta5rp”) nie trafiają do analizy ani do stałego monitoringu.</div>
+            <label className="toggle"><input type="checkbox" checked={plOnly.data?.on !== false} onChange={(e) => setPlOnly(e.target.checked)} /> tylko materiały po polsku – obcojęzyczne pobrane przez monitoring są pomijane (ręczna analiza bez ograniczeń)</label>
             <div className="exclude-chips">
               {words.map((w) => <span key={w} className="chip neutral">{w}<button type="button" aria-label={`Usuń ${w}`} onClick={() => saveWords(words.filter((x) => x !== w))}>×</button></span>)}
             </div>
@@ -180,7 +185,7 @@ export default function Monitor() {
             </div>
             {junk.data?.length > 0 && (
               <div className="small">
-                Już pobrane materiały z tymi słowami: <b>{junk.data.length}</b> ({junk.data.slice(0, 3).map((m) => `„${(m.title || m.url).slice(0, 40)}”`).join(', ')}{junk.data.length > 3 ? '…' : ''}){' '}
+                Już pobrane materiały z tymi słowami lub obcojęzyczne: <b>{junk.data.length}</b> ({junk.data.slice(0, 3).map((m) => `„${(m.title || m.url).slice(0, 40)}”`).join(', ')}{junk.data.length > 3 ? '…' : ''}){' '}
                 <button className="btn danger" onClick={purge}>Usuń je</button>
               </div>
             )}

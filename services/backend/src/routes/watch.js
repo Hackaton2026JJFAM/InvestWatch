@@ -1,6 +1,6 @@
 // Monitoring popularnych treści: tagi, wyszukiwanie kandydatów, zapisane zapytania.
 import { Router } from 'express';
-import { DEFAULT_EXCLUDE, excludedBy, getExcludes, setExcludes } from '../exclude.js';
+import { DEFAULT_EXCLUDE, excludedBy, foreignLang, getExcludes, getPolishOnly, setExcludes, setPolishOnly } from '../exclude.js';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { one, q } from '../db.js';
@@ -48,6 +48,11 @@ r.post('/discover/video', async (req, res) => {
 
 // Globalna lista słów wykluczających (np. gry) – wyniki z nimi nie trafiają do analizy ani do monitoringu
 r.get('/settings/exclude-keywords', async (_req, res) => res.json({ words: await getExcludes(), defaults: DEFAULT_EXCLUDE }));
+r.get('/settings/polish-only', async (_req, res) => res.json({ on: await getPolishOnly() }));
+r.put('/settings/polish-only', async (req, res) => {
+  const { on } = parse(z.object({ on: z.boolean() }), req.body);
+  res.json({ on: await setPolishOnly(on) });
+});
 r.put('/settings/exclude-keywords', async (req, res) => {
   const { words } = parse(z.object({ words: z.array(z.string().max(40)).max(200) }), req.body);
   res.json({ words: await setExcludes(words) });
@@ -57,9 +62,14 @@ r.put('/settings/exclude-keywords', async (req, res) => {
 // GET = podgląd, DELETE (administrator) = usunięcie razem z analizami i alertami.
 async function excludedMaterials() {
   const words = await getExcludes();
-  const rows = await q(`SELECT id, title, url, author, tags, raw->>'description' AS description,
-                               raw->'layout'->'video'->'meta'->'tags' AS meta_tags FROM materials`);
-  return rows.map((m) => ({ ...m, word: excludedBy({ ...m, tags: [...(m.tags ?? []), ...(Array.isArray(m.meta_tags) ? m.meta_tags : [])] }, words) }))
+  const polishOnly = await getPolishOnly();
+  // obcojęzyczne tylko z monitoringu/wyszukiwania (ręcznie zlecone analizy zostają)
+  const rows = await q(`SELECT id, title, url, author, tags, lang, raw->>'description' AS description,
+                               raw->'layout'->'video'->'meta'->'tags' AS meta_tags,
+                               EXISTS (SELECT 1 FROM scan_jobs j WHERE j.material_id = materials.id AND j.trigger IN ('watch', 'discover', 'schedule')) AS auto
+                          FROM materials`);
+  return rows.map((m) => ({ ...m, word: excludedBy({ ...m, tags: [...(m.tags ?? []), ...(Array.isArray(m.meta_tags) ? m.meta_tags : [])] }, words)
+      ?? (polishOnly && m.auto && foreignLang(m.lang) ? `język ${m.lang}` : null) }))
     .filter((m) => m.word).map(({ id, title, url, word }) => ({ id, title, url, word }));
 }
 r.get('/materials-excluded', async (_req, res) => res.json(await excludedMaterials()));
