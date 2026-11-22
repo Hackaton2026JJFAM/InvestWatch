@@ -109,7 +109,12 @@ r.get('/materials/:id', async (req, res) => {
   const latest = analyses[0] ? await one('SELECT result FROM analyses WHERE id = $1', [analyses[0].id]) : null;
   const findings = analyses[0] ? await q('SELECT * FROM findings WHERE analysis_id = $1 ORDER BY id', [analyses[0].id]) : [];
   const entities = await q(
-    `SELECT e.id, e.name, e.kind, e.registry_status, me.role FROM material_entities me JOIN entities e ON e.id = me.entity_id WHERE me.material_id = $1`, [id]);
+    `SELECT e.id, e.name, e.kind, e.registry_status, e.krs, me.role,
+            (SELECT rr.status FROM registry_records rr
+              WHERE rr.entity_id = e.id AND rr.registry = 'krs'
+              ORDER BY rr.checked_at DESC LIMIT 1) AS krs_status
+       FROM material_entities me JOIN entities e ON e.id = me.entity_id
+      WHERE me.material_id = $1`, [id]);
   const alerts = await q('SELECT * FROM alerts WHERE material_id = $1 ORDER BY id DESC', [id]);
   const { layout = {}, content_text: _c, full_text: _f, transcript: _t, ...meta } = m.raw ?? {};
   // wideo: transkrypcja z czasami i napisy z klatek z czasem widoczności na ekranie

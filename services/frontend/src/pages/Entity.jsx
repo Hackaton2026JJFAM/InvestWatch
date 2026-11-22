@@ -10,6 +10,7 @@ import { Empty, fmtDate, Panel, RiskBadge, Score, StatCard } from '../components
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 import { KIND, REG } from './Entities.jsx';
+import { HelpTip } from '../components/HelpTip.jsx';
 
 const SourceLink = ({ url, label = 'źródło' }) => (url ? <a href={url} target="_blank" rel="noreferrer noopener">{label}</a> : null);
 
@@ -49,7 +50,7 @@ function RegistryPanel({ entity, registry }) {
         : <p className="small muted">Brak odczytu KRS. Podaj numer KRS albo użyj „Wzbogać dane” – dla spółek z kodem LEI numer KRS zostanie odczytany z GLEIF. Dowolny podmiot sprawdzisz też w <Link to="/search?tab=external">wyszukiwarce (KRS, LEI)</Link>.</p>}
       {knf && (
         <>
-          <h3 style={{ marginTop: 14 }}>Rejestr firm inwestycyjnych KNF</h3>
+          <h3 style={{ marginTop: 14 }}>Rejestr firm inwestycyjnych KNF <HelpTip term="knf" label="KNF" /></h3>
           {entity.registry_status === 'demo' && <div className="notice" style={{ marginBottom: 6 }}>Podmiot fikcyjny z danych demonstracyjnych – nie jest wpisem w rejestrze KNF.</div>}
           <dl className="kv">
             <dt>Nazwa</dt><dd>{knf.name}</dd>
@@ -72,8 +73,8 @@ function LicensePanel({ entity, registry }) {
       <dl className="kv">
         <dt>Zakres (KNF)</dt><dd>{knf?.scope ?? 'brak danych'}</dd>
         <dt>Organ nadzoru</dt><dd>{knf?.supervisor ?? (knf?.country === 'PL' ? 'KNF' : 'brak danych')}</dd>
-        <dt>MiCA – CASP (ESMA)</dt><dd>{esma ? (esma.casp?.length ? esma.casp.map((c) => `${c.name} (${c.country}, ${c.authority})`).join('; ') : 'nie figuruje w rejestrze CASP') : 'nie sprawdzono'}</dd>
-        <dt>LEI (GLEIF)</dt>
+        <dt>MiCA – CASP (ESMA) <HelpTip term="mica" label="MiCA" /><HelpTip term="esma" label="ESMA" /><HelpTip term="casp" label="CASP" /></dt><dd>{esma ? (esma.casp?.length ? esma.casp.map((c) => `${c.name} (${c.country}, ${c.authority})`).join('; ') : 'nie figuruje w rejestrze CASP') : 'nie sprawdzono'}</dd>
+        <dt>LEI (GLEIF) <HelpTip term="lei" label="LEI" /><HelpTip term="gleif" label="GLEIF" /></dt>
         <dd>{gleif ? (gleif.records?.length ? gleif.records.slice(0, 4).map((g) => (
           <div key={g.lei}><a href={g.source_url} target="_blank" rel="noreferrer noopener" className="mono">{g.lei}</a> {g.name} · {g.country} · {g.entity_status}{g.lei === gleif.exact && <span className="chip pass" style={{ marginLeft: 6 }}>dokładne</span>}</div>))
           : 'brak rekordów LEI') : 'nie sprawdzono'}</dd>
@@ -236,7 +237,7 @@ function ReservesPanel({ id }) {
   const latest = data?.reports?.[0];
   const rep = latest?.data;
   return (
-    <Panel title="Rezerwy i pokrycie 1:1" meta={latest ? `raport ${String(latest.report_date).slice(0, 10)}` : data?.status}>
+    <Panel title={<>Raport rezerw i pokrycie 1:1 <HelpTip term="por" label="Proof of Reserves" /></>} meta={latest ? `raport ${String(latest.report_date).slice(0, 10)}` : data?.status}>
       <div className="notice">Proof of Reserves to deklaracja giełdy, nie audyt finansowy.</div>
       {rep ? (
         <p style={{ marginBottom: 0 }}>Minimalne pokrycie: <b>{(rep.min_coverage * 100).toFixed(1)}%</b>

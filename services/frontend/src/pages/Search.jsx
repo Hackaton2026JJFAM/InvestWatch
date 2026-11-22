@@ -8,6 +8,7 @@ import { GleifRelations, GleifSummary, KrsSummary } from '../components/Registry
 import { Empty, Panel, Score } from '../components/ui.jsx';
 import { useData, useDebounced } from '../hooks.js';
 import { useLive } from '../live.jsx';
+import { HelpTip } from '../components/HelpTip.jsx';
 import { KIND, REG } from './Entities.jsx';
 
 const KRS_RE = /^\d{10}$/;
@@ -86,14 +87,14 @@ function GleifResults({ q, onOpen }) {
   const [pl, setPl] = useState(true);
   const { data, error } = useData(q.length >= 3 ? `/registries/gleif${qs({ name: q, country: pl ? 'PL' : undefined })}` : null);
   return (
-    <Panel title="KRS i LEI (GLEIF)" meta="rejestry zewnętrzne"
+    <Panel title={<>KRS i LEI (GLEIF) <HelpTip term="gleif" label="GLEIF" /><HelpTip term="lei" label="LEI" /></>} meta="rejestry zewnętrzne"
       actions={<label className="small"><input type="checkbox" checked={pl} onChange={(e) => setPl(e.target.checked)} /> tylko Polska</label>}>
       {error && <Empty>{error.message}</Empty>}
       {!data && !error && <p className="small muted">Szukanie w GLEIF…</p>}
       {data && (data.length ? (
         <table><tbody>{data.map((g) => (
-          <tr key={g.lei} className="click" onClick={() => onOpen({ lei: g.lei, name: g.name })}>
-            <td>{g.name}<div className="small muted mono">{g.lei} · {g.country} · {g.entity_status}</div></td>
+          <tr key={g.lei}>
+            <td><button type="button" className="text-button" onClick={() => onOpen({ lei: g.lei, name: g.name })}>{g.name}</button><div className="small muted mono">{g.lei} · {g.country} · {g.entity_status}</div></td>
             <td style={{ textAlign: 'right' }}>{g.krs ? <span className="chip pass">KRS {g.krs}</span> : <span className="chip na">bez KRS</span>}</td>
           </tr>))}
         </tbody></table>
@@ -129,9 +130,9 @@ export default function Search() {
 
   return (
     <>
-      <div className="page-head"><div><h1>Wyszukiwarka</h1><p>Podmioty, materiały i adresy URL w InvestWatch, rejestr firm KNF oraz rejestry zewnętrzne: KRS (po numerze) i GLEIF/LEI (po nazwie lub kodzie)</p></div></div>
+      <div className="page-head"><div><h1>Wyszukiwarka</h1><p>Podmioty, materiały i adresy URL w InvestWatch, rejestr firm KNF oraz rejestry zewnętrzne: KRS <HelpTip term="krs" label="KRS" /> i GLEIF/LEI <HelpTip term="lei" label="LEI" /> (po nazwie lub kodzie)</p></div></div>
       <Panel>
-        <input className="search-big" autoFocus placeholder="Nazwa firmy, numer KRS (10 cyfr), kod LEI, adres URL, fraza z reklamy…" value={text} onChange={(e) => setText(e.target.value)} />
+        <label className="f search-main" htmlFor="search-global">Szukaj podmiotu, materiału lub w rejestrach<input id="search-global" className="search-big" autoFocus placeholder="Nazwa firmy, numer KRS (10 cyfr), kod LEI, adres URL, fraza z reklamy…" value={text} onChange={(e) => setText(e.target.value)} /></label>
         <div className="search-hint small muted">
           {q.length < 2 ? 'Wpisz co najmniej 2 znaki.' : kind === 'krs' ? `Rozpoznano numer KRS – pobieram odpis z KRS.` : kind === 'lei' ? 'Rozpoznano kod LEI – pobieram rekord z GLEIF.' : 'Wyszukiwanie po nazwie i treści.'}
         </div>
