@@ -67,6 +67,10 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Instagram: zasięg (wyświetlenia) bez logowania niedostępny – tylko polubienia/opis; Facebook: metadane ograniczone
 - [ ] Rejestr licencjonowanych doradców inwestycyjnych KNF – dziś licencja „zadeklarowana, do weryfikacji” (numer wyciągany z treści)
 
+## Wykluczenia i sprawdzeni doradcy (22.11.2026)
+- [x] Filtr wykluczeń w wyszukiwaniu kandydatów: stała lista słów (domyślnie gry: gta, gta5, roblox, fortnite, minecraft…; edycja w Monitoringu) + dodatkowe słowa dla pojedynczego wyszukiwania; dopasowanie w tytule/opisie/autorze/tagach, także początek słowa (gta5 → gta5rp); wykluczone nie trafiają do analizy ani do stałego monitoringu, w wynikach ukryte z licznikiem i opcją „pokaż”
+- [x] Sprawdzeni doradcy: analityk oznacza publikującego (konto, domena lub nr licencji) jako sprawdzonego w rejestrze KNF → przesłanki o braku/niepotwierdzonych uprawnieniach (M3.1–M3.3) nie liczą się, także dla przyszłych materiałów; M3.4 (lista ostrzeżeń) i M3.5 (nierealne obietnice) nadal się liczą; cofnięcie przelicza materiały ponownie
+
 ## Stabilność scrapera (22.11.2026)
 - [x] „Scraper nie odpowiada” przy transkrypcji: health scrapera z czasem 10 s (`SCRAPER_HEALTH_TIMEOUT_MS`), przekroczony czas przy wcześniej działającym scraperze = stan „zajęty” (informacja, nie błąd); healthcheck kontenera backendu na `/api/live`; zmierzone pod obciążeniem (transkrypcja 25-min filmu): health ≤ 40 ms, zawsze „up”
 - [x] Whisper ograniczony do połowy rdzeni (`WHISPER_THREADS`), druga próba po polsku tylko dla klipów ≤ 90 s; wyłącznik `VIDEO_TRANSCRIBE=false`

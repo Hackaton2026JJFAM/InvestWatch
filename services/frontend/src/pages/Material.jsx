@@ -374,6 +374,62 @@ function Summary({ materialId, analysis, tick, onReviewed, isVideo }) {
   );
 }
 
+// Doradca sprawdzony przez analityka w rejestrze KNF – jego treści nie są oznaczane jako możliwy brak zezwolenia
+function AdvisorVerification({ m, verified, candidate, onChange }) {
+  const { toast } = useLive();
+  const [open, setOpen] = useState(false);
+  const [f, setF] = useState(() => ({ name: candidate?.name ?? '', handle: candidate?.handle ?? '', domain: candidate?.domain ?? '', license_no: candidate?.license_no ?? '', note: '' }));
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const save = async (e) => {
+    e.preventDefault();
+    try {
+      const r = await api.post('/advisors/verified', { ...Object.fromEntries(Object.entries(f).filter(([, v]) => v.trim())), material_id: m.id });
+      toast({ kind: 'info', title: 'Doradca oznaczony jako sprawdzony', text: `Przeliczono materiały: ${r.updated}. Jego treści nie będą oznaczane jako możliwy brak zezwolenia.` });
+      setOpen(false);
+      onChange?.();
+    } catch (err) { toast({ kind: 'error', title: 'Nie zapisano', text: err.message }); }
+  };
+  const undo = async () => {
+    if (!window.confirm('Cofnąć oznaczenie „sprawdzony doradca”? Materiały tego publikującego zostaną ocenione ponownie.')) return;
+    try { await api.del(`/advisors/verified/${verified.id}`); onChange?.(); } catch (err) { toast({ kind: 'error', title: 'Nie cofnięto', text: err.message }); }
+  };
+  return (
+    <Panel title="Uprawnienia doradcy" meta="sprawdzenie w rejestrze KNF przez analityka">
+      {verified ? (
+        <div className="notice ok-notice">
+          <b>✓ Sprawdzony doradca:</b> {verified.name || verified.handle || verified.domain}
+          {verified.license_no && <> · nr {verified.license_no}</>} · {fmtDate(verified.verified_at)}
+          {verified.note && <div className="small">{verified.note}</div>}
+          <div className="small muted">Dopasowanie: {[verified.handle && `konto @${verified.handle}`, verified.domain && `domena ${verified.domain}`, verified.license_no && `nr licencji ${verified.license_no}`].filter(Boolean).join(', ')}. Treści nie są oznaczane jako możliwe doradztwo bez zezwolenia; nierealne obietnice i listy ostrzeżeń nadal się liczą.</div>
+          <div className="btn-row" style={{ marginTop: 8 }}><button className="btn" onClick={undo}>Cofnij oznaczenie</button></div>
+        </div>
+      ) : open ? (
+        <form className="add-problem" onSubmit={save}>
+          <div className="small muted">Uzupełnij przynajmniej jedno: konto, domenę albo numer licencji – po nich rozpoznamy kolejne materiały tego doradcy.</div>
+          <div className="grid g2" style={{ gap: 8 }}>
+            <label className="f">Nazwa / imię i nazwisko<input value={f.name} onChange={set('name')} maxLength={200} /></label>
+            <label className="f">Konto (bez @)<input value={f.handle} onChange={set('handle')} maxLength={200} placeholder="np. jan.kowalski" /></label>
+            <label className="f">Domena strony<input value={f.domain} onChange={set('domain')} maxLength={200} placeholder="np. kowalski-doradztwo.pl" /></label>
+            <label className="f">Nr licencji / wpisu KNF<input value={f.license_no} onChange={set('license_no')} maxLength={40} /></label>
+          </div>
+          <label className="f">Notatka (gdzie sprawdzono)<input value={f.note} onChange={set('note')} maxLength={500} placeholder="np. rejestr doradców inwestycyjnych KNF, 22.11.2026" /></label>
+          <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+            <button type="button" className="btn" onClick={() => setOpen(false)}>Anuluj</button>
+            <button className="btn primary" disabled={!(f.handle.trim() || f.domain.trim() || f.license_no.trim())}>Zapisz jako sprawdzonego</button>
+          </div>
+        </form>
+      ) : (
+        <>
+          <p className="small" style={{ marginTop: 0 }}>{r_lic(candidate)}</p>
+          <button className="btn" onClick={() => setOpen(true)}>Oznacz jako sprawdzonego doradcę</button>
+          <p className="small muted">Użyj po sprawdzeniu publikującego w rejestrze KNF. Jego obecne i przyszłe materiały nie będą oznaczane jako „możliwe doradztwo bez zezwolenia”.</p>
+        </>
+      )}
+    </Panel>
+  );
+}
+const r_lic = (c) => (c?.license_no ? `W treści podano numer licencji: ${c.license_no} – sprawdź go w rejestrze KNF.` : 'Publikujący nie został jeszcze sprawdzony przez analityka.');
+
 export default function Material() {
   const { id } = useParams();
   const { tick, toast } = useLive();
@@ -533,7 +589,10 @@ export default function Material() {
             </dl>
             <div className="notice" style={{ marginTop: 10 }}>Brak podmiotu w rejestrze KNF nie oznacza automatycznie nielegalnej działalności – to sygnał do weryfikacji (art. 76 u.o.i.f.).</div>
           </Panel>
-          <Panel title="Przesłanki dotyczące doradztwa"><FindingsTable findings={byModule('m3')} rejected={rejectedSet} /></Panel>
+          <Panel title="Przesłanki dotyczące doradztwa">
+            {data.verified_advisor && <div className="notice ok-notice" style={{ marginBottom: 8 }}>✓ Doradca sprawdzony przez analityka ({data.verified_advisor.name || data.verified_advisor.handle || data.verified_advisor.domain}{data.verified_advisor.license_no ? `, nr ${data.verified_advisor.license_no}` : ''}) – przesłanki o braku zezwolenia (M3.1–M3.3) nie liczą się do wyniku.</div>}
+            <FindingsTable findings={byModule('m3')} rejected={data.verified_advisor ? new Set([...rejectedSet, 'M3.1', 'M3.2', 'M3.3']) : rejectedSet} />
+          </Panel>
         </div>}
         </div>
         </>
@@ -542,6 +601,7 @@ export default function Material() {
       {tab === 'Publikujący' && (
         <div className="grid g2">
           <ProfilePanel r={r} m={m} onChange={reload} />
+          <AdvisorVerification key={data.verified_advisor?.id ?? 'none'} m={m} verified={data.verified_advisor} candidate={data.advisor_candidate} onChange={reload} />
           <Panel title="Podmioty powiązane w analizie">
             <div className="notice" style={{ marginBottom: 10 }}>Powiązanie automatyczne nie potwierdza współpracy. Sprawdź źródła i dane rejestrowe przed wyciągnięciem wniosków.</div>
             {entities.length ? <div className="entity-links">{entities.map((entity) => (

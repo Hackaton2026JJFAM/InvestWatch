@@ -33,7 +33,20 @@ export default function Monitor() {
   const tags = useData('/tags/popular?days=90', tick);
   const watches = useData('/watch', tick);
   const [text, setText] = useState('');
-  const [opts, setOpts] = useState({ min_views: 0, limit: 20, polish: true, sort: 'views' });
+  const [opts, setOpts] = useState({ min_views: 0, limit: 20, polish: true, sort: 'views', exclude: '' });
+  const excl = useData('/settings/exclude-keywords', tick);
+  const [editExcl, setEditExcl] = useState(false);
+  const [newWord, setNewWord] = useState('');
+  const [showExcluded, setShowExcluded] = useState(false);
+  const words = excl.data?.words ?? [];
+  const saveWords = async (list) => {
+    try { await api.put('/settings/exclude-keywords', { words: list }); excl.reload(); } catch (e) { toast({ kind: 'error', title: 'Wykluczenia', text: e.message }); }
+  };
+  const addWord = () => {
+    const w = newWord.trim().replace(/^#+/, '').toLowerCase();
+    if (w) saveWords([...words, ...w.split(/[,\s]+/).filter(Boolean)]);
+    setNewWord('');
+  };
   const [hints, setHints] = useState('tags');
   const [res, setRes] = useState(null);
   const [sel, setSel] = useState(new Set());
@@ -58,7 +71,8 @@ export default function Monitor() {
     setRes(null);
     setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
     try {
-      const r = await api.post('/discover/video', { ...opts, kind: p.kind, query: p.query, platform: 'all' });
+      const extra = opts.exclude.split(/[,\s]+/).map((x) => x.trim().replace(/^#+/, '')).filter(Boolean);
+      const r = await api.post('/discover/video', { ...opts, exclude: extra, kind: p.kind, query: p.query, platform: 'all' });
       setRes({ ...r, kind: p.kind, query: p.query });
       setSel(new Set(r.items.filter((i) => i.passes && !i.known).map((i) => i.url)));
     } catch (e) { toast({ kind: 'error', title: 'Wyszukiwanie', text: e.message }); } finally { setBusy(false); }
@@ -138,7 +152,24 @@ export default function Monitor() {
           <label className="inline">wyników <select value={opts.limit} onChange={(e) => setOpts((o) => ({ ...o, limit: Number(e.target.value) }))}>
             {[10, 20, 30, 50].map((v) => <option key={v}>{v}</option>)}</select></label>
           <label className="inline"><input type="checkbox" checked={opts.polish} onChange={(e) => setOpts((o) => ({ ...o, polish: e.target.checked }))} /> tylko po polsku</label>
+          <label className="inline">wyklucz też <input value={opts.exclude} onChange={(e) => setOpts((o) => ({ ...o, exclude: e.target.value }))} placeholder="np. minecraft, skrzynki" style={{ width: 170 }} title="Dodatkowe słowa tylko dla tego wyszukiwania" /></label>
+          <button type="button" className="linkish" onClick={() => setEditExcl((v) => !v)} title="Słowa, przy których wynik jest pomijany w wyszukiwaniu i stałym monitoringu">
+            stałe wykluczenia: {words.length ? words.slice(0, 4).join(', ') + (words.length > 4 ? ` +${words.length - 4}` : '') : 'brak'} ✎</button>
         </div>
+        {editExcl && (
+          <div className="exclude-edit">
+            <div className="small muted">Wyniki zawierające te słowa (w tytule, opisie, autorze, tagach – także jako początek słowa: „gta5” wyklucza „gta5rp”) nie trafiają do analizy ani do stałego monitoringu.</div>
+            <div className="exclude-chips">
+              {words.map((w) => <span key={w} className="chip neutral">{w}<button type="button" aria-label={`Usuń ${w}`} onClick={() => saveWords(words.filter((x) => x !== w))}>×</button></span>)}
+            </div>
+            <div className="btn-row">
+              <input value={newWord} onChange={(e) => setNewWord(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addWord()} placeholder="dodaj słowo, np. gta6" style={{ width: 200 }} />
+              <button className="btn" onClick={addWord} disabled={!newWord.trim()}>Dodaj</button>
+              <button className="btn" onClick={() => saveWords(excl.data?.defaults ?? [])} title="Przywróć domyślną listę (gry)">Przywróć domyślne</button>
+              <button className="btn" onClick={() => setEditExcl(false)}>Zamknij</button>
+            </div>
+          </div>
+        )}
 
         <div className="hints">
           <div className="seg" role="tablist">
@@ -187,19 +218,25 @@ export default function Monitor() {
               }, {})).map(([msg, plats]) => <div key={msg} className="small"><b>{plats.join(', ')}:</b> {msg}</div>)}
             </div>
           )}
-          {res && (res.items.length ? (
+          {res && res.items.some((i) => i.excluded) && (
+            <div className="small muted" style={{ marginBottom: 6 }}>
+              Pominięto {res.items.filter((i) => i.excluded).length} wyników z wykluczonymi słowami ({[...new Set(res.items.filter((i) => i.excluded).map((i) => i.excluded))].join(', ')}).{' '}
+              <button type="button" className="linkish" onClick={() => setShowExcluded((v) => !v)}>{showExcluded ? 'ukryj' : 'pokaż'}</button>
+            </div>
+          )}
+          {res && (res.items.filter((i) => showExcluded || !i.excluded).length ? (
             <div className="table-wrap monitor-results-wrap"><table className="monitor-results">
               <thead><tr><th /><th>Platforma</th><th>Film / post</th><th>Twórca</th><th>Zasięg</th><th>Język</th><th>Status</th></tr></thead>
-              <tbody>{res.items.map((i) => (
+              <tbody>{res.items.filter((i) => showExcluded || !i.excluded).map((i) => (
                 <tr key={i.url} style={{ opacity: i.passes ? 1 : 0.55 }}>
-                  <td><input type="checkbox" aria-label="Zaznacz do analizy" disabled={i.known || i.live} checked={sel.has(i.url)} onChange={(e) => setSel((s) => { const n = new Set(s); e.target.checked ? n.add(i.url) : n.delete(i.url); return n; })} /></td>
+                  <td><input type="checkbox" aria-label="Zaznacz do analizy" disabled={i.known || i.live || Boolean(i.excluded)} checked={sel.has(i.url)} onChange={(e) => setSel((s) => { const n = new Set(s); e.target.checked ? n.add(i.url) : n.delete(i.url); return n; })} /></td>
                   <td><span className="chip neutral">{PLATFORMS[i.platform] ?? i.platform}</span></td>
                   <td><a href={i.url} target="_blank" rel="noreferrer noopener">{i.title || i.url}</a></td>
                   <td className="small">{i.author ?? '–'}{i.followers != null && <div className="muted">{fmtCount(i.followers)} obs.</div>}</td>
                   <td>{i.views != null ? <b>{fmtCount(i.views)}</b> : i.likes != null ? <span className="small">{fmtCount(i.likes)} polub.</span> : <span className="small muted">nieznany</span>}
                     <div className="small muted">{i.live ? 'na żywo' : fmtDur(i.duration)}</div></td>
                   <td>{i.lang === 'pl' ? <span className="chip low">PL</span> : <span className="small muted">?</span>}</td>
-                  <td className="small">{i.known ? <Link to={`/materials?q=${encodeURIComponent(i.url)}`}>już przeanalizowany</Link> : i.passes ? 'do analizy' : (opts.polish && i.lang !== 'pl' ? 'nie po polsku' : 'za mały zasięg')}</td>
+                  <td className="small">{i.known ? <Link to={`/materials?q=${encodeURIComponent(i.url)}`}>już przeanalizowany</Link> : i.excluded ? `wykluczone („${i.excluded}”)` : i.passes ? 'do analizy' : (opts.polish && i.lang !== 'pl' ? 'nie po polsku' : 'za mały zasięg')}</td>
                 </tr>))}
               </tbody></table></div>
           ) : <Empty>Nic nie znaleziono. Spróbuj innego hashtagu albo frazy, albo zdejmij próg zasięgu.</Empty>)}

@@ -139,3 +139,28 @@ test('weryfikacja: problem dodany ręcznie podnosi wynik swojego modułu', async
   // odrzucenie jedynego punktu M2 + brak ręcznych -> 0
   assert.equal(reviewResult(result, ['3'], []).score, 0);
 });
+
+test('wykluczenia: słowa z listy odrzucają wyniki wyszukiwania (także gta5rp, #GTA5, polskie znaki)', async () => {
+  const { excludedBy, normalizeWords, DEFAULT_EXCLUDE } = await import('../src/exclude.js');
+  const words = normalizeWords(DEFAULT_EXCLUDE);
+  assert.equal(excludedBy({ title: 'DARMOWA KASA w GTA5RP 💸', author: 'gamer' }, words), 'gta5');
+  assert.equal(excludedBy({ title: 'Jak zarobić', tags: ['#Roblox'] }, words), 'roblox');
+  assert.equal(excludedBy({ title: 'Darmowa kasa na start – bot AI zarabia 30% miesięcznie' }, words), null);
+  assert.equal(excludedBy({ title: 'Legata i obligacje' }, words), null); // „gta” w środku słowa nie wyklucza
+  assert.equal(excludedBy({ title: 'Żółta kartka' }, normalizeWords(['zolta'])), 'zolta');
+});
+
+test('sprawdzony doradca: znikają przesłanki o braku zezwolenia (M3.1–M3.3), nierealne obietnice (M3.5) zostają', async () => {
+  const { reviewResult, withVerifiedAdvisor } = await import('../src/review.js');
+  const result = { score: 70, module_scores: { m3: 70 }, findings: [
+    { module: 'm3', rule_id: 'M3.1', status: 'fail', severity: 70, title: 'Możliwe doradztwo inwestycyjne bez zezwolenia', evidence: [] },
+    { module: 'm3', rule_id: 'M3.2', status: 'warn', severity: 20, title: 'Odpłatny charakter usługi', evidence: [] },
+  ] };
+  const adv = { name: 'Jan Kowalski', license_no: '553' };
+  const v = withVerifiedAdvisor(result, adv);
+  assert.equal(v.score, 0);
+  assert.ok(v.findings.some((f) => f.verified && f.status === 'pass' && /553/.test(f.explanation)));
+  const withPromise = { ...result, findings: [...result.findings, { module: 'm3', rule_id: 'M3.5', status: 'fail', severity: 50, title: 'x', evidence: [] }] };
+  assert.equal(reviewResult(withPromise, [], [], adv).score, 50);
+  assert.equal(withVerifiedAdvisor(result, null), result);
+});

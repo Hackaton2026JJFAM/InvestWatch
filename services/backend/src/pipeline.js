@@ -1,4 +1,5 @@
 // Przetwarzanie zadania: scraper -> deduplikacja -> analyzer -> zapis -> alert -> WebSocket.
+import { verifiedAdvisorFor } from './advisors.js';
 import { UnrecoverableError } from 'bullmq';
 import { getThreshold, one, q, tx } from './db.js';
 import { log } from './log.js';
@@ -167,6 +168,11 @@ export async function processScan(job) {
   analyzer.summary(result)
     .then((s) => q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [saved.analysisId, s.summary, s.engine]))
     .catch((err) => log.warn('summary failed', { analysisId: saved.analysisId, err: err.message }));
+
+  // doradca sprawdzony wcześniej przez analityka – od razu wynik po weryfikacji (bez „możliwego braku zezwolenia”)
+  try {
+    if (await verifiedAdvisorFor(saved.materialId)) await (await import('./routes/materials.js')).storeReviewFor(saved.materialId);
+  } catch (err) { log.warn('verified advisor apply failed', { id: saved.materialId, err: err.message }); }
 
   const payload = { id: saved.materialId, title: material.title, url: material.url, score: result.score, modules: result.modules, platform: material.platform };
   for (const id of newEntities) scheduleEnrichment(id);

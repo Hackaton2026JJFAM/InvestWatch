@@ -1,5 +1,6 @@
 // Monitoring popularnych treści: tagi, wyszukiwanie kandydatów, zapisane zapytania.
 import { Router } from 'express';
+import { DEFAULT_EXCLUDE, getExcludes, setExcludes } from '../exclude.js';
 import { z } from 'zod';
 import { requireAdmin } from '../auth.js';
 import { one, q } from '../db.js';
@@ -39,8 +40,16 @@ r.get('/tags/popular', async (req, res) => {
 
 // Podgląd kandydatów (bez kolejkowania) – analityk zaznacza, co analizować
 r.post('/discover/video', async (req, res) => {
-  const b = parse(searchSchema.and(z.object({ limit: z.coerce.number().int().min(1).max(50).default(20), min_views: z.coerce.number().int().min(0).default(0) })), req.body);
+  const b = parse(searchSchema.and(z.object({ limit: z.coerce.number().int().min(1).max(50).default(20), min_views: z.coerce.number().int().min(0).default(0),
+    exclude: z.array(z.string().max(40)).max(50).optional() })), req.body);
   res.json(await discoverCandidates({ ...b, query: b.kind === 'hashtag' ? normTag(b.query) : b.query, minViews: b.min_views }));
+});
+
+// Globalna lista słów wykluczających (np. gry) – wyniki z nimi nie trafiają do analizy ani do monitoringu
+r.get('/settings/exclude-keywords', async (_req, res) => res.json({ words: await getExcludes(), defaults: DEFAULT_EXCLUDE }));
+r.put('/settings/exclude-keywords', async (req, res) => {
+  const { words } = parse(z.object({ words: z.array(z.string().max(40)).max(200) }), req.body);
+  res.json({ words: await setExcludes(words) });
 });
 
 // Kolejkowanie wybranych kandydatów z priorytetem wg wyświetleń

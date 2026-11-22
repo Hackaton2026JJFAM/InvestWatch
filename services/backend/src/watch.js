@@ -9,6 +9,7 @@ import { log } from './log.js';
 import { enqueue, priorityFor } from './queue.js';
 import { emit } from './realtime.js';
 import { scraper } from './services.js';
+import { excludedBy, getExcludes, normalizeWords } from './exclude.js';
 
 export const ALL_PLATFORMS = ['youtube', 'tiktok', 'instagram', 'x', 'facebook'];
 const PROFILE_HOSTS = { youtube: /youtube\.com|youtu\.be/i, tiktok: /tiktok\.com/i };
@@ -31,7 +32,8 @@ async function discoverOne(platform, kind, query, sort, limit, polish) {
 }
 
 /** Kandydaci (jedna platforma albo wszystkie naraz) z oznaczeniem, czy już są w bazie / w kolejce. */
-export async function discoverCandidates({ platform = 'all', kind, query, sort = 'views', limit = 20, minViews = 0, polish = true }) {
+export async function discoverCandidates({ platform = 'all', kind, query, sort = 'views', limit = 20, minViews = 0, polish = true, exclude = [] }) {
+  const excludes = [...new Set([...(await getExcludes()), ...normalizeWords(exclude)])];
   const plats = platformsFor(platform, kind, query);
   const per = plats.length > 1 ? Math.max(5, Math.ceil(limit / 2)) : limit;
   const parts = [];
@@ -49,10 +51,11 @@ export async function discoverCandidates({ platform = 'all', kind, query, sort =
   const items = r.items.map((i) => {
     const reachOk = i.views == null ? i.platform !== 'youtube' || !minViews : i.views >= minViews;
     const langOk = !polish || i.lang === 'pl' || (i.lang == null && i.platform !== 'youtube');
-    return { ...i, known: known.has(i.url), reach_known: i.views != null, passes: !i.live && reachOk && langOk };
+    const excluded = excludedBy(i, excludes);
+    return { ...i, known: known.has(i.url), reach_known: i.views != null, excluded, passes: !i.live && reachOk && langOk && !excluded };
   });
   items.sort((a, b) => (b.passes - a.passes) || ((b.views ?? -1) - (a.views ?? -1)));
-  return { ...r, items };
+  return { ...r, items, excludes };
 }
 
 export async function runWatch(w) {

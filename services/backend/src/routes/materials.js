@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { saveReach } from '../reach.js';
-import { isKnownKey, KEY_RX, reviewResult, summaryPoints } from '../review.js';
+import { isKnownKey, KEY_RX, reviewResult, summaryPoints, withVerifiedAdvisor } from '../review.js';
+import { advisorCandidate, applyVerifiedAdvisors, verifiedAdvisorFor } from '../advisors.js';
 import { z } from 'zod';
 import { getShowDemo, getThreshold, one, q, tx } from '../db.js';
 import { emit } from '../realtime.js';
@@ -16,10 +17,11 @@ const PROFILES = ['podejrzenie_oszustwa', 'płatna_promocja', 'autoreklama', 'do
 const rejectedOf = async (materialId) => (await q('SELECT rule_id FROM finding_reviews WHERE material_id = $1 AND decision = \'rejected\'', [materialId])).map((x) => x.rule_id);
 
 const manualOf = async (materialId) => q('SELECT * FROM manual_findings WHERE material_id = $1 ORDER BY id', [materialId]);
+const advisorOf = (materialId) => verifiedAdvisorFor(materialId);
 
 // wynik i profil po weryfikacji analityka (odrzucone punkty + problemy dodane ręcznie; ręcznie ustawiony profil ma pierwszeństwo)
-async function storeReview(db, id, result, rejected, manual) {
-  const reviewed = rejected.length || manual.length ? reviewResult(result, rejected, manual) : null;
+async function storeReview(db, id, result, rejected, manual, advisor = null) {
+  const reviewed = rejected.length || manual.length || advisor ? reviewResult(result, rejected, manual, advisor) : null;
   const p = (reviewed ?? result).profile;
   await db.q(`UPDATE materials SET reviewed_score = $2, reviewed_modules = $3, profile_type = COALESCE(profile_manual, $4), scam_score = $5
                WHERE id = $1`,
@@ -33,7 +35,7 @@ async function refreshReview(id) {
   if (!a) return null;
   const rejected = await rejectedOf(id);
   const manual = await manualOf(id);
-  const reviewed = await storeReview({ q }, id, a.result, rejected, manual);
+  const reviewed = await storeReview({ q }, id, a.result, rejected, manual, await advisorOf(id));
   const s = await analyzer.summary(reviewed ?? a.result).catch(() => null);
   if (s) await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   emit('material:status', { id });
@@ -135,6 +137,8 @@ r.get('/materials/:id', async (req, res) => {
     analysis: analyses[0] ? { ...analyses[0], result: latest.result } : null,
     history: analyses, findings, entities, alerts, threshold, rejected: await rejectedOf(id),
     manual_findings: await manualOf(id),
+    verified_advisor: await advisorOf(id),
+    advisor_candidate: advisorCandidate(m, latest?.result),
     similar: await findSimilar(m.simhash, { excludeId: m.id }),
     // wynik efektywny = po weryfikacji analityka (gdy jest), inaczej wynik klasyfikatora
     effective_score: analyses[0] ? Number(m.reviewed_score ?? analyses[0].score) : null,
@@ -193,7 +197,7 @@ r.post('/materials/:id/reanalyze', async (req, res) => {
   });
   if (result.doc?.simhash) await q('UPDATE materials SET simhash = $2 WHERE id = $1', [id, result.doc.simhash]);
   // odrzucenia analityka obowiązują także po ponownej analizie
-  const reviewed = await storeReview({ q }, id, result, await rejectedOf(id), await manualOf(id));
+  const reviewed = await storeReview({ q }, id, result, await rejectedOf(id), await manualOf(id), await advisorOf(id));
   const s = await analyzer.summary(reviewed ?? result).catch(() => null);
   if (s) await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   res.json(a);
@@ -213,13 +217,15 @@ r.get('/summary/:materialId', async (req, res) => {
   if (!a) return res.status(404).json({ error: 'Brak analizy' });
   const rejected = await rejectedOf(materialId);
   const manual = await manualOf(materialId);
-  const reviewed = rejected.length || manual.length ? reviewResult(a.result, rejected, manual) : null;
+  const advisor = await advisorOf(materialId);
+  const reviewed = rejected.length || manual.length || advisor ? reviewResult(a.result, rejected, manual, advisor) : null;
   let s = { summary: a.summary, engine: a.summary_engine };
   if (!a.summary || req.query.refresh === '1') {
     s = await analyzer.summary(reviewed ?? a.result);
     await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   }
-  res.json({ ...s, points: summaryPoints(a.result, rejected, manual), score: Number(a.score), reviewed_score: reviewed ? reviewed.score : null,
+  res.json({ ...s, points: summaryPoints(withVerifiedAdvisor(a.result, advisor), rejected, manual), score: Number(a.score), reviewed_score: reviewed ? reviewed.score : null,
+    verified_advisor: advisor,
     module_scores: a.result.module_scores, reviewed_modules: reviewed?.module_scores ?? null });
 });
 
@@ -232,7 +238,8 @@ r.put('/materials/:id/review', async (req, res) => {
   // klucz „reguła” = cała przesłanka, „reguła:element” = pojedynczy sygnał/fragment
   const rejected = [...new Set(b.rejected)].filter((k) => isKnownKey(a.result, k));
   const manual = await manualOf(id);
-  const reviewed = rejected.length || manual.length ? reviewResult(a.result, rejected, manual) : null;
+  const advisor = await advisorOf(id);
+  const reviewed = rejected.length || manual.length || advisor ? reviewResult(a.result, rejected, manual, advisor) : null;
   // podgląd na żywo w trybie edycji – bez zapisu
   if (req.query.dry === '1') {
     return res.json({ score: Number(a.score), reviewed_score: reviewed ? reviewed.score : null, module_scores: a.result.module_scores,
@@ -245,12 +252,12 @@ r.put('/materials/:id/review', async (req, res) => {
       await t.q(`INSERT INTO finding_reviews (material_id, rule_id, note) VALUES ($1, $2, $3)
                  ON CONFLICT (material_id, rule_id) DO UPDATE SET note = COALESCE(EXCLUDED.note, finding_reviews.note)`, [id, rule, b.note ?? null]);
     }
-    await storeReview(t, id, a.result, rejected, manual);
+    await storeReview(t, id, a.result, rejected, manual, advisor);
     if (s) await t.q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   });
   emit('material:status', { id });
   res.json({ rejected, reviewed_score: reviewed ? reviewed.score : null, score: Number(a.score), summary: s?.summary ?? null,
-    points: summaryPoints(a.result, rejected, manual), profile: reviewed?.profile?.primary ?? a.result.profile?.primary ?? null });
+    points: summaryPoints(withVerifiedAdvisor(a.result, advisor), rejected, manual), profile: reviewed?.profile?.primary ?? a.result.profile?.primary ?? null });
 });
 
 // Problemy dodane ręcznie (np. fragment filmu, którego automat nie wychwycił) – liczą się do wyniku po weryfikacji
@@ -277,6 +284,36 @@ r.delete('/materials/:id/manual-findings/:fid', async (req, res) => {
   res.json({ reviewed_score: out?.reviewed?.score ?? null });
 });
 
+// Doradcy sprawdzeni przez analityka w rejestrze KNF (konto, domena albo nr licencji)
+r.get('/advisors/verified', async (_req, res) => res.json(await q('SELECT * FROM verified_advisors ORDER BY verified_at DESC')));
+r.post('/advisors/verified', async (req, res) => {
+  const b = parse(z.object({
+    name: z.string().trim().max(200).optional(), handle: z.string().trim().max(200).optional(), domain: z.string().trim().max(200).optional(),
+    license_no: z.string().trim().max(40).optional(), note: z.string().trim().max(500).optional(), material_id: z.coerce.number().int().positive().optional(),
+  }).refine((x) => x.handle || x.domain || x.license_no, 'Podaj konto, domenę albo numer licencji'), req.body);
+  const row = await one(
+    'INSERT INTO verified_advisors (name, handle, domain, license_no, note) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+    [b.name || null, b.handle ? b.handle.toLowerCase().replace(/^@/, '') : null, b.domain ? b.domain.toLowerCase().replace(/^www\./, '') : null,
+      b.license_no || null, b.note || null]);
+  const updated = await applyVerifiedAdvisors(storeReviewFor);
+  res.status(201).json({ advisor: row, updated });
+});
+r.delete('/advisors/verified/:id', async (req, res) => {
+  const { id } = parse(idParam, req.params);
+  const row = await one('DELETE FROM verified_advisors WHERE id = $1 RETURNING *', [id]);
+  if (!row) return res.status(404).json({ error: 'Nie znaleziono' });
+  const updated = await applyVerifiedAdvisors(storeReviewFor, row);
+  res.json({ deleted: row.id, updated });
+});
+
+// przeliczenie wyniku po weryfikacji materiału (np. po zmianie listy sprawdzonych doradców)
+export async function storeReviewFor(id) {
+  const a = await one('SELECT result FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [id]);
+  if (!a) return;
+  await storeReview({ q }, id, a.result, await rejectedOf(id), await manualOf(id), await advisorOf(id));
+  emit('material:status', { id });
+}
+
 // Ręczne oznaczenie profilu treści (np. „autoreklama”); null = powrót do klasyfikacji automatycznej
 r.put('/materials/:id/profile', async (req, res) => {
   const { id } = parse(idParam, req.params);
@@ -284,7 +321,7 @@ r.put('/materials/:id/profile', async (req, res) => {
   const a = await one('SELECT result FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [id]);
   const row = await one('UPDATE materials SET profile_manual = $2 WHERE id = $1 RETURNING id', [id, profile]);
   if (!row) return res.status(404).json({ error: 'Nie znaleziono materiału' });
-  if (a) await storeReview({ q }, id, a.result, await rejectedOf(id), await manualOf(id));
+  if (a) await storeReview({ q }, id, a.result, await rejectedOf(id), await manualOf(id), await advisorOf(id));
   else await q('UPDATE materials SET profile_type = COALESCE(profile_manual, profile_type) WHERE id = $1', [id]);
   const m = await one('SELECT id, profile_type, profile_manual FROM materials WHERE id = $1', [id]);
   emit('material:status', { id });

@@ -66,9 +66,30 @@ export const manualFinding = (x) => ({
   evidence: x.fragment ? [{ text: x.fragment, where: x.at ? `fragment · ${x.at}` : 'fragment', ...(x.at ? { at: x.at } : {}) }] : [],
 });
 
-/** Wynik po weryfikacji: bez odrzuconych przesłanek/elementów, z problemami dodanymi ręcznie. */
-export function reviewResult(result, rejected = [], manual = []) {
-  const base = rejected.length ? withoutRejected(result, rejected) : result;
+// Przesłanki M3 dotyczące braku/niepotwierdzonych uprawnień – nieaktualne, gdy analityk sprawdził doradcę w rejestrze.
+// M3.4 (lista ostrzeżeń) i M3.5 (nierealne obietnice) zostają – to problemy niezależne od licencji.
+export const LICENSE_RULES = ['M3.1', 'M3.2', 'M3.3'];
+
+/** Przesłanki z doradcą sprawdzonym przez analityka: M3.1–M3.3 zastąpione informacją „zweryfikowany” (bez wagi). */
+export function withVerifiedAdvisor(result, advisor) {
+  if (!advisor) return result;
+  const findings = result.findings.filter((f) => !LICENSE_RULES.includes(f.rule_id));
+  const had = findings.length !== result.findings.length;
+  findings.push({ module: 'm3', rule_id: 'M3.1', title: 'Doradca sprawdzony przez analityka', status: 'pass', severity: 0, verified: true,
+    legal_basis: 'art. 76 u.o.i.f.', evidence: [],
+    explanation: `${advisor.name || advisor.handle || advisor.domain || 'Publikujący'}${advisor.license_no ? ` (nr ${advisor.license_no})` : ''} – `
+      + `uprawnienia sprawdzone w rejestrze KNF${advisor.verified_at ? ` (${new Date(advisor.verified_at).toLocaleDateString('pl-PL')})` : ''}`
+      + `${advisor.note ? `: ${advisor.note}` : ''}. Treść nie jest oznaczana jako możliwe doradztwo bez zezwolenia.` });
+  if (!had) return { ...result, findings };
+  const s = scoreOf(findings);
+  return { ...result, findings, score: s.score, module_scores: { ...result.module_scores, ...s.module_scores },
+    modules: Object.entries(s.module_scores).filter(([, v]) => v >= 20).map(([m]) => m) };
+}
+
+/** Wynik po weryfikacji: sprawdzony doradca, bez odrzuconych przesłanek/elementów, z problemami dodanymi ręcznie. */
+export function reviewResult(result, rejected = [], manual = [], advisor = null) {
+  const verified = withVerifiedAdvisor(result, advisor);
+  const base = rejected.length ? withoutRejected(verified, rejected) : verified;
   if (!manual.length) return base;
   const findings = [...base.findings, ...manual.map(manualFinding)];
   const s = scoreOf(findings);

@@ -487,3 +487,10 @@ label.f { gap: 5px; font-size: .77rem; font-weight: 600; }
 .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 .seg button { background: transparent; border: 0; padding: 6px 12px; color: var(--muted); cursor: pointer; font: inherit; }
 .seg button.active { background: var(--chip-brand-bg); color: var(--brand-2); font-weight: 600; }
+
+.notice.ok-notice { border-left-color: var(--low); }
+.exclude-edit { display: grid; gap: 8px; padding: 10px 12px; margin: 0 0 12px; border: 1px dashed var(--border); border-radius: 8px; background: var(--surface-2); }
+.exclude-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.exclude-chips .chip button { background: none; border: 0; margin-left: 4px; cursor: pointer; color: inherit; font: inherit; padding: 0; }
+
+.linkish { background: none; border: 0; padding: 0; color: var(--brand-2); cursor: pointer; font: inherit; text-decoration: underline dotted; }

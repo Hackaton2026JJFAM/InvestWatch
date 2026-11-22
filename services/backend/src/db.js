@@ -121,6 +121,10 @@ const MIGRATIONS = [
      id SERIAL PRIMARY KEY, material_id INT NOT NULL REFERENCES materials(id) ON DELETE CASCADE, module TEXT NOT NULL,
      title TEXT NOT NULL, severity INT NOT NULL, explanation TEXT, fragment TEXT, at TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
   'CREATE INDEX IF NOT EXISTS manual_findings_material ON manual_findings (material_id)',
+  // doradcy sprawdzeni przez analityka w rejestrze KNF – ich treści nie są oznaczane jako możliwy brak zezwolenia
+  `CREATE TABLE IF NOT EXISTS verified_advisors (
+     id SERIAL PRIMARY KEY, name TEXT, handle TEXT, domain TEXT, license_no TEXT, note TEXT,
+     verified_at TIMESTAMPTZ NOT NULL DEFAULT now(), CHECK (handle IS NOT NULL OR domain IS NOT NULL OR license_no IS NOT NULL))`,
   // uzupełnienie dla materiałów sprzed rankingu tagów: język z ostatniej analizy, hashtagi z tytułu i treści
   `UPDATE materials m SET lang = x.lang FROM (SELECT DISTINCT ON (material_id) material_id, result->'doc'->>'lang' AS lang
      FROM analyses ORDER BY material_id, created_at DESC) x WHERE x.material_id = m.id AND m.lang IS NULL AND x.lang IS NOT NULL`,
