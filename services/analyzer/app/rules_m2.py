@@ -41,6 +41,7 @@ VISUAL_RULES = {"4", "5", "6", "7", "8"}
 CREDIBILITY = T.rx(r"potwierdz\w*", r"gwarant\w*", r"\bekspert\w*", r"wiarygodn\w*", r"zaufan\w*", r"\bjakos\w*", r"\bdowod\w*",
                    r"\bprofesjonaln\w*", r"\bkompetenc\w*")
 MIN_WARNING_SECONDS = 3   # wideo: minimalny czas wyświetlania ostrzeżenia (czytelność planszy)
+PAGE_OVERLAY_SHARE = 0.6  # > 60% przesłoniętych bloków strony = nakładka na całą stronę, nie ukrywanie ostrzeżenia
 
 
 def F(rule_id: str, status: str, explanation: str, evidence: list[dict] | None = None, severity: int | None = None) -> Finding:
@@ -148,8 +149,25 @@ def r3(c: Ctx) -> Finding:
     return F("3", PASS, f"Twierdzeniom o zyskach towarzyszy informacja o ryzyku (ryzyko/zysk = {ratio:.2f}).", [ev(c.risk[0].text, "ryzyko")])
 
 
+# „bez ryzyka” o obligacjach skarbowych / lokatach (gwarancja Skarbu Państwa, BFG) to opis instrumentu, nie obietnica oszusta
+# (same „obligacje” nie wystarczą – oszustwa na obligacjach korporacyjnych też obiecują „brak ryzyka”; obligacje
+#  indeksowane inflacją to detaliczne obligacje skarbowe)
+STATE_BACKED = T.rx(r"obligacj\w* (?:skarbow|panstw|oszczednosciow|emerytaln|rodzinn|indeksowan)\w*", r"skarb\w* panstwa", r"\bedo\d*\b",
+                    r"obligacj\w*[^.]{0,80}inflacj\w*", r"inflacj\w*[^.]{0,80}obligacj\w*",
+                    r"\bcoi\d*\b", r"\bros\d*\b", r"\brod\d*\b", r"\btos\d*\b", r"\blokat\w*", r"\bbfg\b", r"gwarancj\w* (?:skarbu|panstwa|bfg)\w*")
+
+
+def state_backed(sentences, x, window: int = 2) -> bool:
+    return any(T.has(STATE_BACKED, y.text) for y in sentences if abs(y.idx - x.idx) <= window)
+
+
+def guarantee_promises(sentences) -> list:
+    """Obietnice zysku bez ryzyka, z pominięciem opisu instrumentów gwarantowanych przez państwo."""
+    return [x for x in sentences if promises(x.text) and not state_backed(sentences, x)]
+
+
 def g1(c: Ctx) -> Finding:
-    hits = [x for x in c.doc.sentences if promises(x.text)]
+    hits = guarantee_promises(c.doc.sentences)
     if hits:
         phrases = sorted({p for x in hits for p in T.affirmed(T.GUARANTEE, x.text)})
         return F("G1", FAIL, f"Wykryto sformułowania sugerujące zysk bez ryzyka: {', '.join(phrases)}.", [ev(x.text) for x in hits[:4]])
@@ -355,7 +373,11 @@ def r5(c: Ctx) -> Finding:
         problems.append(f"bardzo niski kontrast {best['contrast']}:1 (WCAG wymaga ≥4,5:1)")
     elif best["contrast"] < 4.5:
         problems.append(f"niski kontrast {best['contrast']}:1 (WCAG ≥4,5:1)")
-    if all(b.get("occluded") for b in rb):
+    # nakładka na całą stronę (okno cookies/promocji nierozpoznane przy renderze) zasłania wszystko po równo –
+    # to nie jest ukrycie ostrzeżenia; przesłonięcie liczy się, gdy dotyczy ostrzeżenia, a nie większości treści
+    page = _vis(c.doc.blocks("desktop"))
+    page_overlay = len(page) >= 10 and sum(1 for b in page if b.get("occluded")) / len(page) > PAGE_OVERLAY_SHARE
+    if all(b.get("occluded") for b in rb) and not page_overlay:
         problems.append("ostrzeżenie jest przesłonięte przez inny element")
     if best.get("opacity", 1) < 0.6:
         problems.append(f"obniżona przezroczystość ({best['opacity']})")

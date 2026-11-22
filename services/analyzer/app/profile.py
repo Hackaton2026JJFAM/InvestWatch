@@ -29,7 +29,7 @@ _NUM = r"(\d+(?:[.,]\d+)?|" + "|".join(sorted(NUM_WORDS, key=len, reverse=True))
 PCT = re.compile(_NUM + r"\s?(?:%|procent\w*|proc\.?)", re.I)
 # okres: dziennie / w tydzień / miesięcznie / w 3 miesiące / rocznie
 PERIOD = re.compile(
-    r"(?P<n>\d+)?\s*(?P<u>dzien\w*|dni|dniach|dziennie|daily|day|tydz\w*|tygodni\w*|weekly|week|mies\w*|monthly|month|"
+    r"(?P<n>\d+)?\s*(?P<u>dzien\w*|dni\b|dniach|dziennie|daily|day|tydz\w*|tygodni\w*|weekly|week|mies\w*|monthly|month|"
     r"kwartal\w*|rok\w*|rocz\w*|lat\b|lata\b|year\w*|annual\w*|annually)", re.I)
 UNIT_PER_YEAR = [("dz", 365), ("dni", 365), ("dai", 365), ("day", 365), ("tyg", 52), ("tydz", 52), ("week", 52),
                  ("mies", 12), ("month", 12), ("kwart", 4), ("rok", 1), ("rocz", 1), ("lat", 1), ("year", 1), ("annual", 1)]
@@ -37,6 +37,14 @@ MULTIPLIER = re.compile(r"\b(?:x\s?(\d{1,4})|(\d{1,4})\s?x)\b|\b(podwo[ij]\w*|po
 NOT_RETURN = T.rx(r"prowizj", r"oplat", r"rabat", r"znizk", r"podat", r"inflacj", r"stop\w* procentow", r"\brrso\b", r"oprocentowani\w* kredyt",
                   r"rachunk\w* (?:inwestor|klient)", r"\btraci\b", r"\bstrat\w*", r"\bspad\w*", r"\bkurs\w* walut", r"\bmarz\w*", r"\bvat\b",
                   r"\bltv\b", r"\bdzwigni\w*", r"\blewar\w*", r"\bdepozyt\w* zabezpieczaj")
+# oprocentowanie obligacji skarbowych i lokat to publikowane warunki emisji, nie obietnica zysku – sprawdzane w całym zdaniu
+# (plansza z OCR: „list emisyjny … 5,55% w pierwszym roku” – OCR potrafi zgubić przecinek i „cbligacji” zamiast „obligacji”)
+BOND = T.rx(r"\b[oc]bligacj\w*", r"\bemisj\w*", r"\bemisyjn\w*", r"\bedo\d*\b", r"\bcoi\d*\b", r"\bros\d*\b", r"\brod\d*\b",
+            r"\blokat\w*", r"\bskarb\w* panstwa\b")
+# „podwójne dno / szczyt” to formacje analizy technicznej, nie podwojenie kapitału
+FORMATION = re.compile(r"(?:dn\w*|dni\w*|szczyt\w*|wierzcholk\w*|dolk\w*|top\w*|bottom\w*|formacj\w*)\b")
+# „w 100% racjonalne”, „na 100% pewne” – idiom, nie stopa zwrotu
+PCT_IDIOM = re.compile(r"\b(?:w|na) 100\s?%")
 RETURN_CONTEXT = T.rx(r"zysk", r"zarob", r"zwrot", r"stop\w* zwrotu", r"dochod", r"profit", r"return", r"earn", r"\broi\b", r"zarabia", r"wzrost",
                       r"\bpomnoz", r"\bpodwo", r"\bwyplat", r"oprocentowan", r"odsetk", r"\bpasywn")
 INVEST_CTX = T.rx(r"monet", r"token", r"krypto", r"bitcoin", r"\bbtc\b", r"kapital", r"pieniad", r"inwest", r"akcj", r"portfel", r"kurs", r"wartos")
@@ -71,9 +79,10 @@ def return_claims(sentences) -> list[dict]:
         if is_risk_warning(s.text) and not T.has(T.GUARANTEE, s.text):
             continue  # „74% rachunków traci pieniądze” to ostrzeżenie, nie obietnica
         has_return = T.has(RETURN_CONTEXT, s.text)
+        bond = T.has(BOND, s.text)
         for m in (PCT.finditer(f) if has_return else ()):
             near = f[max(0, m.start() - 40): m.end() + 45]
-            if T.has(NOT_RETURN, near):
+            if T.has(NOT_RETURN, near) or PCT_IDIOM.search(f, max(0, m.start() - 4), m.end()):
                 continue
             pct = _num(m.group(1))
             if pct is None or pct <= 0:
@@ -82,10 +91,12 @@ def return_claims(sentences) -> list[dict]:
             per = _per_year(pm.group("u"), int(pm.group("n")) if pm and pm.group("n") else None) if pm else None
             annual = round(pct * per, 1) if per else None
             out.append({"text": s.text, "claim": m.group(0), "pct": pct, "period": pm.group(0).strip() if pm else None,
-                        "annual_pct": annual, "historical": T.has(T.HIST, s.text) and not T.has(T.FORECAST, s.text)})
+                        "annual_pct": annual, "historical": T.has(T.HIST, s.text) and not T.has(T.FORECAST, s.text), "bond": bond})
         for m in (MULTIPLIER.finditer(f) if has_return or T.has(INVEST_CTX, s.text) else ()):
             mult = m.group(1) or m.group(2)
             word = m.group(3)
+            if word and FORMATION.match(f, m.end() + 1):
+                continue
             factor = float(mult) if mult else (2.0 if word.startswith("podwo") else 3.0 if word.startswith("potroj") else None)
             if factor is None or factor < 1.5 or factor > 10000:
                 if word and not factor:  # „pomnożysz kapitał” bez liczby
@@ -103,7 +114,7 @@ def return_claims(sentences) -> list[dict]:
 # ---------------------------------------------------------------------------- sygnały oszustwa
 SCAM_SIGNALS: list[tuple[str, str, re.Pattern, int]] = [
     ("presja_czasu", "Presja czasu", T.rx(r"tylko (?:dzis|dzisiaj|teraz|do (?:konca|polnocy))", r"ostatni\w* (?:miejsc|szans|dzien)", r"zostal\w* (?:tylko )?\d+ miejsc",
-                                           r"nie przegap", r"\bspiesz\w* sie\b", r"oferta (?:wygasa|konczy)", r"limited (?:time|spots)", r"act now", r"\bonly \d+ spots\b", r"zanim bedzie za pozno"), 20),
+                                           r"nie przegap", r"\b(?:po)?spiesz(?:cie)? sie\b", r"oferta (?:wygasa|konczy)", r"limited (?:time|spots)", r"act now", r"\bonly \d+ spots\b", r"zanim bedzie za pozno"), 20),
     ("kontakt_prywatny", "Przeniesienie rozmowy poza platformę", T.rx(r"\bwhats ?app\b", r"\btelegram\w*", r"\bnapisz (?:do mnie )?(?:na )?(?:priv|prywatn|dm)\w*",
                                                                       r"\bdm me\b", r"\bpisz na priv\b", r"\bmessage me\b", r"\btext me\b", r"\bsignal\b (?:app|komunikator)", r"\bwiadomosc prywatn\w*"), 20),
     ("wplata_prywatna", "Wpłata na prywatny portfel/rachunek", T.rx(r"\bwplac\w* (?:na|przez) (?:moj|portfel|blik|konto prywatn)", r"\bprzelej\w*", r"\bblik\w*",
@@ -114,7 +125,9 @@ SCAM_SIGNALS: list[tuple[str, str, re.Pattern, int]] = [
     ("znane_osoby", "Wizerunek znanych osób", T.rx(r"\blewandowsk\w*", r"\bkubic\w*", r"\bmusk\w*", r"\bkulczyk\w*", r"\bsolorz\w*", r"\bglapinsk\w*",
                                                     r"\bowsiak\w*", r"\bznan\w* (?:milioner|miliarder|biznesmen|celebryt)\w*",
                                                     r"\b(?:prezydent|premier|prezes nbp)\w* (?:zainwestowal|poleca|ujawnil)\w*"), 35),
-    ("odzyskiwanie", "„Odzyskamy Twoje środki”", T.rx(r"odzysk\w* (?:twoje |utracon\w* )?(?:pieniadz|srodk|kapital)\w*", r"recover\w* (?:your )?(?:funds|money)"), 40),
+    # czasownik / „odzyskanie” – nie rzeczownik ekonomiczny („odzysków kapitałowych”)
+    ("odzyskiwanie", "„Odzyskamy Twoje środki”", T.rx(r"\bodzysk(?:a|am|uj|ani)\w* (?:twoje |swoje |twoich |utracon\w* )?(?:pieniadz|pieniedz|srodk|kapital)\w*",
+                                                      r"recover\w* (?:your )?(?:funds|money)"), 40),
     ("minimalna_wplata", "Niska wpłata na start z obietnicą zysku", T.rx(r"(?:od|tylko|juz od|zacznij od|wplac) ?\$? ?(?:50|99|100|200|250|500) ?(?:zl|pln|eur|euro|usd|\$|dolar)\w*"), 20),
     ("bot_ai", "Automatyczny bot/AI „zarabia za Ciebie”", T.rx(r"\bbot\w* (?:tradingow|inwestycyjn|ai|zarabia)\w*", r"\bai (?:zarabia|inwestuje|trader)\w*",
                                                                  r"\bzarabia (?:za ciebie|sam|automatycznie)\b", r"\bautomatyczn\w* (?:zysk|dochod|zarabian)\w*",
@@ -133,12 +146,14 @@ ADVISOR = T.rx(r"\bsygnal\w* (?:transakcyjn|kupna|sprzedazy|tradingow)\w*", r"\b
 
 
 def run(doc: Doc, m3_classification: str, watch_hits: list[dict], publisher_type: str | None = None, advertised: bool = False) -> dict:
-    from .rules_m2 import promises
+    from .rules_m2 import guarantee_promises
     s = doc.sentences
     claims = return_claims(s)
-    unrealistic = [c for c in claims if (c["annual_pct"] or 0) >= UNREALISTIC_ANNUAL or (c.get("multiplier") and c["annual_pct"] is None)]
-    high = [c for c in claims if REALISTIC_ANNUAL <= (c["annual_pct"] or 0) < UNREALISTIC_ANNUAL]
-    guarantee = [x for x in s if promises(x.text)]
+    # oprocentowanie obligacji / lokat to opublikowane warunki emisji (z planszy OCR bywa zniekształcone) – bez oceny realizmu
+    rated = [c for c in claims if not c.get("bond")]
+    unrealistic = [c for c in rated if (c["annual_pct"] or 0) >= UNREALISTIC_ANNUAL or (c.get("multiplier") and c["annual_pct"] is None)]
+    high = [c for c in rated if REALISTIC_ANNUAL <= (c["annual_pct"] or 0) < UNREALISTIC_ANNUAL]
+    guarantee = guarantee_promises(s)
 
     signals = []
     for key, label, pat, weight in SCAM_SIGNALS:

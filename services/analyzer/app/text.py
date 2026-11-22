@@ -77,7 +77,8 @@ GUARANTEE = rx(
     r"bezpieczn\w* inwestycj\w* bez", r"zysk bez ryzyka",
 )
 RISK = rx(
-    r"\bryzyk(?!owa|uj)\w*",  # bez czasownika „ryzykować” (np. „lubi ryzykować”) r"mozesz (?:\w+ )?straci\w*", r"utrat\w* (?:czesci |calosci |calego |zainwestowan\w* )?(?:kapital|srodk|zainwestowan)\w*",
+    r"\bryzyk(?!owa|uj)\w*",  # bez czasownika „ryzykować” (np. „lubi ryzykować”)
+    r"mozesz (?:\w+ )?straci\w*", r"utrat\w* (?:czesci |calosci |calego |zainwestowan\w* )?(?:kapital|srodk|zainwestowan)\w*",
     r"\bstrat\w*", r"zlozonymi instrumentami", r"\d+(?:[.,]\d+)?\s?% (?:rachunkow|kont) (?:inwestorow )?detalicznych",
     r"wartosc \w+ moze (?:spadac|spasc|male|ulec)", r"nie gwarantuj\w*", r"\brisk\w*", r"\blose\b", r"\bloss\w*",
     r"dzwigni\w* finansow\w*", r"wahani\w* (?:kurs|wartosc|cen)\w*",
