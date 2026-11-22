@@ -86,7 +86,13 @@ def extract(html: str, url: str) -> dict:
     ld = _jsonld(soup)
 
     author = _meta(soup, "author", "article:author", "twitter:creator")
-    published = _meta(soup, "article:published_time", "datePublished", "pubdate", "date")
+    published = _meta(soup, "article:published_time", "og:published_time", "datePublished", "pubdate", "publish-date", "date",
+                      "dc.date", "DC.date.issued", "parsely-pub-date", "sailthru.date")
+    if not published:
+        # <time datetime> / itemprop=datePublished w treści strony
+        t = soup.find(attrs={"itemprop": "datePublished"}) or soup.find("time", attrs={"datetime": True})
+        if t:
+            published = (t.get("datetime") or t.get("content") or "").strip() or None
     publisher = _meta(soup, "og:site_name")
     for item in ld:
         a = item.get("author")

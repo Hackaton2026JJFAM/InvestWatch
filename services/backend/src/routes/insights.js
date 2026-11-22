@@ -1,56 +1,71 @@
 // Dashboard, alerty, kalibracja, ustawienia, wyszukiwarka, podmioty.
 import { Router } from 'express';
 import { z } from 'zod';
-import { getThreshold, one, q } from '../db.js';
+import { getShowDemo, getThreshold, one, q } from '../db.js';
 import { emit } from '../realtime.js';
 import { analyzer } from '../services.js';
 import { requireAdmin } from '../auth.js';
 import { enrichEntity, krsCandidates } from '../enrichment.js';
-import { parse, aboveSql, riskSql } from '../validate.js';
+import { parse, aboveSql, riskSql, LATEST, LATEST_RAW, demoSql } from '../validate.js';
 
 const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
-const LATEST = 'JOIN LATERAL (SELECT * FROM analyses WHERE material_id = m.id ORDER BY created_at DESC LIMIT 1) a ON TRUE';
+const ALERT_STATUSES = ['NEW', 'IN_REVIEW', 'REVIEWED', 'DISMISSED'];
 
 r.get('/dashboard/stats', async (_req, res) => {
   const t = await getThreshold();
+  const D = demoSql(await getShowDemo());
   const totals = await one(
     `SELECT count(*)::int AS materials,
             count(*) FILTER (WHERE a.score >= $1)::int AS high,
             count(*) FILTER (WHERE a.score >= $1 * 0.6 AND a.score < $1)::int AS medium,
-            count(*) FILTER (WHERE m.status = 'NEW' AND a.score >= $1 * 0.6)::int AS to_verify
-       FROM materials m ${LATEST}`, [t]);
-  const alerts = await one("SELECT count(*) FILTER (WHERE NOT read)::int AS unread, count(*) FILTER (WHERE status = 'NEW')::int AS new FROM alerts");
+            count(*) FILTER (WHERE m.status IN ('NEW', 'IN_REVIEW') AND a.score >= $1 * 0.6)::int AS to_verify
+       FROM materials m ${LATEST} WHERE ${D}`, [t]);
+  const alerts = await one(
+    `SELECT count(*) FILTER (WHERE NOT al.read)::int AS unread, count(*) FILTER (WHERE al.status = 'NEW')::int AS new
+       FROM alerts al LEFT JOIN materials m ON m.id = al.material_id WHERE m.id IS NULL OR ${D}`);
   const trend = await q(
     `SELECT to_char(date_trunc('day', m.fetched_at), 'YYYY-MM-DD') AS day, count(*)::int AS total,
             count(*) FILTER (WHERE a.score >= $1)::int AS high
-       FROM materials m ${LATEST} WHERE m.fetched_at > now() - interval '30 days' GROUP BY 1 ORDER BY 1`, [t]);
+       FROM materials m ${LATEST} WHERE m.fetched_at > now() - interval '30 days' AND ${D} GROUP BY 1 ORDER BY 1`, [t]);
   const byModule = await q(
     `SELECT mod AS module, count(*)::int AS n, count(*) FILTER (WHERE a.score >= $1)::int AS high
-       FROM materials m ${LATEST}, unnest(a.modules) AS mod GROUP BY mod ORDER BY mod`, [t]);
+       FROM materials m ${LATEST}, unnest(a.modules) AS mod WHERE ${D} GROUP BY mod ORDER BY mod`, [t]);
   const byRule = await q(
     `SELECT f.rule_id, f.title, count(*)::int AS n FROM materials m ${LATEST} JOIN findings f ON f.analysis_id = a.id
-      WHERE f.status = 'fail' GROUP BY f.rule_id, f.title ORDER BY n DESC LIMIT 12`);
-  const byPlatform = await q(`SELECT coalesce(platform, 'web') AS platform, count(*)::int AS n FROM materials GROUP BY 1 ORDER BY n DESC`);
+      WHERE f.status = 'fail' AND ${D} GROUP BY f.rule_id, f.title ORDER BY n DESC LIMIT 12`);
+  const byPlatform = await q(`SELECT coalesce(platform, 'web') AS platform, count(*)::int AS n FROM materials m WHERE ${D} GROUP BY 1 ORDER BY n DESC`);
   const recent = await q(
-    `SELECT m.id, m.title, m.url, m.platform, m.status, m.fetched_at, a.score, a.modules, ${riskSql()} AS risk, ${aboveSql()} AS above_threshold
-       FROM materials m ${LATEST} ORDER BY m.fetched_at DESC LIMIT 10`, [t]);
-  res.json({ threshold: t, totals: { ...totals, ...alerts }, trend, byModule, byRule, byPlatform, recent });
+    `SELECT m.id, m.title, m.url, m.platform, m.status, m.fetched_at, m.published_at, a.score, a.modules, ${riskSql()} AS risk, ${aboveSql()} AS above_threshold
+       FROM materials m ${LATEST} WHERE ${D} ORDER BY m.fetched_at DESC LIMIT 10`, [t]);
+  const demo = await one('SELECT count(*) FILTER (WHERE demo)::int AS n FROM materials');
+  res.json({ threshold: t, totals: { ...totals, ...alerts }, trend, byModule, byRule, byPlatform, recent,
+    demo: { count: demo.n, shown: D === 'TRUE' } });
 });
 
 r.get('/alerts', async (req, res) => {
-  const f = parse(z.object({ status: z.enum(['NEW', 'REVIEWED', 'DISMISSED']).optional() }), req.query);
+  const f = parse(z.object({ status: z.enum(ALERT_STATUSES).optional() }), req.query);
+  const D = demoSql(await getShowDemo());
   res.json(await q(
-    `SELECT al.*, COALESCE(m.title, e.name) AS title, m.url, COALESCE(m.platform, al.kind) AS platform, e.name AS entity_name
+    `SELECT al.*, COALESCE(m.title, e.name) AS title, m.url, COALESCE(m.platform, al.kind) AS platform, e.name AS entity_name,
+            m.reviewed_score, m.status AS material_status
        FROM alerts al LEFT JOIN materials m ON m.id = al.material_id LEFT JOIN entities e ON e.id = al.entity_id
-      ${f.status ? 'WHERE al.status = $1' : ''} ORDER BY al.created_at DESC LIMIT 200`, f.status ? [f.status] : []));
+      WHERE (m.id IS NULL OR ${D}) ${f.status ? 'AND al.status = $1' : ''} ORDER BY al.created_at DESC LIMIT 200`, f.status ? [f.status] : []));
 });
 
 r.patch('/alerts/:id', async (req, res) => {
   const { id } = parse(idParam, req.params);
-  const b = parse(z.object({ status: z.enum(['NEW', 'REVIEWED', 'DISMISSED']).optional(), read: z.boolean().optional() }), req.body);
-  const row = await one('UPDATE alerts SET status = COALESCE($2, status), read = COALESCE($3, read) WHERE id = $1 RETURNING *', [id, b.status ?? null, b.read ?? null]);
+  const b = parse(z.object({ status: z.enum(ALERT_STATUSES).optional(), read: z.boolean().optional(), reset: z.boolean().optional() }), req.body);
+  // reset = porzucenie przypisania: alert wraca do stanu początkowego (nowy, nieprzeczytany), materiał – do statusu „Nowy”
+  const status = b.reset ? 'NEW' : b.status ?? null;
+  const read = b.reset ? false : b.read ?? null;
+  const row = await one('UPDATE alerts SET status = COALESCE($2, status), read = COALESCE($3, read) WHERE id = $1 RETURNING *', [id, status, read]);
   if (!row) return res.status(404).json({ error: 'Nie znaleziono alertu' });
+  if (row.material_id && status) {
+    const matStatus = { NEW: 'NEW', IN_REVIEW: 'IN_REVIEW', REVIEWED: 'REVIEWED', DISMISSED: 'DISMISSED' }[status];
+    const m = await one('UPDATE materials SET status = $2 WHERE id = $1 AND status <> $2 RETURNING id, status', [row.material_id, matStatus]);
+    if (m) emit('material:status', m);
+  }
   emit('alert:update', row);
   res.json(row);
 });
@@ -74,12 +89,29 @@ r.patch('/settings', requireAdmin, async (req, res) => {
   res.json({ threshold: b.threshold });
 });
 
+// Pokazywanie próbek demo/kalibracyjnych w widokach operacyjnych (wyniki, pulpit, alerty)
+r.put('/settings/show-demo', async (req, res) => {
+  const { show } = parse(z.object({ show: z.boolean() }), req.body);
+  await q("INSERT INTO settings (key, value, updated_at) VALUES ('show_demo', $1, now()) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()",
+    [JSON.stringify(show)]);
+  emit('settings:update', { show_demo: show });
+  emit('material:status', {});
+  res.json({ show_demo: show });
+});
+
+// Usunięcie próbek demo (administrator) – zostają tylko prawdziwe wyniki monitoringu
+r.delete('/demo', requireAdmin, async (_req, res) => {
+  const rows = await q('DELETE FROM materials WHERE demo RETURNING id');
+  emit('material:deleted', { ids: rows.map((x) => x.id) });
+  res.json({ deleted: rows.length });
+});
+
 // Panel kalibracji: wynik klasyfikatora jest stały, próg zmienia tylko decyzję.
 r.get('/calibration', async (req, res) => {
   const current = await getThreshold();
   const { threshold } = parse(z.object({ threshold: z.coerce.number().min(0).max(100).optional() }), req.query);
   const t = threshold ?? current;
-  const items = await q(`SELECT m.id, m.title, m.ground_truth, a.score FROM materials m ${LATEST} ORDER BY a.score DESC`);
+  const items = await q(`SELECT m.id, m.title, m.ground_truth, m.demo, a.score FROM materials m ${LATEST_RAW} ORDER BY a.score DESC`);
   const labeled = items.filter((i) => i.ground_truth !== null);
   const confusion = (th) => {
     const c = { tp: 0, fp: 0, fn: 0, tn: 0 };

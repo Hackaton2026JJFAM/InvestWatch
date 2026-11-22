@@ -67,6 +67,15 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Instagram: zasięg (wyświetlenia) bez logowania niedostępny – tylko polubienia/opis; Facebook: metadane ograniczone
 - [ ] Rejestr licencjonowanych doradców inwestycyjnych KNF – dziś licencja „zadeklarowana, do weryfikacji” (numer wyciągany z treści)
 
+## Poprawki po testach zespołu (22.11.2026)
+- [x] Wynik po weryfikacji analityka zastępuje wynik automatu wszędzie (nagłówek, lista, pulpit, filtry ryzyka/progu); wynik automatu przekreślony obok; kalibracja nadal na surowym wyniku klasyfikatora
+- [x] „Zostaje 75/100” – to nie błąd liczenia: wynik ogólny = najwyższy wynik obszaru (M2 83, M3 75). Tryb edycji pokazuje teraz podgląd wyniku na żywo i rozbicie na obszary (który obszar trzyma wynik), punkty pogrupowane wg obszaru
+- [x] Ręczne dodawanie problemów (obszar, waga, fragment, moment w filmie, komentarz) – liczą się do wyniku i podsumowania, usuwane ikoną kosza
+- [x] Data publikacji: w nagłówku materiału, kolumna i sortowanie w wynikach; scraper – data z ID posta X/TikToka, `<time datetime>`, więcej metatagów, metadane posta
+- [x] „Mock data”: scraper działa (prawdziwe filmy YT i post X przeanalizowane); dane demo to próbki kalibracyjne (`SEED_DEMO`) – oznaczone jako „próbka”, domyślnie ukryte w pulpicie, wynikach i alertach (przełącznik „pokaż próbki demo”), zostają w kalibracji; `DELETE /api/demo` (admin) usuwa je całkiem
+- [x] Alerty: „Weryfikuję” (W trakcie weryfikacji) i „↺ Porzuć” – powrót do stanu początkowego (nowy, nieprzeczytany); status alertu i materiału zsynchronizowany w obie strony
+- [x] Prostszy język: „problem / do sprawdzenia / w porządku”, „Ocena ryzyka”, „Wykryte problemy”, „Co sprawdzamy / Dlaczego / Przepis”
+
 ## Weryfikacja analityka – iteracja 2
 - [x] Odrzucanie pojedynczych elementów punktu (sygnał oszustwa, fragment transkrypcji/tekstu), nie tylko całych punktów: M1.10 przeliczany od razu z pozostałych sygnałów (ten sam wzór i progi co analizator), odrzucenie wszystkich fragmentów = odrzucenie punktu, odrzucenie M1.9 usuwa też sygnał „nierealne zyski”; profil i wynik sygnałów po weryfikacji zapisywane w materiale
 - [x] Oznaczenie „Autoreklama (własna reklama)”: automatycznie, gdy firma reklamuje samą siebie albo usługodawca – własne usługi; ręczna zmiana typu treści w profilu (ma pierwszeństwo przed klasyfikacją, także po ponownej analizie)

@@ -172,6 +172,11 @@ IMAGE_EXT = re.compile(r"\.(png|jpe?g|webp|gif|bmp|tiff?)$", re.I)
 URL_RE = re.compile(r"(?:https?://)?(?:www\.)?[a-z0-9-]+\.[a-z]{2,}(?:/\S*)?")
 
 
+def _date_from_url(url):
+    from .social import date_from_url
+    return date_from_url(url)
+
+
 def _image_material(raw: bytes, url: str, title=None, author=None, platform=None) -> dict:
     data = ocr.ocr_image(raw)
     if not data["content_text"].strip():
@@ -196,7 +201,7 @@ def _video_material(data: dict, url: str, title=None, author=None, platform=None
     return {
         "url": url, "final_url": data.get("final_url") or url, "fetched_at": _now(),
         "title": title or data.get("title"), "author": author or data.get("author"), "publisher": None,
-        "published_at": data.get("published_at"), "lang": (data.get("transcript") or {}).get("language"),
+        "published_at": data.get("published_at") or _date_from_url(url), "lang": (data.get("transcript") or {}).get("language"),
         "description": data.get("description"),
         "platform": platform or video.platform_of(url) or platform_for(url), "social_handle": data.get("social_handle"),
         "content_text": normalize_text(data.get("content_text") or text), "full_text": text, "content_hash": content_hash(text),
@@ -326,7 +331,7 @@ async def scrape_text(req: TextReq):
     text = normalize_text(req.text)
     return {
         "url": req.url, "final_url": req.url, "fetched_at": _now(), "title": req.title,
-        "author": req.author, "publisher": None, "published_at": None, "lang": None,
+        "author": req.author, "publisher": None, "published_at": _date_from_url(req.url), "lang": None,
         "platform": req.platform or platform_for(req.url), "social_handle": None,
         "content_text": text, "full_text": text, "content_hash": content_hash(text),
         "links": [], "layout": {"engine": "none", "reason": "text_only"}, "scraper_version": VERSION,
@@ -383,7 +388,8 @@ async def _post_text_material(url: str, req) -> dict:
         raise HTTPException(422, "Post nie zawiera wideo, a jego tekstu nie udało się pobrać bez logowania")
     return {
         "url": url, "final_url": url, "fetched_at": _now(), "title": req.title or text[:120], "author": req.author or meta.get("author"),
-        "publisher": None, "published_at": None, "lang": "pl" if social.is_polish(text) else None, "platform": platform,
+        "publisher": None, "published_at": social.published_of(meta.get("published")) or social.date_from_url(url),
+        "lang": "pl" if social.is_polish(text) else None, "platform": platform,
         "social_handle": None, "content_text": text, "full_text": text, "content_hash": content_hash(text),
         "links": [{"text": u, "href": u if u.startswith("http") else f"https://{u}"} for u in sorted(set(URL_RE.findall(text.lower())))][:50],
         "layout": {"engine": "none", "reason": "post_text"},

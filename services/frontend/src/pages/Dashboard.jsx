@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { api } from '../api.js';
 import { useNavigate } from 'react-router-dom';
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AreaGradient, axisProps, barCursor, ChartGrid, ChartTooltip, cursorStyle, Legend, useChartColors } from '../components/charts.jsx';
@@ -31,6 +32,11 @@ export default function Dashboard() {
     <>
       <div className="page-head">
         <div><h1>Pulpit</h1><p>Stan monitoringu treści inwestycyjnych · próg ryzyka {threshold}</p></div>
+        {data.demo?.count > 0 && (
+          <label className="toggle" title="Próbki kalibracyjne (dane demonstracyjne) – domyślnie ukryte w pulpicie, wynikach i alertach">
+            <input type="checkbox" checked={data.demo.shown} onChange={(e) => api.put('/settings/show-demo', { show: e.target.checked })} /> pokaż próbki demo ({data.demo.count})
+          </label>
+        )}
       </div>
       <div className="grid g4">
         <StatCard label="Przeanalizowane materiały" value={totals.materials} />
@@ -89,7 +95,7 @@ export default function Dashboard() {
             </table></div>
           ) : <Empty>Brak materiałów – dodaj URL w zakładce „Skanowanie”.</Empty>}
         </Panel>
-        <Panel title="Najczęstsze przesłanki" meta="reguły niespełnione – liczba materiałów">
+        <Panel title="Najczęstsze problemy" meta="liczba materiałów z danym problemem">
           {byRule.length ? (
             <ResponsiveContainer width="100%" height={Math.max(200, byRule.length * 30)}>
               <BarChart data={byRule.map((r) => ({ ...r, name: `${r.rule_id} · ${r.title}` }))} layout="vertical" margin={{ left: 4, right: 28 }} barCategoryGap="22%">

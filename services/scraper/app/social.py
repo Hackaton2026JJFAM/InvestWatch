@@ -117,6 +117,45 @@ def _meta(url: str, platform: str) -> dict:
     return info
 
 
+X_ID = re.compile(r"(?:x|twitter)\.com/[^/]+/status(?:es)?/(\d{15,20})")
+TT_ID = re.compile(r"tiktok\.com/@[^/]+/(?:video|photo)/(\d{15,20})")
+
+
+def date_from_url(url: str | None) -> str | None:
+    """Data publikacji zakodowana w identyfikatorze posta (X: snowflake, TikTok: sekundy w górnych 32 bitach)."""
+    import datetime as dt
+    if not url:
+        return None
+    try:
+        if m := X_ID.search(url):
+            ms = (int(m.group(1)) >> 22) + 1288834974657
+            ts = ms / 1000
+        elif m := TT_ID.search(url):
+            ts = int(m.group(1)) >> 32
+        else:
+            return None
+        d = dt.datetime.fromtimestamp(ts, dt.timezone.utc)
+        # sanity: identyfikatory demo/syntetyczne dają daty spoza sensownego zakresu
+        if not (dt.datetime(2010, 1, 1, tzinfo=dt.timezone.utc) <= d <= dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=1)):
+            return None
+        return d.isoformat()
+    except (ValueError, OverflowError, OSError):
+        return None
+
+
+def published_of(published) -> str | None:
+    """yt-dlp: timestamp (s) albo upload_date RRRRMMDD -> ISO."""
+    import datetime as dt
+    if published is None:
+        return None
+    if isinstance(published, (int, float)):
+        return dt.datetime.fromtimestamp(published, dt.timezone.utc).isoformat()
+    s = str(published)
+    if re.fullmatch(r"\d{8}", s):
+        return f"{s[:4]}-{s[4:6]}-{s[6:]}"
+    return s
+
+
 def oembed(url: str, platform: str) -> dict | None:
     """Publiczny oEmbed (bez logowania): autor i tekst posta X / podpis TikToka."""
     endpoint = {"x": "https://publish.twitter.com/oembed", "tiktok": "https://www.tiktok.com/oembed"}.get(platform)

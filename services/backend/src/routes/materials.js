@@ -1,28 +1,43 @@
 import { Router } from 'express';
 import { saveReach } from '../reach.js';
-import { isKnownKey, KEY_RX, summaryPoints, withoutRejected } from '../review.js';
+import { isKnownKey, KEY_RX, reviewResult, summaryPoints } from '../review.js';
 import { z } from 'zod';
-import { getThreshold, one, q, tx } from '../db.js';
+import { getShowDemo, getThreshold, one, q, tx } from '../db.js';
 import { emit } from '../realtime.js';
 import { analyzer } from '../services.js';
 import { findSimilar } from '../similarity.js';
 import { requireAdmin } from '../auth.js';
-import { parse, riskLevel, aboveSql, riskSql } from '../validate.js';
+import { parse, riskLevel, aboveSql, riskSql, LATEST, demoSql } from '../validate.js';
 
 const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
 const STATUSES = ['NEW', 'IN_REVIEW', 'REVIEWED', 'ESCALATED', 'DISMISSED'];
 const PROFILES = ['podejrzenie_oszustwa', 'płatna_promocja', 'autoreklama', 'doradca_finansowy', 'edukacja', 'informacja'];
-const LATEST = 'JOIN LATERAL (SELECT * FROM analyses WHERE material_id = m.id ORDER BY created_at DESC LIMIT 1) a ON TRUE';
 const rejectedOf = async (materialId) => (await q('SELECT rule_id FROM finding_reviews WHERE material_id = $1 AND decision = \'rejected\'', [materialId])).map((x) => x.rule_id);
 
-// wynik i profil po weryfikacji analityka (ręcznie ustawiony profil ma pierwszeństwo)
-async function storeReview(db, id, result, rejected) {
-  const reviewed = rejected.length ? withoutRejected(result, rejected) : null;
+const manualOf = async (materialId) => q('SELECT * FROM manual_findings WHERE material_id = $1 ORDER BY id', [materialId]);
+
+// wynik i profil po weryfikacji analityka (odrzucone punkty + problemy dodane ręcznie; ręcznie ustawiony profil ma pierwszeństwo)
+async function storeReview(db, id, result, rejected, manual) {
+  const reviewed = rejected.length || manual.length ? reviewResult(result, rejected, manual) : null;
   const p = (reviewed ?? result).profile;
-  await db.q('UPDATE materials SET reviewed_score = $2, profile_type = COALESCE(profile_manual, $3), scam_score = $4 WHERE id = $1',
-    [id, reviewed ? reviewed.score : null, p?.primary ?? null, p?.scam_score ?? null]);
+  await db.q(`UPDATE materials SET reviewed_score = $2, reviewed_modules = $3, profile_type = COALESCE(profile_manual, $4), scam_score = $5
+               WHERE id = $1`,
+    [id, reviewed ? reviewed.score : null, reviewed ? reviewed.module_scores : null, p?.primary ?? null, p?.scam_score ?? null]);
   return reviewed;
+}
+
+// przeliczenie po zmianie decyzji analityka: wynik, podsumowanie, powiadomienie
+async function refreshReview(id) {
+  const a = await one('SELECT id, score, result FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [id]);
+  if (!a) return null;
+  const rejected = await rejectedOf(id);
+  const manual = await manualOf(id);
+  const reviewed = await storeReview({ q }, id, a.result, rejected, manual);
+  const s = await analyzer.summary(reviewed ?? a.result).catch(() => null);
+  if (s) await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
+  emit('material:status', { id });
+  return { a, reviewed, rejected, manual, summary: s };
 }
 
 r.get('/materials', async (req, res) => {
@@ -36,8 +51,8 @@ r.get('/materials', async (req, res) => {
     min_followers: z.coerce.number().int().min(0).optional(), tag: z.string().max(60).optional(),
     profile: z.enum(PROFILES).optional(),
     media: z.enum(['video', 'image', 'web']).optional(), watch: z.coerce.number().int().positive().optional(),
-    lang: z.enum(['pl', 'other']).optional(),
-    sort: z.enum(['score', 'fetched_at', 'title', 'views', 'priority']).default('fetched_at'), dir: z.enum(['asc', 'desc']).default('desc'),
+    lang: z.enum(['pl', 'other']).optional(), demo: z.enum(['0', '1', 'only']).optional(),
+    sort: z.enum(['score', 'fetched_at', 'published_at', 'title', 'views', 'priority']).default('fetched_at'), dir: z.enum(['asc', 'desc']).default('desc'),
     page: z.coerce.number().int().min(1).default(1), size: z.coerce.number().int().min(1).max(200).default(50),
   }), req.query);
   const threshold = await getThreshold();
@@ -63,17 +78,20 @@ r.get('/materials', async (req, res) => {
   if (f.media === 'video') where.push("m.raw->'layout' ? 'video'");
   if (f.media === 'image') where.push("m.raw->'layout'->>'engine' = 'ocr'");
   if (f.media === 'web') where.push("NOT (m.raw->'layout' ? 'video') AND coalesce(m.raw->'layout'->>'engine', '') <> 'ocr'");
+  if (f.demo === 'only') where.push('m.demo');
+  else if (f.demo !== '1') where.push(demoSql(f.demo === '0' ? false : await getShowDemo()));
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
   // $1 (próg) musi wystąpić w zapytaniu także wtedy, gdy nie filtrujemy po ryzyku
   const total = (await one(`SELECT count(*)::int AS n, max($1::numeric) AS threshold FROM materials m ${LATEST} ${w}`, params)).n;
   // priorytet = ryzyko × log(zasięg): wysoki wynik u popularnego twórcy na górze listy
-  const sortCol = { score: 'a.score', fetched_at: 'm.fetched_at', title: 'm.title', views: 'm.views',
+  const sortCol = { score: 'a.score', fetched_at: 'm.fetched_at', published_at: 'm.published_at', title: 'm.title', views: 'm.views',
     priority: 'a.score * (1 + log(greatest(coalesce(m.views, 0), 1)))' }[f.sort];
   params.push(f.size, (f.page - 1) * f.size);
   const items = await q(
-    `SELECT m.id, m.url, m.title, m.author, m.platform, m.status, m.fetched_at, m.ground_truth, m.near_duplicate_of,
+    `SELECT m.id, m.url, m.title, m.author, m.platform, m.status, m.fetched_at, m.published_at, m.demo, m.ground_truth, m.near_duplicate_of,
             m.views, m.followers, m.tags, m.profile_type, m.scam_score, (m.raw->'layout' ? 'video') AS is_video,
-            a.id AS analysis_id, a.score, a.modules, a.module_scores, ${riskSql()} AS risk, ${aboveSql()} AS above_threshold
+            a.id AS analysis_id, a.score, a.classifier_score, (m.reviewed_score IS NOT NULL) AS reviewed, a.modules, a.module_scores,
+            ${riskSql()} AS risk, ${aboveSql()} AS above_threshold
        FROM materials m ${LATEST} ${w}
       ORDER BY ${sortCol} ${f.dir} NULLS LAST, m.id DESC
       LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -110,9 +128,12 @@ r.get('/materials/:id', async (req, res) => {
       video, image_ocr: layout.image_ocr ?? null },
     analysis: analyses[0] ? { ...analyses[0], result: latest.result } : null,
     history: analyses, findings, entities, alerts, threshold, rejected: await rejectedOf(id),
+    manual_findings: await manualOf(id),
     similar: await findSimilar(m.simhash, { excludeId: m.id }),
-    risk: analyses[0] ? riskLevel(analyses[0].score) : null,
-    above_threshold: analyses[0] ? analyses[0].score >= threshold : null,
+    // wynik efektywny = po weryfikacji analityka (gdy jest), inaczej wynik klasyfikatora
+    effective_score: analyses[0] ? Number(m.reviewed_score ?? analyses[0].score) : null,
+    risk: analyses[0] ? riskLevel(Number(m.reviewed_score ?? analyses[0].score)) : null,
+    above_threshold: analyses[0] ? Number(m.reviewed_score ?? analyses[0].score) >= threshold : null,
   });
 });
 
@@ -121,14 +142,11 @@ r.patch('/materials/:id/status', async (req, res) => {
   const { status } = parse(z.object({ status: z.enum(STATUSES) }), req.body);
   const row = await one('UPDATE materials SET status = $2 WHERE id = $1 RETURNING id, status', [id, status]);
   if (!row) return res.status(404).json({ error: 'Nie znaleziono materiału' });
-  if (status === 'IN_REVIEW') {
-    // w trakcie weryfikacji: alert przeczytany, ale nadal otwarty
-    const changed = await q("UPDATE alerts SET read = TRUE WHERE material_id = $1 AND status = 'NEW' AND NOT read RETURNING id", [id]);
-    if (changed.length) emit('alert:update', { materialId: id, alerts: changed.map((x) => x.id) });
-  } else if (status !== 'NEW') {
-    const changed = await q("UPDATE alerts SET status = $2, read = TRUE WHERE material_id = $1 AND status = 'NEW' RETURNING id", [id, status === 'DISMISSED' ? 'DISMISSED' : 'REVIEWED']);
-    if (changed.length) emit('alert:update', { materialId: id, alerts: changed.map((a) => a.id) });
-  }
+  // alerty materiału idą za jego statusem; „Nowy” = powrót do stanu początkowego (alert znów nowy i nieprzeczytany)
+  const alertStatus = { NEW: 'NEW', IN_REVIEW: 'IN_REVIEW', REVIEWED: 'REVIEWED', ESCALATED: 'REVIEWED', DISMISSED: 'DISMISSED' }[status];
+  const changed = await q(
+    `UPDATE alerts SET status = $2, read = ($2 <> 'NEW') WHERE material_id = $1 AND (status <> $2 OR read <> ($2 <> 'NEW')) RETURNING id`, [id, alertStatus]);
+  if (changed.length) emit('alert:update', { materialId: id, alerts: changed.map((a) => a.id) });
   emit('material:status', row);
   res.json(row);
 });
@@ -169,7 +187,7 @@ r.post('/materials/:id/reanalyze', async (req, res) => {
   });
   if (result.doc?.simhash) await q('UPDATE materials SET simhash = $2 WHERE id = $1', [id, result.doc.simhash]);
   // odrzucenia analityka obowiązują także po ponownej analizie
-  const reviewed = await storeReview({ q }, id, result, await rejectedOf(id));
+  const reviewed = await storeReview({ q }, id, result, await rejectedOf(id), await manualOf(id));
   const s = await analyzer.summary(reviewed ?? result).catch(() => null);
   if (s) await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   res.json(a);
@@ -188,13 +206,15 @@ r.get('/summary/:materialId', async (req, res) => {
   const a = await one('SELECT id, score, result, summary, summary_engine FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [materialId]);
   if (!a) return res.status(404).json({ error: 'Brak analizy' });
   const rejected = await rejectedOf(materialId);
-  const reviewed = rejected.length ? withoutRejected(a.result, rejected) : null;
+  const manual = await manualOf(materialId);
+  const reviewed = rejected.length || manual.length ? reviewResult(a.result, rejected, manual) : null;
   let s = { summary: a.summary, engine: a.summary_engine };
   if (!a.summary || req.query.refresh === '1') {
     s = await analyzer.summary(reviewed ?? a.result);
     await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   }
-  res.json({ ...s, points: summaryPoints(a.result, rejected), score: Number(a.score), reviewed_score: reviewed ? reviewed.score : null });
+  res.json({ ...s, points: summaryPoints(a.result, rejected, manual), score: Number(a.score), reviewed_score: reviewed ? reviewed.score : null,
+    module_scores: a.result.module_scores, reviewed_modules: reviewed?.module_scores ?? null });
 });
 
 // Odrzucenie wybranych punktów podsumowania (pełny zestaw odrzuconych reguł; pusta lista = przywrócenie wszystkich)
@@ -205,7 +225,13 @@ r.put('/materials/:id/review', async (req, res) => {
   if (!a) return res.status(404).json({ error: 'Brak analizy' });
   // klucz „reguła” = cała przesłanka, „reguła:element” = pojedynczy sygnał/fragment
   const rejected = [...new Set(b.rejected)].filter((k) => isKnownKey(a.result, k));
-  const reviewed = rejected.length ? withoutRejected(a.result, rejected) : null;
+  const manual = await manualOf(id);
+  const reviewed = rejected.length || manual.length ? reviewResult(a.result, rejected, manual) : null;
+  // podgląd na żywo w trybie edycji – bez zapisu
+  if (req.query.dry === '1') {
+    return res.json({ score: Number(a.score), reviewed_score: reviewed ? reviewed.score : null, module_scores: a.result.module_scores,
+      reviewed_modules: reviewed?.module_scores ?? null });
+  }
   const s = await analyzer.summary(reviewed ?? a.result).catch(() => null);
   await tx(async (t) => {
     await t.q('DELETE FROM finding_reviews WHERE material_id = $1 AND NOT (rule_id = ANY($2))', [id, rejected]);
@@ -213,12 +239,36 @@ r.put('/materials/:id/review', async (req, res) => {
       await t.q(`INSERT INTO finding_reviews (material_id, rule_id, note) VALUES ($1, $2, $3)
                  ON CONFLICT (material_id, rule_id) DO UPDATE SET note = COALESCE(EXCLUDED.note, finding_reviews.note)`, [id, rule, b.note ?? null]);
     }
-    await storeReview(t, id, a.result, rejected);
+    await storeReview(t, id, a.result, rejected, manual);
     if (s) await t.q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   });
   emit('material:status', { id });
   res.json({ rejected, reviewed_score: reviewed ? reviewed.score : null, score: Number(a.score), summary: s?.summary ?? null,
-    points: summaryPoints(a.result, rejected), profile: reviewed?.profile?.primary ?? a.result.profile?.primary ?? null });
+    points: summaryPoints(a.result, rejected, manual), profile: reviewed?.profile?.primary ?? a.result.profile?.primary ?? null });
+});
+
+// Problemy dodane ręcznie (np. fragment filmu, którego automat nie wychwycił) – liczą się do wyniku po weryfikacji
+const manualBody = z.object({
+  module: z.enum(['m1', 'm2', 'm3']), title: z.string().trim().min(3).max(200),
+  severity: z.coerce.number().int().min(5).max(90), explanation: z.string().trim().max(1000).optional(),
+  fragment: z.string().trim().max(1000).optional(), at: z.string().trim().max(20).optional(),
+});
+r.post('/materials/:id/manual-findings', async (req, res) => {
+  const { id } = parse(idParam, req.params);
+  const b = parse(manualBody, req.body);
+  if (!(await one('SELECT id FROM materials WHERE id = $1', [id]))) return res.status(404).json({ error: 'Nie znaleziono materiału' });
+  const row = await one(
+    'INSERT INTO manual_findings (material_id, module, title, severity, explanation, fragment, at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+    [id, b.module, b.title, b.severity, b.explanation || null, b.fragment || null, b.at || null]);
+  const out = await refreshReview(id);
+  res.status(201).json({ finding: row, reviewed_score: out?.reviewed?.score ?? null, score: out ? Number(out.a.score) : null });
+});
+r.delete('/materials/:id/manual-findings/:fid', async (req, res) => {
+  const { id, fid } = parse(z.object({ id: z.coerce.number().int().positive(), fid: z.coerce.number().int().positive() }), req.params);
+  const row = await one('DELETE FROM manual_findings WHERE id = $1 AND material_id = $2 RETURNING id', [fid, id]);
+  if (!row) return res.status(404).json({ error: 'Nie znaleziono problemu' });
+  const out = await refreshReview(id);
+  res.json({ reviewed_score: out?.reviewed?.score ?? null });
 });
 
 // Ręczne oznaczenie profilu treści (np. „autoreklama”); null = powrót do klasyfikacji automatycznej
@@ -228,7 +278,7 @@ r.put('/materials/:id/profile', async (req, res) => {
   const a = await one('SELECT result FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [id]);
   const row = await one('UPDATE materials SET profile_manual = $2 WHERE id = $1 RETURNING id', [id, profile]);
   if (!row) return res.status(404).json({ error: 'Nie znaleziono materiału' });
-  if (a) await storeReview({ q }, id, a.result, await rejectedOf(id));
+  if (a) await storeReview({ q }, id, a.result, await rejectedOf(id), await manualOf(id));
   else await q('UPDATE materials SET profile_type = COALESCE(profile_manual, profile_type) WHERE id = $1', [id]);
   const m = await one('SELECT id, profile_type, profile_manual FROM materials WHERE id = $1', [id]);
   emit('material:status', { id });

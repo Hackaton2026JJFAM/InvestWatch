@@ -52,8 +52,10 @@ export default function Alerts() {
                 <td><span className={`chip ${a.status === 'NEW' ? 'high' : a.status === 'REVIEWED' ? 'pass' : a.status === 'IN_REVIEW' ? 'mid' : 'na'}`}>{LABEL[a.status]}</span></td>
                 <td>
                   <div className="btn-row alert-actions">
+                    {a.status === 'NEW' && <button className="btn" disabled={saving} onClick={() => update(a.id, { status: 'IN_REVIEW', read: true })} title="Przypisz do siebie – alert i materiał dostają status „W trakcie weryfikacji”">Weryfikuję</button>}
                     <button className="btn" disabled={saving || a.status === 'REVIEWED'} onClick={() => update(a.id, { status: 'REVIEWED', read: true })}>Zweryfikuj</button>
                     <button className="btn danger" disabled={saving || a.status === 'DISMISSED'} onClick={() => update(a.id, { status: 'DISMISSED', read: true })}>Odrzuć</button>
+                    {a.status !== 'NEW' && <button className="btn" disabled={saving} onClick={() => update(a.id, { reset: true })} title="Porzuć przypisanie – alert wraca do stanu początkowego (nowy, nieprzeczytany), materiał do statusu „Nowy”">↺ Porzuć</button>}
                   </div>
                 </td>
               </tr>))}

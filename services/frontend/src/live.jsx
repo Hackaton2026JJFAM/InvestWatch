@@ -50,7 +50,7 @@ export function LiveProvider({ children }) {
       'scan:update': bump('scan:update'),
       'entity:enriched': (e) => bump('entity:enriched')(e),
       'watch:update': bump('watch:update'),
-      'settings:update': (s) => { setThreshold(s.threshold); bump('settings:update')(s); },
+      'settings:update': (s) => { if (s.threshold != null) setThreshold(s.threshold); bump('settings:update')(s); },
     };
     Object.entries(handlers).forEach(([ev, fn]) => socket.on(ev, fn));
     setConnected(socket.connected);

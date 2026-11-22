@@ -125,3 +125,17 @@ test('weryfikacja: odrzucenie pojedynczego sygnału oszustwa przelicza M1.10, wy
   assert.deepEqual(pts[0].elements.map((e) => [e.key, e.rejected]),
     [['M1.10:gwarancja', true], ['M1.10:lista_ostrzezen', false], ['M1.10:presja_czasu', false]]);
 });
+
+test('weryfikacja: problem dodany ręcznie podnosi wynik swojego modułu', async () => {
+  const { reviewResult, summaryPoints } = await import('../src/review.js');
+  const result = { score: 30, module_scores: { m1: 0, m2: 30, m3: 0 },
+    findings: [{ module: 'm2', rule_id: '3', status: 'warn', severity: 60, title: 'x', evidence: [] }] };
+  const manual = [{ id: 7, module: 'm3', title: 'Rekomendacja konkretnej spółki w 0:42', severity: 60, fragment: 'kupcie teraz CD Projekt', at: '0:42' }];
+  const r = reviewResult(result, [], manual);
+  assert.equal(r.score, 60);
+  assert.equal(r.module_scores.m3, 60);
+  const pts = summaryPoints(result, [], manual);
+  assert.deepEqual(pts.map((p) => [p.rule_id, p.manual]), [['A7', true], ['3', false]]);
+  // odrzucenie jedynego punktu M2 + brak ręcznych -> 0
+  assert.equal(reviewResult(result, ['3'], []).score, 0);
+});

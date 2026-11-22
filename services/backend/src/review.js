@@ -59,6 +59,23 @@ function reviewProfile(profile, signals) {
   return { ...profile, primary, scam_score: scam, signals, reviewed: true };
 }
 
+// problem dodany ręcznie przez analityka -> przesłanka w formacie analizatora (identyfikator „A<id>”)
+export const manualFinding = (x) => ({
+  module: x.module, rule_id: `A${x.id}`, title: x.title, status: 'fail', severity: x.severity, manual: true,
+  legal_basis: 'dodane przez analityka', explanation: x.explanation || 'Problem zgłoszony ręcznie przez analityka.',
+  evidence: x.fragment ? [{ text: x.fragment, where: x.at ? `fragment · ${x.at}` : 'fragment', ...(x.at ? { at: x.at } : {}) }] : [],
+});
+
+/** Wynik po weryfikacji: bez odrzuconych przesłanek/elementów, z problemami dodanymi ręcznie. */
+export function reviewResult(result, rejected = [], manual = []) {
+  const base = rejected.length ? withoutRejected(result, rejected) : result;
+  if (!manual.length) return base;
+  const findings = [...base.findings, ...manual.map(manualFinding)];
+  const s = scoreOf(findings);
+  return { ...base, findings, score: s.score, module_scores: { ...base.module_scores, ...s.module_scores },
+    modules: Object.entries(s.module_scores).filter(([, v]) => v >= 20).map(([m]) => m) };
+}
+
 /** Wynik analizy bez odrzuconych przesłanek/elementów (do podsumowania i wyniku po weryfikacji). */
 export function withoutRejected(result, rejected) {
   const { whole, parts } = splitRejected(rejected);
@@ -97,9 +114,9 @@ export function withoutRejected(result, rejected) {
 }
 
 /** Punkty podsumowania = przesłanki „niespełnione” i „do weryfikacji”, od najpoważniejszych, z elementami. */
-export function summaryPoints(result, rejected) {
+export function summaryPoints(result, rejected, manual = []) {
   const { whole, parts } = splitRejected(rejected);
-  return result.findings.filter((f) => f.status === 'fail' || f.status === 'warn')
+  return [...result.findings, ...manual.map(manualFinding)].filter((f) => f.status === 'fail' || f.status === 'warn')
     .sort((a, b) => (a.status !== 'fail') - (b.status !== 'fail') || b.severity - a.severity)
     .map((f) => {
       const ev = f.evidence ?? [];
@@ -110,6 +127,7 @@ export function summaryPoints(result, rejected) {
           rejected: drop.has(elementKey(e, i)) }))
         : [];
       return { rule_id: f.rule_id, module: f.module, title: f.title, status: f.status, severity: f.severity,
-        explanation: f.explanation, rejected: whole.has(f.rule_id), elements };
+        explanation: f.explanation, rejected: whole.has(f.rule_id), elements: f.manual ? [] : elements, manual: Boolean(f.manual),
+        ...(f.manual ? { id: Number(f.rule_id.slice(1)), fragment: f.evidence[0]?.text ?? null } : {}) };
     });
 }

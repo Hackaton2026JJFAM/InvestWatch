@@ -131,11 +131,11 @@ export async function processScan(job) {
   async function save() {
     return tx(async (t) => {
     const m = await t.one(
-      `INSERT INTO materials (source_id, url, final_url, title, author, published_at, lang, platform, content_text, content_hash, raw, ground_truth, simhash, near_duplicate_of, layout_hash)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) RETURNING id, fetched_at`,
+      `INSERT INTO materials (source_id, url, final_url, title, author, published_at, lang, platform, content_text, content_hash, raw, ground_truth, simhash, near_duplicate_of, layout_hash, demo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id, fetched_at`,
       [data.sourceId ?? null, material.url, material.final_url, material.title, material.author,
         parseDate(material.published_at), material.lang, material.platform, material.content_text, material.content_hash,
-        { ...material, layout: { ...layoutNoShot, screenshot } }, data.groundTruth ?? null, simhash, nearDup?.id ?? null, material.layout_hash ?? null],
+        { ...material, layout: { ...layoutNoShot, screenshot } }, data.groundTruth ?? null, simhash, nearDup?.id ?? null, material.layout_hash ?? null, Boolean(data.demo)],
     );
     const a = await t.one(
       `INSERT INTO analyses (material_id, score, module_scores, modules, result, analyzer_version)

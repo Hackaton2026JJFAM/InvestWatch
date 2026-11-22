@@ -24,5 +24,15 @@ export const riskLevel = (score) => (score == null ? null : score >= RISK_BANDS.
 export const riskSql = (alias = 'a', _param = '$1') =>
   `CASE WHEN ${alias}.score >= ${RISK_BANDS.high} THEN 'wysokie' WHEN ${alias}.score >= ${RISK_BANDS.mid} THEN 'średnie' ELSE 'niskie' END`;
 
+// Ostatnia analiza materiału; „score” = wynik po weryfikacji analityka, gdy istnieje (odrzucone punkty,
+// problemy dodane ręcznie), inaczej wynik klasyfikatora; „classifier_score” = zawsze wynik klasyfikatora.
+export const LATEST = `JOIN LATERAL (SELECT id, material_id, modules, result, summary, summary_engine, analyzer_version, created_at,
+    score AS classifier_score, COALESCE(m.reviewed_score, score) AS score, COALESCE(m.reviewed_modules, module_scores) AS module_scores
+  FROM analyses WHERE material_id = m.id ORDER BY created_at DESC LIMIT 1) a ON TRUE`;
+// kalibracja ocenia sam klasyfikator – bez korekt analityka
+export const LATEST_RAW = 'JOIN LATERAL (SELECT * FROM analyses WHERE material_id = m.id ORDER BY created_at DESC LIMIT 1) a ON TRUE';
+// próbki demo/kalibracyjne ukryte w widokach operacyjnych, chyba że włączono ich pokazywanie
+export const demoSql = (show, alias = 'm') => (show ? 'TRUE' : `NOT ${alias}.demo`);
+
 // Czy wynik przekracza próg alertów (parametr zapytania – zwykle $1)
 export const aboveSql = (alias = 'a', param = '$1') => `(${alias}.score >= ${param}::numeric)`;

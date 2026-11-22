@@ -111,6 +111,16 @@ const MIGRATIONS = [
      note TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (material_id, rule_id))`,
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS reviewed_score NUMERIC',
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS profile_manual TEXT',
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS reviewed_modules JSONB',
+  // próbki kalibracyjne (SEED_DEMO) – oddzielone od prawdziwych wyników monitoringu
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS demo BOOLEAN NOT NULL DEFAULT FALSE',
+  `UPDATE materials SET demo = TRUE WHERE NOT demo AND id IN (SELECT material_id FROM scan_jobs WHERE trigger = 'seed' AND material_id IS NOT NULL)`,
+  'CREATE INDEX IF NOT EXISTS materials_published ON materials (published_at)',
+  // problemy dodane ręcznie przez analityka (liczą się do wyniku po weryfikacji)
+  `CREATE TABLE IF NOT EXISTS manual_findings (
+     id SERIAL PRIMARY KEY, material_id INT NOT NULL REFERENCES materials(id) ON DELETE CASCADE, module TEXT NOT NULL,
+     title TEXT NOT NULL, severity INT NOT NULL, explanation TEXT, fragment TEXT, at TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+  'CREATE INDEX IF NOT EXISTS manual_findings_material ON manual_findings (material_id)',
   // uzupełnienie dla materiałów sprzed rankingu tagów: język z ostatniej analizy, hashtagi z tytułu i treści
   `UPDATE materials m SET lang = x.lang FROM (SELECT DISTINCT ON (material_id) material_id, result->'doc'->>'lang' AS lang
      FROM analyses ORDER BY material_id, created_at DESC) x WHERE x.material_id = m.id AND m.lang IS NULL AND x.lang IS NOT NULL`,
@@ -122,6 +132,11 @@ export async function migrate() {
   for (const sql of MIGRATIONS) await pool.query(sql);
   // próg domyślny z konfiguracji (DEFAULT_THRESHOLD) – tylko gdy nie ustawiono go wcześniej
   await pool.query("INSERT INTO settings (key, value) VALUES ('threshold', $1) ON CONFLICT (key) DO NOTHING", [JSON.stringify(config.defaultThreshold)]);
+}
+
+export async function getShowDemo() {
+  const row = await one("SELECT value FROM settings WHERE key = 'show_demo'");
+  return row ? row.value === true : false;
 }
 
 export async function getThreshold() {

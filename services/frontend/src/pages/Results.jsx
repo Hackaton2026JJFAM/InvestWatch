@@ -27,7 +27,10 @@ export default function Results() {
   return (
     <>
       <div className="page-head"><div><h1>Wyniki analiz</h1><p>Filtrowanie po dacie, źródle, module, ryzyku, typie publikującego i zasięgu</p></div>
-        <label className="toggle"><input type="checkbox" checked={Boolean(f.above)} onChange={(e) => set('above', e.target.checked ? '1' : '')} /> tylko powyżej progu ({data?.threshold ?? '–'})</label>
+        <span className="btn-row">
+          <label className="toggle"><input type="checkbox" checked={f.demo === '1'} onChange={(e) => set('demo', e.target.checked ? '1' : '')} /> pokaż próbki demo</label>
+          <label className="toggle"><input type="checkbox" checked={Boolean(f.above)} onChange={(e) => set('above', e.target.checked ? '1' : '')} /> tylko powyżej progu ({data?.threshold ?? '–'})</label>
+        </span>
       </div>
       <Panel>
         <div className="filters">
@@ -43,7 +46,7 @@ export default function Results() {
           <label className="f">Zasięg<select value={f.min_views ?? ''} onChange={(e) => set('min_views', e.target.value)}>{VIEWS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
           <label className="f">Język<select value={f.lang ?? ''} onChange={(e) => set('lang', e.target.value)}><option value="">wszystkie</option><option value="pl">polski</option><option value="other">inne</option></select></label>
           <label className="f">Tag<input placeholder="#kryptowaluty" value={f.tag ?? ''} onChange={(e) => set('tag', e.target.value.replace(/^#/, ''))} style={{ width: 130 }} /></label>
-          <label className="f">Sortuj<select value={f.sort ?? 'fetched_at'} onChange={(e) => set('sort', e.target.value)}><option value="fetched_at">najnowsze</option><option value="score">wynik</option><option value="views">zasięg</option><option value="priority">priorytet (ryzyko × zasięg)</option></select></label>
+          <label className="f">Sortuj<select value={f.sort ?? 'fetched_at'} onChange={(e) => set('sort', e.target.value)}><option value="fetched_at">najnowsze (pobrane)</option><option value="published_at">data publikacji</option><option value="score">wynik</option><option value="views">zasięg</option><option value="priority">priorytet (ryzyko × zasięg)</option></select></label>
         </div>
         {error && <Empty>Błąd: {error.message}</Empty>}
         {data && (data.items.length ? (
@@ -52,19 +55,21 @@ export default function Results() {
               <thead><tr>
                 <th onClick={() => sort('title')} style={{ cursor: 'pointer' }}>Materiał</th><th>Źródło</th><th>Typ</th><th onClick={() => sort('views')} style={{ cursor: 'pointer' }}>Zasięg ↕</th><th>Moduły</th>
                 <th onClick={() => sort('score')} style={{ cursor: 'pointer' }}>Wynik ↕</th><th>Ryzyko</th><th>Status</th>
+                <th onClick={() => sort('published_at')} style={{ cursor: 'pointer' }}>Opublikowano ↕</th>
                 <th onClick={() => sort('fetched_at')} style={{ cursor: 'pointer' }}>Pobrano ↕</th>
               </tr></thead>
               <tbody>{data.items.map((m) => (
                 <tr key={m.id} className="click" onClick={() => nav(`/materials/${m.id}`)}>
-                  <td><div className="truncate">{m.title || '(bez tytułu)'}{m.near_duplicate_of && <span className="chip mid" style={{ marginLeft: 6 }} title={`Prawie duplikat materiału #${m.near_duplicate_of}`}>duplikat #{m.near_duplicate_of}</span>}</div><div className="small muted truncate">{m.url}</div></td>
+                  <td><div className="truncate">{m.title || '(bez tytułu)'}{m.demo && <span className="chip neutral" style={{ marginLeft: 6 }} title="Próbka kalibracyjna (dane demonstracyjne)">próbka</span>}{m.near_duplicate_of && <span className="chip mid" style={{ marginLeft: 6 }} title={`Prawie duplikat materiału #${m.near_duplicate_of}`}>duplikat #{m.near_duplicate_of}</span>}</div><div className="small muted truncate">{m.url}</div></td>
                   <td><span className="chip neutral">{m.platform}</span>{m.author && <div className="small muted">{m.author}</div>}</td>
                   <td><ProfileChip type={m.profile_type} />{m.is_video && <div className="small muted">wideo</div>}</td>
                   <td className="small">{m.views != null ? <><b>{fmtCount(m.views)}</b> wyśw.</> : '–'}{m.followers != null && <div className="muted">{fmtCount(m.followers)} obs.</div>}
                     {m.tags?.length > 0 && <div className="muted truncate" style={{ maxWidth: 140 }}>{m.tags.slice(0, 3).map((t) => `#${t}`).join(' ')}</div>}</td>
                   <td><ModuleChips modules={m.modules} /></td>
-                  <td style={{ minWidth: 90 }}><Score score={m.score} threshold={data.threshold} /><ScoreBar score={m.score} threshold={data.threshold} /></td>
+                  <td style={{ minWidth: 90 }}><Score score={m.score} threshold={data.threshold} />{m.reviewed && <span className="small muted" title={`Wynik po weryfikacji analityka (automat: ${Math.round(m.classifier_score)})`}> ✎</span>}<ScoreBar score={m.score} threshold={data.threshold} /></td>
                   <td><RiskBadge risk={m.risk} /></td>
                   <td className="small">{MAT_STATUS[m.status]}</td>
+                  <td className="small">{m.published_at ? fmtDate(m.published_at) : <span className="muted">–</span>}</td>
                   <td className="small muted">{fmtDate(m.fetched_at)}</td>
                 </tr>))}
               </tbody>

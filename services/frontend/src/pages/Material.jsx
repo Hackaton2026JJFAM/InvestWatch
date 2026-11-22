@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
 import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, PROFILE, ProfileChip, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
@@ -13,14 +13,14 @@ function FindingsTable({ findings, rejected }) {
   const rows = onlyIssues ? findings.filter((f) => f.status === 'fail' || f.status === 'warn') : findings;
   return (
     <>
-      <label className="small"><input type="checkbox" checked={onlyIssues} onChange={(e) => setOnlyIssues(e.target.checked)} /> tylko niespełnione i do weryfikacji</label>
+      <label className="small"><input type="checkbox" checked={onlyIssues} onChange={(e) => setOnlyIssues(e.target.checked)} /> pokaż tylko problemy</label>
       <div className="table-wrap"><table style={{ marginTop: 8 }}>
-        <thead><tr><th>ID</th><th>Reguła</th><th>Wynik</th><th>Uzasadnienie i fragmenty</th><th>Podstawa prawna</th></tr></thead>
+        <thead><tr><th>ID</th><th>Co sprawdzamy</th><th>Ocena</th><th>Dlaczego (fragmenty)</th><th>Przepis</th></tr></thead>
         <tbody>{rows.map((f) => (
           <tr key={f.id ?? f.rule_id} style={rejected?.has(f.rule_id) ? { opacity: 0.5 } : undefined}>
             <td className="mono"><b>{f.rule_id}</b></td>
             <td style={{ minWidth: 160 }}>{f.title}</td>
-            <td><StatusChip status={f.status} />{rejected?.has(f.rule_id) && <div className="small muted">odrzucone przez analityka</div>}</td>
+            <td><StatusChip status={f.status} />{rejected?.has(f.rule_id) && <div className="small muted">odznaczone przez analityka</div>}</td>
             <td style={{ minWidth: 320 }}>{f.explanation}<Evidence items={(f.evidence ?? []).filter((e, i) => !rejected?.has(`${f.rule_id}:${e.signal ?? i}`)).slice(0, 3)} />
               {(f.evidence ?? []).some((e, i) => rejected?.has(`${f.rule_id}:${e.signal ?? i}`)) && (
                 <div className="small muted">odrzucone elementy: {(f.evidence ?? []).filter((e, i) => rejected?.has(`${f.rule_id}:${e.signal ?? i}`)).map((e) => e.where || e.text.slice(0, 40)).join('; ')}</div>)}</td>
@@ -147,86 +147,201 @@ function ProfilePanel({ r, m, onChange }) {
   );
 }
 
-// Ikona edycji (ołówek) – tryb weryfikacji punktów podsumowania
+// Ikony: edycja (ołówek), dodawanie (plus), usuwanie (kosz)
 const PencilIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
   </svg>
 );
+const PlusIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+);
+const TrashIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M6 6l1 14h10l1-14" />
+  </svg>
+);
 
-function Summary({ materialId, analysis, tick, onReviewed }) {
+const SEVERITY = [[20, 'niska'], [40, 'średnia'], [60, 'wysoka'], [80, 'bardzo wysoka']];
+const MODULE_SHORT = { m1: 'Reklama i publikujący', m2: 'Informacja o ryzyku', m3: 'Doradztwo inwestycyjne' };
+
+// Ręczne dodanie problemu (np. fragment filmu, którego automat nie wychwycił)
+function AddProblem({ materialId, isVideo, onDone, onCancel }) {
+  const { toast } = useLive();
+  const [f, setF] = useState({ module: 'm2', title: '', severity: 40, fragment: '', at: '', explanation: '' });
+  const [saving, setSaving] = useState(false);
+  const set = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const submit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const r = await api.post(`/materials/${materialId}/manual-findings`, { ...f, severity: Number(f.severity) });
+      toast({ kind: 'info', title: 'Dodano problem', text: `Wynik po weryfikacji: ${Math.round(r.reviewed_score)}/100` });
+      onDone();
+    } catch (err) { toast({ kind: 'error', title: 'Nie dodano problemu', text: err.message }); } finally { setSaving(false); }
+  };
+  return (
+    <form className="add-problem" onSubmit={submit}>
+      <div className="grid g2" style={{ gap: 8 }}>
+        <label className="f">Czego dotyczy<select value={f.module} onChange={set('module')}>
+          {Object.entries(MODULE_SHORT).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+        <label className="f">Waga<select value={f.severity} onChange={set('severity')}>
+          {SEVERITY.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+      </div>
+      <label className="f">Problem<input required minLength={3} maxLength={200} value={f.title} onChange={set('title')} placeholder="np. Obietnica zysku bez ostrzeżenia o ryzyku" /></label>
+      <div className="grid g2" style={{ gap: 8, gridTemplateColumns: isVideo ? '1fr 120px' : '1fr' }}>
+        <label className="f">Fragment (cytat){' '}<input maxLength={1000} value={f.fragment} onChange={set('fragment')} placeholder="np. „gwarantuję 20% miesięcznie”" /></label>
+        {isVideo && <label className="f">Moment w filmie<input maxLength={20} value={f.at} onChange={set('at')} placeholder="np. 0:42" /></label>}
+      </div>
+      <label className="f">Komentarz (opcjonalnie)<input maxLength={1000} value={f.explanation} onChange={set('explanation')} /></label>
+      <div className="btn-row" style={{ justifyContent: 'flex-end' }}>
+        <button type="button" className="btn" onClick={onCancel}>Anuluj</button>
+        <button className="btn primary" disabled={saving}>{saving ? 'Dodawanie…' : 'Dodaj problem'}</button>
+      </div>
+    </form>
+  );
+}
+
+// Wynik po weryfikacji z rozbiciem na moduły – wynik ogólny to najwyższy wynik modułu
+function ScoreBreakdown({ score, reviewed, modules, reviewedModules }) {
+  const after = reviewed ?? score;
+  const mods = reviewedModules ?? modules ?? {};
+  const top = Object.entries(mods).sort((a, b) => b[1] - a[1])[0];
+  return (
+    <div className="score-breakdown">
+      <div><span className="muted small">Wynik</span>{' '}
+        {reviewed != null && Math.round(reviewed) !== Math.round(score)
+          ? <><s className="muted">{Math.round(score)}</s> → <b>{Math.round(after)}</b>/100</>
+          : <b>{Math.round(after)}/100</b>}
+      </div>
+      <div className="small">
+        {Object.entries(mods).map(([k, v]) => (
+          <span key={k} className={`chip ${top && k === top[0] && v > 0 ? 'brand' : 'neutral'}`} style={{ marginRight: 6 }}>
+            {MODULE_SHORT[k] ?? k}: {modules?.[k] != null && Math.round(modules[k]) !== Math.round(v) ? <><s>{Math.round(modules[k])}</s> → </> : null}<b>{Math.round(v)}</b>
+          </span>))}
+      </div>
+      <div className="small muted">Wynik ogólny = najwyższy wynik spośród obszarów. Żeby go obniżyć, trzeba odznaczyć punkty w obszarze, który ma teraz najwyższy wynik{top ? ` (${MODULE_SHORT[top[0]] ?? top[0]})` : ''}.</div>
+    </div>
+  );
+}
+
+function Summary({ materialId, analysis, tick, onReviewed, isVideo }) {
   const { toast } = useLive();
   const { data, reload } = useData(`/summary/${materialId}`, `${tick}-${analysis?.id}`);
   const [editing, setEditing] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(new Set());
+  const [preview, setPreview] = useState(null);
   const [saving, setSaving] = useState(false);
   const points = data?.points ?? [];
-  const rejected = points.filter((p) => p.rejected);
-  const rejectedEls = points.flatMap((p) => (p.rejected ? [] : (p.elements ?? []).filter((e) => e.rejected).map((e) => ({ ...e, point: p }))));
+  const auto = points.filter((p) => !p.manual);
+  const manual = points.filter((p) => p.manual);
+  const rejected = auto.filter((p) => p.rejected);
+  const rejectedEls = auto.flatMap((p) => (p.rejected ? [] : (p.elements ?? []).filter((e) => e.rejected).map((e) => ({ ...e, point: p }))));
+  const draftKey = [...draft].sort().join('|');
+  // podgląd wyniku na żywo podczas odznaczania (bez zapisu)
+  useEffect(() => {
+    if (!editing) return undefined;
+    let alive = true;
+    const t = setTimeout(() => {
+      api.put(`/materials/${materialId}/review?dry=1`, { rejected: draftKey ? draftKey.split('|') : [] })
+        .then((r) => { if (alive) setPreview(r); }).catch(() => {});
+    }, 150);
+    return () => { alive = false; clearTimeout(t); };
+  }, [editing, draftKey, materialId]);
   const startEdit = () => {
-    setDraft(new Set([...rejected.map((p) => p.rule_id), ...points.flatMap((p) => (p.elements ?? []).filter((e) => e.rejected).map((e) => e.key))]));
+    setDraft(new Set([...rejected.map((p) => p.rule_id), ...auto.flatMap((p) => (p.elements ?? []).filter((e) => e.rejected).map((e) => e.key))]));
+    setPreview(null);
     setEditing(true);
   };
   const toggle = (rule) => setDraft((s) => { const n = new Set(s); n.has(rule) ? n.delete(rule) : n.add(rule); return n; });
+  const done = () => { reload(); onReviewed?.(); };
   const save = async () => {
     setSaving(true);
     try {
       const r = await api.put(`/materials/${materialId}/review`, { rejected: [...draft] });
-      toast({ kind: 'info', title: 'Weryfikacja zapisana', text: r.reviewed_score != null ? `Wynik po weryfikacji: ${Math.round(r.reviewed_score)}/100 (klasyfikator: ${Math.round(r.score)})` : 'Przywrócono wszystkie punkty.' });
+      toast({ kind: 'info', title: 'Weryfikacja zapisana', text: r.reviewed_score != null ? `Nowy wynik: ${Math.round(r.reviewed_score)}/100 (automat: ${Math.round(r.score)})` : 'Przywrócono wynik automatyczny.' });
       setEditing(false);
-      reload();
-      onReviewed?.();
+      done();
     } catch (e) { toast({ kind: 'error', title: 'Weryfikacja', text: e.message }); } finally { setSaving(false); }
   };
+  const removeManual = async (p) => {
+    if (!window.confirm(`Usunąć problem „${p.title}”?`)) return;
+    try { await api.del(`/materials/${materialId}/manual-findings/${p.id}`); done(); } catch (e) { toast({ kind: 'error', title: 'Nie usunięto', text: e.message }); }
+  };
+  const byModule = (list) => Object.keys(MODULE_SHORT).map((m) => [m, list.filter((p) => p.module === m)]).filter(([, l]) => l.length);
+  const addBtn = <button className="icon-btn" title="Dodaj problem ręcznie" aria-label="Dodaj problem ręcznie" onClick={() => setAdding(true)}><PlusIcon /></button>;
   const actions = editing
-    ? <span className="btn-row"><button className="btn" onClick={() => setEditing(false)}>Anuluj</button><button className="btn primary" disabled={saving} onClick={save}>{saving ? 'Zapisywanie…' : 'Zapisz'}</button></span>
+    ? <span className="btn-row">{addBtn}<button className="btn" onClick={() => setEditing(false)}>Anuluj</button><button className="btn primary" disabled={saving} onClick={save}>{saving ? 'Zapisywanie…' : 'Zapisz'}</button></span>
     : <span className="btn-row">
-        <button className="icon-btn" title="Edytuj – odrzuć wybrane punkty" aria-label="Edytuj punkty podsumowania" disabled={!points.length} onClick={startEdit}><PencilIcon /></button>
+        {addBtn}
+        <button className="icon-btn" title="Edytuj – odznacz źle rozpoznane punkty" aria-label="Edytuj punkty podsumowania" disabled={!points.length} onClick={startEdit}><PencilIcon /></button>
         <button className="btn" onClick={() => api.get(`/summary/${materialId}?refresh=1`).then(reload)}>Odśwież</button>
       </span>;
+  const manualRow = (p) => (
+    <div key={p.rule_id} className="review-item manual">
+      <span className="chip brand">dodane ręcznie</span>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div><b>{p.title}</b> <span className="muted small">· {MODULE_SHORT[p.module]} · waga {SEVERITY.find(([v]) => v === p.severity)?.[1] ?? p.severity}</span></div>
+        {p.fragment && <div className="small muted">„{p.fragment}”</div>}
+      </div>
+      <button className="icon-btn" title="Usuń problem" aria-label={`Usuń problem ${p.title}`} onClick={() => removeManual(p)}><TrashIcon /></button>
+    </div>
+  );
   return (
-    <Panel title="Podsumowanie AI" meta={data ? `silnik: ${data.engine}${data.reviewed_score != null ? ` · po weryfikacji ${Math.round(data.reviewed_score)}/100` : ''}` : ''} actions={actions}>
+    <Panel title="Podsumowanie" meta={data ? `silnik: ${data.engine}` : ''} actions={actions}>
+      {adding && <AddProblem materialId={materialId} isVideo={isVideo} onCancel={() => setAdding(false)} onDone={() => { setAdding(false); done(); }} />}
       {editing ? (
         <>
-          <div className="notice" style={{ marginBottom: 10 }}>Odznacz punkty albo pojedyncze elementy (sygnały, fragmenty transkrypcji), które zostały źle rozpoznane. Ocena przelicza się od razu po zapisaniu; odrzucone nie liczą się do wyniku po weryfikacji ani do podsumowania, a decyzja obowiązuje także po ponownej analizie.</div>
-          <div className="review-list">
-            {points.map((p) => {
-              const on = !draft.has(p.rule_id);
-              return (
-                <div key={p.rule_id} className={`review-item ${on ? '' : 'off'}`}>
-                  <input id={`rv-${p.rule_id}`} type="checkbox" checked={on} onChange={() => toggle(p.rule_id)} />
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <label htmlFor={`rv-${p.rule_id}`} style={{ cursor: 'pointer' }}><span className="mono"><b>[{p.rule_id}]</b></span> {p.title} <StatusChip status={p.status} /></label>
-                    <div className="small muted">{p.explanation}</div>
-                    {p.elements?.length > 0 && (
-                      <div className="review-sub">
-                        {p.elements.map((e) => {
-                          const eon = on && !draft.has(e.key);
-                          return (
-                            <label key={e.key} className={`review-el ${eon ? '' : 'off'}`}>
-                              <input type="checkbox" disabled={!on} checked={eon} onChange={() => toggle(e.key)} />
-                              <span><b>{e.where}</b>{e.weight ? <span className="muted"> · waga {e.weight}</span> : null}
-                                <div className="small muted">„{(e.text ?? '').slice(0, 200)}”</div></span>
-                            </label>
-                          );
-                        })}
+          <div className="notice" style={{ marginBottom: 10 }}>Odznacz punkty albo pojedyncze elementy (np. źle rozpoznany fragment transkrypcji), które są błędne. Wynik poniżej zmienia się od razu; po zapisaniu zastępuje wynik automatyczny.</div>
+          <ScoreBreakdown score={data?.score} reviewed={preview ? preview.reviewed_score : data?.reviewed_score}
+            modules={data?.module_scores} reviewedModules={preview ? preview.reviewed_modules : data?.reviewed_modules} />
+          {byModule(auto).map(([mod, list]) => (
+            <div key={mod} style={{ marginTop: 12 }}>
+              <h3 style={{ margin: '0 0 6px' }}>{MODULE_SHORT[mod]}</h3>
+              <div className="review-list">
+                {list.map((p) => {
+                  const on = !draft.has(p.rule_id);
+                  return (
+                    <div key={p.rule_id} className={`review-item ${on ? '' : 'off'}`}>
+                      <input id={`rv-${p.rule_id}`} type="checkbox" checked={on} onChange={() => toggle(p.rule_id)} />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <label htmlFor={`rv-${p.rule_id}`} style={{ cursor: 'pointer' }}><span className="mono"><b>[{p.rule_id}]</b></span> {p.title} <StatusChip status={p.status} /></label>
+                        <div className="small muted">{p.explanation}</div>
+                        {p.elements?.length > 0 && (
+                          <div className="review-sub">
+                            {p.elements.map((e) => {
+                              const eon = on && !draft.has(e.key);
+                              return (
+                                <label key={e.key} className={`review-el ${eon ? '' : 'off'}`}>
+                                  <input type="checkbox" disabled={!on} checked={eon} onChange={() => toggle(e.key)} />
+                                  <span><b>{e.where}</b>{e.weight ? <span className="muted"> · waga {e.weight}</span> : null}
+                                    <div className="small muted">„{(e.text ?? '').slice(0, 200)}”</div></span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {manual.length > 0 && <div style={{ marginTop: 12 }}><h3 style={{ margin: '0 0 6px' }}>Dodane ręcznie</h3><div className="review-list">{manual.map(manualRow)}</div></div>}
         </>
       ) : (
         <>
-          <div className="notice" style={{ marginBottom: 10 }}>Podsumowanie powstaje wyłącznie z ustrukturyzowanych przesłanek; każde zdanie odwołuje się do reguły [ID]. To sygnał do weryfikacji, nie ocena prawna.</div>
+          <div className="notice" style={{ marginBottom: 10 }}>Podsumowanie opisuje wykryte problemy; numer w nawiasie [ID] wskazuje regułę. To wskazówka do sprawdzenia, nie ocena prawna.</div>
+          {data?.reviewed_score != null && <ScoreBreakdown score={data.score} reviewed={data.reviewed_score} modules={data.module_scores} reviewedModules={data.reviewed_modules} />}
           <div className="summary-text">{data?.summary ?? 'Generowanie…'}</div>
+          {manual.length > 0 && <div style={{ marginTop: 10 }}><h3 style={{ margin: '0 0 6px' }}>Problemy dodane ręcznie</h3><div className="review-list">{manual.map(manualRow)}</div></div>}
           {rejected.length > 0 && (
-            <p className="small muted" style={{ marginBottom: 0 }}>Odrzucone przez analityka ({rejected.length}): {rejected.map((p) => `[${p.rule_id}] ${p.title}`).join('; ')}</p>
+            <p className="small muted" style={{ marginBottom: 0 }}>Odznaczone przez analityka ({rejected.length}): {rejected.map((p) => `[${p.rule_id}] ${p.title}`).join('; ')}</p>
           )}
           {rejectedEls.length > 0 && (
-            <p className="small muted" style={{ marginBottom: 0 }}>Odrzucone elementy ({rejectedEls.length}): {rejectedEls.map((e) => `[${e.point.rule_id}] ${e.where}`).join('; ')}</p>
+            <p className="small muted" style={{ marginBottom: 0 }}>Odznaczone elementy ({rejectedEls.length}): {rejectedEls.map((e) => `[${e.point.rule_id}] ${e.where}`).join('; ')}</p>
           )}
         </>
       )}
@@ -244,6 +359,7 @@ export default function Material() {
   if (!data) return <Empty>Ładowanie…</Empty>;
   const { material: m, analysis: a, findings, entities, history, threshold, risk, similar = [] } = data;
   const rejectedSet = new Set(data.rejected ?? []);
+  const score = data.effective_score ?? a?.score;
   const r = a?.result ?? {};
   const byModule = (mod) => findings.filter((f) => f.module === mod);
   const setStatus = (status) => api.patch(`/materials/${id}/status`, { status }).then(reload);
@@ -277,11 +393,11 @@ export default function Material() {
       </div>
 
       <div className="grid g4">
-        <div className="panel stat"><span className="label">Wynik punktowy</span><span className="value"><Score score={a?.score} threshold={threshold} /><span className="muted small"> /100</span></span>{m.reviewed_score != null && <span className="sub">po weryfikacji analityka: <b>{Math.round(m.reviewed_score)}</b>/100</span>}<ScoreBar score={a?.score} threshold={threshold} /></div>
+        <div className="panel stat"><span className="label">Ocena ryzyka{m.reviewed_score != null ? ' (po weryfikacji)' : ''}</span><span className="value"><Score score={score} threshold={threshold} /><span className="muted small"> /100</span></span>{m.reviewed_score != null && <span className="sub">automat: <s>{Math.round(a?.score)}</s> · zmieniona przez analityka</span>}<ScoreBar score={score} threshold={threshold} /></div>
         <div className="panel stat"><span className="label">Poziom ryzyka (skala 0–100)</span><span><RiskBadge risk={risk} />{data.above_threshold && <span className="chip high" style={{ marginLeft: 6 }}>powyżej progu {threshold}</span>}</span><span className="sub">Moduły: <ModuleChips modules={a?.modules} /></span></div>
-        <div className="panel stat"><span className="label">Status weryfikacji</span><span className="value" style={{ fontSize: '1.2rem' }}>{MAT_STATUS[m.status]}</span><span className="sub">pobrano {fmtDate(m.fetched_at)}</span></div>
-        <div className="panel stat"><span className="label">Wyniki modułów</span>
-          {Object.entries(a?.module_scores ?? {}).map(([k, v]) => <span key={k} className="small">{MODULES[k]}: <b>{Math.round(v)}</b></span>)}
+        <div className="panel stat"><span className="label">Status weryfikacji</span><span className="value" style={{ fontSize: '1.2rem' }}>{MAT_STATUS[m.status]}</span><span className="sub">opublikowano: <b>{m.published_at ? fmtDate(m.published_at) : 'brak danych'}</b> · pobrano {fmtDate(m.fetched_at)}</span></div>
+        <div className="panel stat"><span className="label">Wyniki obszarów</span>
+          {Object.entries(m.reviewed_modules ?? a?.module_scores ?? {}).map(([k, v]) => <span key={k} className="small">{MODULES[k]}: <b>{Math.round(v)}</b></span>)}
         </div>
       </div>
 
@@ -291,7 +407,7 @@ export default function Material() {
 
       {tab === 'Podsumowanie' && (
         <div className="grid g2">
-          <Summary materialId={id} analysis={a} tick={tick} onReviewed={reload} />
+          <Summary materialId={id} analysis={a} tick={tick} onReviewed={reload} isVideo={Boolean(m.video)} />
           <Panel title="Wykryte podmioty">
             {entities.length ? <table><tbody>{entities.map((e) => (
               <tr key={`${e.id}-${e.role}`}><td><Link to={`/entities/${e.id}`}>{e.name}</Link></td><td className="small muted">{{ advertised_firm: 'reklamowana firma', publisher: 'publikujący', advisor: 'podmiot doradczy' }[e.role]}</td>
@@ -339,7 +455,7 @@ export default function Material() {
               <dt>URL</dt><dd className="mono">{m.url}</dd>
             </dl>
           </Panel>
-          <Panel title="Przesłanki M1"><FindingsTable findings={byModule('m1')} rejected={rejectedSet} /></Panel>
+          <Panel title="Wykryte problemy – reklama i publikujący"><FindingsTable findings={byModule('m1')} rejected={rejectedSet} /></Panel>
         </div>
       )}
       {tab === 'Reklama i publikujący' && (
@@ -355,7 +471,7 @@ export default function Material() {
             </dl>
             <div className="notice" style={{ marginTop: 10 }}>Brak podmiotu w rejestrze KNF nie oznacza automatycznie nielegalnej działalności – to sygnał do weryfikacji (art. 76 u.o.i.f.).</div>
           </Panel>
-          <Panel title="Przesłanki M3"><FindingsTable findings={byModule('m3')} rejected={rejectedSet} /></Panel>
+          <Panel title="Wykryte problemy – doradztwo"><FindingsTable findings={byModule('m3')} rejected={rejectedSet} /></Panel>
         </div>
       )}
 
