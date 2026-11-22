@@ -7,6 +7,13 @@ import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
 const LABEL = { NEW: 'Nowy', REVIEWED: 'Zweryfikowany', DISMISSED: 'Odrzucony' };
+const ALERT_TITLE_LIMIT = 50;
+const shortAlertTitle = (value) => {
+  const chars = Array.from(value ?? '');
+  return chars.length > ALERT_TITLE_LIMIT
+    ? `${chars.slice(0, ALERT_TITLE_LIMIT - 1).join('')}…`
+    : value;
+};
 
 export default function Alerts() {
   const { tick, threshold, refreshCounters, toast } = useLive();
@@ -47,9 +54,10 @@ export default function Alerts() {
               <tr key={a.id} className={a.read ? '' : 'unread-row'}>
                 <td>{!a.read && <span className="dot" style={{ background: 'var(--high)' }} />}</td>
                 <td>{a.material_id
-                  ? <Link to={`/materials/${a.material_id}`} onClick={() => !a.read && update(a.id, { read: true })}>{a.title || a.url}</Link>
-                  : <Link to={a.kind?.startsWith('reserves') ? '/reserves' : `/entities/${a.entity_id}`} onClick={() => !a.read && update(a.id, { read: true })}>{a.entity_name ?? 'Podmiot'} – {a.kind?.startsWith('reserves') ? 'Proof of Reserves' : a.kind}</Link>}
+                  ? <Link title={a.title || a.url} to={`/materials/${a.material_id}`} onClick={() => !a.read && update(a.id, { read: true })}>{shortAlertTitle(a.title || a.url)}</Link>
+                  : <Link title={`${a.entity_name ?? 'Podmiot'} – ${a.kind?.startsWith('reserves') ? 'Proof of Reserves' : a.kind}`} to={a.kind?.startsWith('reserves') ? '/reserves' : `/entities/${a.entity_id}`} onClick={() => !a.read && update(a.id, { read: true })}>{shortAlertTitle(`${a.entity_name ?? 'Podmiot'} – ${a.kind?.startsWith('reserves') ? 'Proof of Reserves' : a.kind}`)}</Link>}
                   <RecordDetails context={a.title || a.entity_name} fields={[
+                    ['Pełny tytuł', a.title || (a.entity_name ? `${a.entity_name} – ${a.kind}` : null)],
                     ['Utworzono', fmtDate(a.created_at)], ['Próg alertu', a.threshold],
                     ['Źródło', a.platform], ['Adres', a.url], ['Odczyt', a.read ? 'przeczytany' : 'nieprzeczytany'],
                   ]}>{a.message && <p>{a.message}</p>}</RecordDetails>

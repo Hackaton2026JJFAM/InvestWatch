@@ -35,7 +35,7 @@ const fixtures = {
     gleif: { data: { exact: '12345678901234567890', records: [{ lei: '12345678901234567890', name: 'Test LEI', country: 'PL', entity_status: 'ACTIVE', source_url: 'https://example.com/lei' }] } },
     esma_mica: { checked_at: '2026-11-22', data: { casp: [{ name: 'Test CASP', country: 'PL', authority: 'Organ testowy', services: ['Usługa testowa'] }] } },
   }, materials: [{ ...material, role: 'advertised_firm' }], persons: [], timeline: [], krsCandidates: [] },
-  '/alerts': [{ id: 1, material_id: 1, ...material, read: false, threshold: 45, created_at: '2026-11-22' }],
+  '/alerts': [{ id: 1, material_id: 1, ...material, title: 'Tytuł alertu, który jest celowo bardzo długi i przekracza limit pięćdziesięciu znaków', read: false, threshold: 45, created_at: '2026-11-22' }],
   '/scans': [{ id: 1, material_id: 1, url: material.url, status: 'failed', error: 'Błąd testowy zadania', attempts: 2, trigger: 'manual', created_at: '2026-11-22' }],
   '/sources': [{ id: 1, url: material.url, enabled: false }],
   '/watch': [{ id: 1, query: 'Test monitoringu', kind: 'hashtag', platform: 'youtube', enabled: false, materials: 1, min_views: 1000, max_per_run: 10 }],
@@ -126,6 +126,13 @@ async function assertTextContrast(page) {
           assert(await page.getByText('Uzasadnienie testowe', { exact: true }).isVisible());
           assert(await page.getByText('„Cytat źródłowy”', { exact: true }).isVisible());
           assert(await page.getByText('Podstawa testowa', { exact: true }).isVisible());
+        }
+        if (path === '/alerts') {
+          const alertTitle = fixtures['/alerts'][0].title;
+          const alertLink = page.locator('tbody a').first();
+          assert((await alertLink.innerText()).length <= 50);
+          assert.equal(await alertLink.getAttribute('title'), alertTitle);
+          assert(await page.getByText(alertTitle, { exact: true }).isVisible());
         }
         if (path === '/scan') assert(await page.getByText('Błąd testowy zadania', { exact: true }).isVisible());
         await summary.click();
