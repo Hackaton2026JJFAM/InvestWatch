@@ -6,7 +6,7 @@ import { useData } from '../hooks.js';
 import { REG } from './Entities.jsx';
 import { useLive } from '../live.jsx';
 
-const TABS = ['Podsumowanie', 'Reguły zgodności (M2)', 'Finfluencerzy (M1)', 'Shadow Advisory (M3)', 'Materiał', 'Historia'];
+const TABS = ['Podsumowanie', 'Informacja o ryzyku', 'Reklama i publikujący', 'Doradztwo inwestycyjne', 'Materiał', 'Historia'];
 
 function FindingsTable({ findings, rejected }) {
   const [onlyIssues, setOnlyIssues] = useState(false);
@@ -314,7 +314,7 @@ export default function Material() {
         </div>
       )}
 
-      {tab === 'Reguły zgodności (M2)' && (
+      {tab === 'Informacja o ryzyku' && (
         <Panel title="18 reguł UKNF – informacja o ryzyku" meta={`render: ${m.layout_engine}`}>
           {m.video && <div className="notice" style={{ marginBottom: 8 }}>Wideo – mowa przepisana przez Whisper, napisy z klatek odczytane OCR. Reguły 4–6 oceniają wielkość, kontrast, położenie w kadrze i czas wyświetlania ostrzeżenia (min. 3 s); ostrzeżenie tylko w mowie oznaczane jest w regule 6.</div>}
           {m.layout_engine === 'ocr' && <div className="notice" style={{ marginBottom: 8 }}>Obraz reklamy (OCR) – reguły 4–6 ocenione na podstawie wysokości liter, kontrastu i położenia tekstu na obrazie; reguły 7–8 nie dotyczą obrazu statycznego.</div>}
@@ -327,7 +327,7 @@ export default function Material() {
         </Panel>
       )}
 
-      {tab === 'Finfluencerzy (M1)' && (
+      {tab === 'Reklama i publikujący' && (
         <div className="grid g2">
           <Panel title="Reklamowana firma i reklamujący">
             <dl className="kv">
@@ -342,11 +342,11 @@ export default function Material() {
           <Panel title="Przesłanki M1"><FindingsTable findings={byModule('m1')} rejected={rejectedSet} /></Panel>
         </div>
       )}
-      {tab === 'Finfluencerzy (M1)' && (
+      {tab === 'Reklama i publikujący' && (
         <div style={{ marginTop: 12 }}><ProfilePanel r={r} m={m} onChange={reload} /></div>
       )}
 
-      {tab === 'Shadow Advisory (M3)' && (
+      {tab === 'Doradztwo inwestycyjne' && (
         <div className="grid g2">
           <Panel title="Klasyfikacja oferty">
             <dl className="kv">

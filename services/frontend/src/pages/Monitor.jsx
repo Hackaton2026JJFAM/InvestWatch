@@ -124,7 +124,7 @@ export default function Monitor() {
         )}
         {res && (res.items.length ? (
           <>
-            <div className="table-wrap" style={{ marginTop: 10 }}><table>
+            <div className="table-wrap monitor-results-wrap" style={{ marginTop: 10 }}><table className="monitor-results">
               <thead><tr><th /><th>Platforma</th><th>Post / film</th><th>Twórca</th><th>Zasięg</th><th>Język</th><th>Status</th></tr></thead>
               <tbody>{res.items.map((i) => (
                 <tr key={i.url} style={{ opacity: i.passes ? 1 : 0.55 }}>
@@ -147,7 +147,7 @@ export default function Monitor() {
       </Panel>
 
       <Panel title="Stały monitoring" meta="uruchamiany według harmonogramu; „auto” = dodane i wstrzymywane automatycznie na podstawie popularności hashtagów">
-        {watches.data?.length ? <div className="table-wrap"><table>
+        {watches.data?.length ? <div className="table-wrap monitor-watches-wrap"><table className="monitor-watches">
           <thead><tr><th>Zapytanie</th><th>Próg</th><th>Ostatnie uruchomienie</th><th>Materiały</th><th>Akcje</th></tr></thead>
           <tbody>{watches.data.map((w) => (
             <tr key={w.id} style={{ opacity: w.enabled ? 1 : 0.55 }}>

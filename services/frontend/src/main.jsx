@@ -31,15 +31,24 @@ function Shell() {
           <div>InvestWatch<small>monitoring reklam inwestycyjnych</small></div>
         </div>
         <nav className="nav">
-          <NavLink to="/" end>Pulpit</NavLink>
-          <NavLink to="/materials">Wyniki analiz</NavLink>
-          <NavLink to="/monitor">Monitoring wideo</NavLink>
-          <NavLink to="/alerts">Alerty {unread > 0 && <span className="badge">{unread}</span>}</NavLink>
-          <NavLink to="/entities">Podmioty</NavLink>
-          <NavLink to="/search">Wyszukiwarka (KRS, LEI)</NavLink>
-          <NavLink to="/reserves">Rezerwy giełd (PoR)</NavLink>
-          <NavLink to="/calibration">Kalibracja</NavLink>
-          <NavLink to="/scan">Skanowanie i źródła</NavLink>
+          <div className="nav-group">
+            <span className="nav-heading">Przegląd</span>
+            <NavLink to="/" end>Pulpit</NavLink>
+            <NavLink to="/materials">Wyniki analiz</NavLink>
+            <NavLink to="/alerts">Alerty {unread > 0 && <span className="badge">{unread}</span>}</NavLink>
+          </div>
+          <div className="nav-group">
+            <span className="nav-heading">Monitoring</span>
+            <NavLink to="/monitor">Monitoring wideo</NavLink>
+            <NavLink to="/scan">Skanowanie i źródła</NavLink>
+          </div>
+          <div className="nav-group">
+            <span className="nav-heading">Podmioty i narzędzia</span>
+            <NavLink to="/entities">Podmioty</NavLink>
+            <NavLink to="/search">Wyszukiwarka KRS / LEI</NavLink>
+            <NavLink to="/reserves">Rezerwy giełd</NavLink>
+            <NavLink to="/calibration">Kalibracja</NavLink>
+          </div>
         </nav>
         <div className="foot">
           <div><span className={`dot ${connected ? 'on' : ''}`} />{connected ? 'Na żywo (WebSocket)' : 'Brak połączenia'}</div>
