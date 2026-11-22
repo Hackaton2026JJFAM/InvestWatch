@@ -77,7 +77,9 @@ function VideoPanel({ video }) {
     <div className="grid g2" style={{ marginTop: 12 }}>
       <Panel title="Transkrypcja mowy" meta={video.transcript ? `Whisper ${video.transcript.model} · język ${video.transcript.language ?? '?'}` : ''}>
         <dl className="kv" style={{ marginBottom: 10 }}>
-          <dt>Długość</dt><dd>{video.duration ? mmss(video.duration) : '–'}</dd>
+          <dt>Długość</dt><dd>{video.full_duration && video.full_duration > (video.duration ?? 0) + 1
+            ? <>{mmss(video.full_duration)} <span className="small muted">(przeanalizowano pierwsze {mmss(video.duration)} – limit VIDEO_MAX_SECONDS)</span></>
+            : video.duration ? mmss(video.duration) : '–'}</dd>
           <dt>Klatki</dt><dd>{video.frames_sampled ?? 0} próbek · {video.frames_with_text ?? 0} z nowym tekstem</dd>
           {meta.view_count != null && <><dt>Wyświetlenia</dt><dd>{Number(meta.view_count).toLocaleString('pl-PL')}</dd></>}
           {meta.channel_follower_count != null && <><dt>Obserwujący</dt><dd>{Number(meta.channel_follower_count).toLocaleString('pl-PL')}</dd></>}

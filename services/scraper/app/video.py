@@ -113,7 +113,7 @@ def capabilities() -> dict:
 def download(url: str, workdir: str) -> tuple[str, dict]:
     try:
         import yt_dlp
-        from yt_dlp.utils import DownloadError, match_filter_func
+        from yt_dlp.utils import DownloadError, download_range_func, match_filter_func
     except ImportError as exc:
         raise VideoUnavailable("Brak yt-dlp w środowisku scrapera") from exc
     try:
@@ -130,8 +130,10 @@ def download(url: str, workdir: str) -> tuple[str, dict]:
         "merge_output_format": "mp4",
         "noplaylist": True, "playlist_items": "1",
         "quiet": True, "no_warnings": True, "noprogress": True,
-        "max_filesize": MAX_BYTES,
-        "match_filter": match_filter_func(f"!is_live & duration <=? {MAX_DURATION}"),
+        # dłuższe filmy nie są odrzucane: pobieramy i analizujemy pierwsze VIDEO_MAX_SECONDS (zwykle tam pada obietnica / oferta)
+        "match_filter": match_filter_func("!is_live"),
+        "download_ranges": download_range_func(None, [(0, MAX_DURATION)]),
+        "force_keyframes_at_cuts": False,
         "socket_timeout": 30, "retries": 2, "fragment_retries": 2,
         "http_headers": {"User-Agent": random_ua(), "Accept-Language": "pl-PL,pl;q=0.9,en;q=0.6"},
         "cachedir": False, "restrictfilenames": True, "windowsfilenames": True,
@@ -144,8 +146,17 @@ def download(url: str, workdir: str) -> tuple[str, dict]:
     if COOKIES and os.path.exists(COOKIES):
         opts["cookiefile"] = COOKIES
     try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+        except DownloadError as first:
+            # przycinanie (ffmpeg) bywa zawodne dla części formatów – druga próba z prostym plikiem progresywnym
+            if "ffmpeg" not in str(first).lower():
+                raise
+            for f in os.listdir(workdir):
+                os.remove(os.path.join(workdir, f))
+            with yt_dlp.YoutubeDL({**opts, "format": "18/b[height<=480][acodec!=none][vcodec!=none]/b"}) as ydl:
+                info = ydl.extract_info(url, download=True)
     except DownloadError as exc:
         msg = str(exc)
         low = msg.lower()
@@ -161,13 +172,15 @@ def download(url: str, workdir: str) -> tuple[str, dict]:
             raise VideoRejected(f"Plik przekracza {MAX_BYTES // 1024 // 1024} MB") from exc
         raise VideoUnavailable(f"Nie udało się pobrać wideo: {re.sub(r'^ERROR: ', '', msg)[:200]}") from exc
     if info is None:
-        raise VideoRejected(f"Materiał przekracza limit {MAX_DURATION // 60} min albo jest transmisją na żywo")
+        raise VideoRejected("Transmisja na żywo – analizowane są tylko nagrania")
     if info.get("entries"):
         info = next((e for e in info["entries"] if e), None) or {}
     files = [f for f in os.listdir(workdir) if f.startswith("video.") and not f.endswith((".part", ".ytdl"))]
     if not files:
-        raise VideoRejected("Pobieranie pominięte (limit rozmiaru lub długości)")
+        raise VideoRejected("Pobieranie pominięte – transmisja na żywo albo platforma nie udostępniła pliku")
     path = os.path.join(workdir, max(files, key=lambda f: os.path.getsize(os.path.join(workdir, f))))
+    if os.path.getsize(path) > MAX_BYTES:
+        raise VideoRejected(f"Plik przekracza {MAX_BYTES // 1024 // 1024} MB")
     return path, info
 
 
@@ -204,15 +217,41 @@ def has_audio(path: str) -> bool:
         return bool(c.streams.audio)
 
 
-def transcribe(path: str) -> dict:
+# typowe „halucynacje” Whispera na muzyce/ciszy (napisy z danych treningowych)
+HALLUCINATIONS = re.compile(r"^(thanks? (you )?for (watching|having me|listening)|thank you\.?|subscribe|napisy (stworzone|wykonane)|"
+                            r"dzi[eę]kuj[eę] za (uwag[eę]|obejrzenie)|subtitles by|amara\.org|\.+|♪+)[.!\s]*$", re.I)
+
+
+def _keep_segment(s) -> bool:
+    text = s.text.strip()
+    if not text or HALLUCINATIONS.match(text):
+        return False
+    # brak mowy według modelu + niska pewność = szum/muzyka, nie wypowiedź
+    if getattr(s, "no_speech_prob", 0) > 0.6 and getattr(s, "avg_logprob", 0) < -0.7:
+        return False
+    return getattr(s, "avg_logprob", 0) > -1.2 or len(text.split()) >= 4
+
+
+def transcribe(path: str, limit_s: float | None = None) -> dict:
     if not has_audio(path):
         return {"language": None, "language_probability": None, "segments": [], "text": "", "model": WHISPER_MODEL, "no_audio": True}
     model = _whisper()
-    segments, info = model.transcribe(path, language=WHISPER_LANG, beam_size=1, vad_filter=True,
-                                      condition_on_previous_text=False)
-    segs = [{"start": round(s.start, 2), "end": round(s.end, 2), "text": s.text.strip()} for s in segments if s.text.strip()]
-    return {"language": info.language, "language_probability": round(info.language_probability, 3),
-            "duration": round(info.duration, 2), "segments": segs, "text": " ".join(s["text"] for s in segs), "model": WHISPER_MODEL}
+    clip = {"clip_timestamps": [0, float(limit_s)]} if limit_s else {}
+
+    def run(lang):
+        segments, info = model.transcribe(path, language=lang, beam_size=1, vad_filter=True, condition_on_previous_text=False, **clip)
+        return [s for s in segments if _keep_segment(s)], info
+
+    kept, info = run(WHISPER_LANG)
+    # niepewne wykrycie języka (krótki klip, muzyka w tle) – monitoring nastawiony na polskie treści: druga próba po polsku
+    if not WHISPER_LANG and info.language != "pl" and (info.language_probability or 0) < 0.6:
+        kept_pl, info_pl = run("pl")
+        if sum(len(s.text) for s in kept_pl) >= sum(len(s.text) for s in kept):
+            kept, info = kept_pl, info_pl
+    segs = [{"start": round(s.start, 2), "end": round(s.end, 2), "text": s.text.strip()} for s in kept]
+    return {"language": info.language if segs else None, "language_probability": round(info.language_probability, 3),
+            "duration": round(info.duration, 2), "segments": segs, "text": " ".join(s["text"] for s in segs), "model": WHISPER_MODEL,
+            "no_speech": not segs}
 
 
 # ---------------------------------------------------------------------------- klatki + OCR
@@ -359,10 +398,11 @@ def process_file(path: str, info: dict | None = None) -> dict:
             duration = (c.duration / 1_000_000) if c.duration else None
     except Exception as exc:
         raise VideoRejected(f"Nieczytelny plik wideo: {type(exc).__name__}") from exc
-    duration = info.get("duration") or duration
-    if duration and duration > MAX_DURATION:
-        raise VideoRejected(f"Materiał przekracza limit {MAX_DURATION // 60} min")
-    transcript = transcribe(path)
+    full_duration = info.get("duration") or duration
+    # dłuższy film: analizujemy pierwsze VIDEO_MAX_SECONDS (plik z platformy jest już przycięty przy pobieraniu)
+    truncated = bool(full_duration and full_duration > MAX_DURATION)
+    duration = min(full_duration, MAX_DURATION) if full_duration else duration
+    transcript = transcribe(path, MAX_DURATION if truncated else None)
     shots = frames(path, duration)
     step = max(1.5, (duration or 1) / MAX_FRAMES)
     blocks, sheet, ocr_meta = ocr_frames(shots, step)
@@ -378,7 +418,7 @@ def process_file(path: str, info: dict | None = None) -> dict:
               "viewports": {"desktop": {"width": TARGET_W, "height": frame_h, "page_height": page_h,
                                         "screenshot_height": page_h, "blocks": blocks}} if blocks else {},
               "screenshot": contact_sheet(sheet),
-              "video": {"duration": duration, "frames_sampled": ocr_meta.get("frames"), "frames_with_text": ocr_meta.get("frames_with_text"),
+              "video": {"duration": duration, "full_duration": full_duration, "truncated": truncated, "frames_sampled": ocr_meta.get("frames"), "frames_with_text": ocr_meta.get("frames_with_text"),
                         "frame_size": ocr_meta.get("frame_size"), "frame_times": [t for t, _ in sheet], "step_s": round(step, 2)}}
     return {"content_text": full or "", "full_text": full or "", "transcript": transcript, "layout": layout,
             "duration": duration, "transcript_timed": "\n".join(f"[{_ts(s['start'])}] {s['text']}" for s in transcript["segments"])}

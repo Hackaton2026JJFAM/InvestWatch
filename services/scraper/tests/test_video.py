@@ -72,3 +72,12 @@ def test_transcription_polish_sample():
     assert t["language"] == "pl"
     text = t["text"].lower()
     assert "zysk" in text and "ryzyka" in text
+
+
+def test_whisper_hallucinations_are_dropped():
+    from types import SimpleNamespace as S
+    from app.video import _keep_segment
+    assert not _keep_segment(S(text=" Thanks for having me.", no_speech_prob=0.2, avg_logprob=-0.4))
+    assert not _keep_segment(S(text="Dziękuję za uwagę.", no_speech_prob=0.1, avg_logprob=-0.3))
+    assert not _keep_segment(S(text="la la", no_speech_prob=0.9, avg_logprob=-1.0))
+    assert _keep_segment(S(text="Zarabiam trzydzieści procent miesięcznie z tym botem", no_speech_prob=0.1, avg_logprob=-0.3))

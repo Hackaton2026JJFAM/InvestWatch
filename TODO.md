@@ -67,6 +67,13 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Instagram: zasięg (wyświetlenia) bez logowania niedostępny – tylko polubienia/opis; Facebook: metadane ograniczone
 - [ ] Rejestr licencjonowanych doradców inwestycyjnych KNF – dziś licencja „zadeklarowana, do weryfikacji” (numer wyciągany z treści)
 
+## Wideo i monitoring – poprawki (22.11.2026)
+- [x] Dłuższe filmy (np. YouTube > 15 min) nie są już odrzucane („Pobieranie pominięte”): pobierany i analizowany jest pierwszy fragment (`VIDEO_MAX_SECONDS`), w materiale widać pełną długość i analizowany zakres; przy błędzie przycinania ffmpeg automatyczna druga próba z prostszym formatem
+- [x] Whisper: odfiltrowane „halucynacje” na muzyce/ciszy (np. „Thanks for having me.”), segmenty bez mowy; przy niepewnym wykryciu języka druga próba po polsku
+- [x] Monitoring: jedno pole wyszukiwania rozpoznające #hashtag / frazę / @profil / link do filmu (link = od razu do analizy), kroki 1-2-3, podpowiedzi (popularne hashtagi / frazy oszustów) pod polem, wyniki zaraz pod spodem, „Monitoruj stale” przy zapytaniu i wynikach, zgrupowane komunikaty o niedostępnych platformach
+- [ ] TikTok: yt-dlp wymaga podszywania się pod przeglądarkę (`curl_cffi`, `--impersonate`), inaczej TikTok odpowiada błędem – decyzja zespołu (dodanie zależności); do tego czasu TikTok tylko przez wgranie pliku
+- [ ] TikTok/Instagram/X/Facebook w wyszukiwaniu idą przez publiczną wyszukiwarkę (DuckDuckGo), która przy częstych zapytaniach czasowo blokuje (202) – nie obchodzimy; rozważyć oficjalne API platform
+
 ## Poprawki po testach zespołu (22.11.2026)
 - [x] Wynik po weryfikacji analityka zastępuje wynik automatu wszędzie (nagłówek, lista, pulpit, filtry ryzyka/progu); wynik automatu przekreślony obok; kalibracja nadal na surowym wyniku klasyfikatora
 - [x] „Zostaje 75/100” – to nie błąd liczenia: wynik ogólny = najwyższy wynik obszaru (M2 83, M3 75). Tryb edycji pokazuje teraz podgląd wyniku na żywo i rozbicie na obszary (który obszar trzyma wynik), punkty pogrupowane wg obszaru

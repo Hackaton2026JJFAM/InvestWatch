@@ -158,7 +158,7 @@ export async function processScan(job) {
         [m.id, a.id, result.score, threshold],
       );
     }
-    await t.q("UPDATE scan_jobs SET status = 'done', material_id = $2, finished_at = now() WHERE id = $1", [jobId, m.id]);
+    await t.q("UPDATE scan_jobs SET status = 'done', material_id = $2, error = NULL, finished_at = now() WHERE id = $1", [jobId, m.id]);
     return { materialId: m.id, analysisId: a.id, alert };
     });
   }

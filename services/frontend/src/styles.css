@@ -474,3 +474,16 @@ label.f { gap: 5px; font-size: .77rem; font-weight: 600; }
   .btn, .help-tip { transition: none; }
   .help-tip { transform: none; }
 }
+
+/* monitoring: jedno pole wyszukiwania z rozpoznawaniem rodzaju zapytania */
+.monitor-search .steps { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 0 0 12px; padding-left: 18px; font-size: .88rem; color: var(--muted); }
+.monitor-search .steps b { color: var(--text); }
+.search-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.big-search { flex: 1 1 320px; min-width: 0; font-size: 1.05rem; padding: 10px 12px; }
+.search-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; margin: 8px 0 14px; }
+.search-meta label.inline { display: inline-flex; gap: 6px; align-items: center; }
+.search-meta select { padding: 2px 6px; }
+.hints { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 6px 12px; color: var(--muted); cursor: pointer; font: inherit; }
+.seg button.active { background: var(--chip-brand-bg); color: var(--brand-2); font-weight: 600; }

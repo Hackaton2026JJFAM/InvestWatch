@@ -119,7 +119,8 @@ r.get('/materials/:id', async (req, res) => {
   const { layout = {}, content_text: _c, full_text: _f, transcript: _t, ...meta } = m.raw ?? {};
   // wideo: transkrypcja z czasami i napisy z klatek z czasem widoczności na ekranie
   const video = layout.video ? {
-    duration: layout.video.duration, frames_sampled: layout.video.frames_sampled, frames_with_text: layout.video.frames_with_text,
+    duration: layout.video.duration, full_duration: layout.video.full_duration ?? layout.video.meta?.duration ?? null,
+    truncated: layout.video.truncated ?? false, frames_sampled: layout.video.frames_sampled, frames_with_text: layout.video.frames_with_text,
     frame_times: layout.video.frame_times ?? [], meta: layout.video.meta ?? null,
     transcript: layout.video.transcript ? { language: layout.video.transcript.language, model: layout.video.transcript.model,
       segments: layout.video.transcript.segments ?? [], no_audio: layout.video.transcript.no_audio ?? false } : null,
