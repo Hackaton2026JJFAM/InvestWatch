@@ -71,7 +71,7 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [x] Dłuższe filmy (np. YouTube > 15 min) nie są już odrzucane („Pobieranie pominięte”): pobierany i analizowany jest pierwszy fragment (`VIDEO_MAX_SECONDS`), w materiale widać pełną długość i analizowany zakres; przy błędzie przycinania ffmpeg automatyczna druga próba z prostszym formatem
 - [x] Whisper: odfiltrowane „halucynacje” na muzyce/ciszy (np. „Thanks for having me.”), segmenty bez mowy; przy niepewnym wykryciu języka druga próba po polsku
 - [x] Monitoring: jedno pole wyszukiwania rozpoznające #hashtag / frazę / @profil / link do filmu (link = od razu do analizy), kroki 1-2-3, podpowiedzi (popularne hashtagi / frazy oszustów) pod polem, wyniki zaraz pod spodem, „Monitoruj stale” przy zapytaniu i wynikach, zgrupowane komunikaty o niedostępnych platformach
-- [ ] TikTok: yt-dlp wymaga podszywania się pod przeglądarkę (`curl_cffi`, `--impersonate`), inaczej TikTok odpowiada błędem – decyzja zespołu (dodanie zależności); do tego czasu TikTok tylko przez wgranie pliku
+- [x] TikTok: dodane `curl_cffi` (yt-dlp[curl-cffi]) – yt-dlp podszywa się pod przeglądarkę, bez tego TikTok odpowiadał błędem; posty ograniczone regionalnie/świeże („IP address is blocked from accessing this post”) nadal niedostępne – wtedy wgranie pliku
 - [ ] TikTok/Instagram/X/Facebook w wyszukiwaniu idą przez publiczną wyszukiwarkę (DuckDuckGo), która przy częstych zapytaniach czasowo blokuje (202) – nie obchodzimy; rozważyć oficjalne API platform
 
 ## Poprawki po testach zespołu (22.11.2026)
