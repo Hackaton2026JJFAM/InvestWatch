@@ -1,19 +1,12 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
-<<<<<<< HEAD
 import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, PROFILE, ProfileChip, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
-=======
-import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, ProfileChip, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
 import { HelpTip } from '../components/HelpTip.jsx';
->>>>>>> origin/frontend
 import { useData } from '../hooks.js';
 import { REG } from './Entities.jsx';
 import { useLive } from '../live.jsx';
 
-<<<<<<< HEAD
-const TABS = ['Podsumowanie', 'Informacja o ryzyku', 'Reklama i publikujący', 'Doradztwo inwestycyjne', 'Materiał', 'Historia'];
-=======
 const TABS = ['Podsumowanie', 'Przesłanki', 'Publikujący', 'Materiał', 'Historia'];
 const FINDING_MODULES = [['m2', 'Zgodność'], ['m1', 'Publikujący'], ['m3', 'Doradztwo']];
 
@@ -30,7 +23,6 @@ function moveTab(event, items, active, setActive, idFor) {
   setActive(Array.isArray(item) ? item[0] : item);
   requestAnimationFrame(() => document.getElementById(idFor(item, next))?.focus());
 }
->>>>>>> origin/frontend
 
 function FindingsTable({ findings, rejected }) {
   const [onlyIssues, setOnlyIssues] = useState(false);
@@ -290,32 +282,24 @@ function Summary({ materialId, analysis, tick, onReviewed, isVideo }) {
       done();
     } catch (e) { toast({ kind: 'error', title: 'Weryfikacja', text: e.message }); } finally { setSaving(false); }
   };
-<<<<<<< HEAD
   const removeManual = async (p) => {
     if (!window.confirm(`Usunąć problem „${p.title}”?`)) return;
     try { await api.del(`/materials/${materialId}/manual-findings/${p.id}`); done(); } catch (e) { toast({ kind: 'error', title: 'Nie usunięto', text: e.message }); }
   };
   const byModule = (list) => Object.keys(MODULE_SHORT).map((m) => [m, list.filter((p) => p.module === m)]).filter(([, l]) => l.length);
   const addBtn = <button className="icon-btn" title="Dodaj problem ręcznie" aria-label="Dodaj problem ręcznie" onClick={() => setAdding(true)}><PlusIcon /></button>;
-=======
   const refresh = async () => {
     setRefreshing(true);
     try { await api.get(`/summary/${materialId}?refresh=1`); await reload(); }
     catch (e) { toast({ kind: 'error', title: 'Nie udało się odświeżyć podsumowania', text: e.message }); }
     finally { setRefreshing(false); }
   };
->>>>>>> origin/frontend
   const actions = editing
     ? <span className="btn-row">{addBtn}<button className="btn" onClick={() => setEditing(false)}>Anuluj</button><button className="btn primary" disabled={saving} onClick={save}>{saving ? 'Zapisywanie…' : 'Zapisz'}</button></span>
     : <span className="btn-row">
-<<<<<<< HEAD
         {addBtn}
         <button className="icon-btn" title="Edytuj – odznacz źle rozpoznane punkty" aria-label="Edytuj punkty podsumowania" disabled={!points.length} onClick={startEdit}><PencilIcon /></button>
-        <button className="btn" onClick={() => api.get(`/summary/${materialId}?refresh=1`).then(reload)}>Odśwież</button>
-=======
-        <button className="icon-btn" title="Edytuj – odrzuć wybrane punkty" aria-label="Edytuj punkty podsumowania" disabled={!points.length} onClick={startEdit}><PencilIcon /></button>
         <button className="btn" disabled={refreshing} onClick={refresh}>{refreshing ? 'Odświeżanie…' : 'Odśwież'}</button>
->>>>>>> origin/frontend
       </span>;
   const manualRow = (p) => (
     <div key={p.rule_id} className="review-item manual">
@@ -437,40 +421,22 @@ export default function Material() {
         </div>
         <div className="btn-row">
           <span className="small muted">Status: <b>{MAT_STATUS[m.status]}</b> · zmień na:</span>
-<<<<<<< HEAD
           {[['IN_REVIEW', 'W trakcie weryfikacji'], ['REVIEWED', 'Zweryfikowany'], ['ESCALATED', 'Eskaluj'], ['DISMISSED', 'Odrzuć']].map(([s, label]) => (
-            <button key={s} className={`btn ${m.status === s ? 'selected' : ''}`} aria-pressed={m.status === s} disabled={m.status === s}
-              title={m.status === s ? 'Obecny status' : `Zmień status na „${MAT_STATUS[s]}”`} onClick={() => setStatus(s)}>{m.status === s ? `✓ ${MAT_STATUS[s]}` : label}</button>
-          ))}
-          {m.status !== 'NEW' && <button className="btn" onClick={() => setStatus('NEW')}>Przywróć „Nowy”</button>}
-          <button className="btn" onClick={reanalyze}>Analizuj ponownie</button>
-          <button className="btn danger" onClick={remove}>Usuń</button>
-=======
-          {[['REVIEWED', 'Zweryfikowany'], ['ESCALATED', 'Eskaluj'], ['DISMISSED', 'Odrzuć']].map(([s, label]) => (
           <button key={s} className={`btn ${m.status === s ? 'selected' : ''}`} aria-pressed={m.status === s} disabled={m.status === s || Boolean(busyAction)}
             title={m.status === s ? 'Obecny status' : `Zmień status na „${MAT_STATUS[s]}”`} onClick={() => setStatus(s)}>{m.status === s ? `✓ ${MAT_STATUS[s]}` : label}</button>
         ))}
           {m.status !== 'NEW' && <button className="btn" disabled={Boolean(busyAction)} onClick={() => setStatus('NEW')}>Przywróć „Nowy”</button>}
           <button className="btn" disabled={Boolean(busyAction)} onClick={reanalyze}>{busyAction === 'reanalyze' ? 'Analizowanie…' : 'Analizuj ponownie'}</button>
           <button className="btn danger" disabled={Boolean(busyAction)} onClick={remove}>Usuń</button>
->>>>>>> origin/frontend
         </div>
       </div>
 
       <div className="grid g4">
-<<<<<<< HEAD
-        <div className="panel stat"><span className="label">Ocena ryzyka{m.reviewed_score != null ? ' (po weryfikacji)' : ''}</span><span className="value"><Score score={score} threshold={threshold} /><span className="muted small"> /100</span></span>{m.reviewed_score != null && <span className="sub">automat: <s>{Math.round(a?.score)}</s> · zmieniona przez analityka</span>}<ScoreBar score={score} threshold={threshold} /></div>
-        <div className="panel stat"><span className="label">Poziom ryzyka (skala 0–100)</span><span><RiskBadge risk={risk} />{data.above_threshold && <span className="chip high" style={{ marginLeft: 6 }}>powyżej progu {threshold}</span>}</span><span className="sub">Moduły: <ModuleChips modules={a?.modules} /></span></div>
+        <div className="panel stat"><span className="label">Ocena ryzyka{m.reviewed_score != null ? ' (po weryfikacji)' : ''} <HelpTip term="scoring" label="wynik punktowy" /></span><span className="value"><Score score={score} threshold={threshold} /><span className="muted small"> /100</span></span>{m.reviewed_score != null && <span className="sub">automat: <s>{Math.round(a?.score)}</s> · zmieniona przez analityka</span>}<ScoreBar score={score} threshold={threshold} /></div>
+        <div className="panel stat"><span className="label">Poziom ryzyka <HelpTip term="risk_threshold" label="próg ryzyka" /></span><span><RiskBadge risk={risk} />{data.above_threshold && <span className="chip high" style={{ marginLeft: 6 }}>powyżej progu {threshold}</span>}</span><span className="sub">Moduły: <ModuleChips modules={a?.modules} /></span></div>
         <div className="panel stat"><span className="label">Status weryfikacji</span><span className="value" style={{ fontSize: '1.2rem' }}>{MAT_STATUS[m.status]}</span><span className="sub">opublikowano: <b>{m.published_at ? fmtDate(m.published_at) : 'brak danych'}</b> · pobrano {fmtDate(m.fetched_at)}</span></div>
         <div className="panel stat"><span className="label">Wyniki obszarów</span>
           {Object.entries(m.reviewed_modules ?? a?.module_scores ?? {}).map(([k, v]) => <span key={k} className="small">{MODULES[k]}: <b>{Math.round(v)}</b></span>)}
-=======
-        <div className="panel stat"><span className="label">Wynik punktowy <HelpTip term="scoring" label="wynik punktowy" /></span><span className="value"><Score score={a?.score} threshold={threshold} /><span className="muted small"> /100</span></span>{m.reviewed_score != null && <span className="sub">po weryfikacji analityka: <b>{Math.round(m.reviewed_score)}</b>/100 <HelpTip term="scoring_review" label="wynik po weryfikacji" /></span>}<ScoreBar score={a?.score} threshold={threshold} /></div>
-        <div className="panel stat"><span className="label">Poziom ryzyka <HelpTip term="risk_threshold" label="próg ryzyka" /></span><span><RiskBadge risk={risk} />{data.above_threshold && <span className="chip high" style={{ marginLeft: 6 }}>powyżej progu {threshold}</span>}</span><span className="sub">Alert powstaje po przekroczeniu progu {threshold}. Wynik analizy pozostaje bez zmian.</span></div>
-        <div className="panel stat"><span className="label">Status weryfikacji</span><span className="value" style={{ fontSize: '1.2rem' }}>{MAT_STATUS[m.status]}</span><span className="sub">pobrano {fmtDate(m.fetched_at)}</span></div>
-        <div className="panel stat"><span className="label">Wyniki modułów</span>
-          {Object.entries(a?.module_scores ?? {}).map(([k, v]) => <span key={k} className="small">{MODULES[k]}: <b>{Math.round(v)}</b></span>)}
->>>>>>> origin/frontend
         </div>
       </div>
 
@@ -480,36 +446,8 @@ export default function Material() {
 
       <div role="tabpanel" id="material-tab-content" aria-labelledby={`material-tab-${TABS.indexOf(tab)}`} tabIndex={0}>
       {tab === 'Podsumowanie' && (
-<<<<<<< HEAD
-        <div className="grid g2">
-          <Summary materialId={id} analysis={a} tick={tick} onReviewed={reload} isVideo={Boolean(m.video)} />
-          <Panel title="Wykryte podmioty">
-            {entities.length ? <table><tbody>{entities.map((e) => (
-              <tr key={`${e.id}-${e.role}`}><td><Link to={`/entities/${e.id}`}>{e.name}</Link></td><td className="small muted">{{ advertised_firm: 'reklamowana firma', publisher: 'publikujący', advisor: 'podmiot doradczy' }[e.role]}</td>
-                <td><span className={`chip ${REG[e.registry_status]?.[0] ?? 'na'}`}>{REG[e.registry_status]?.[1] ?? 'nieustalone'}</span></td></tr>))}
-            </tbody></table> : <Empty>Nie wykryto podmiotów.</Empty>}
-            <h3 style={{ marginTop: 16 }}>Profil klasyfikatora zdań ({r.ml?.model})</h3>
-            <div className="kv">{Object.entries(r.ml?.max ?? {}).map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{pct(v)} (maks.)</dd></Fragment>)}</div>
-            <h3 style={{ marginTop: 16 }}>Etykieta testowa (kalibracja)</h3>
-            <div className="btn-row">
-              <button className={`btn ${m.ground_truth === true ? 'primary' : ''}`} onClick={() => label(true)}>Ryzykowny</button>
-              <button className={`btn ${m.ground_truth === false ? 'primary' : ''}`} onClick={() => label(false)}>Poprawny</button>
-              <button className="btn" onClick={() => label(null)}>Brak etykiety</button>
-            </div>
-            <h3 style={{ marginTop: 16 }}>Podobne materiały (simhash)</h3>
-            {similar.length ? <table><tbody>{similar.map((x) => (
-              <tr key={x.id}><td><Link to={`/materials/${x.id}`}>{x.title || x.url}</Link><div className="small muted">{x.platform}{x.author ? ` · ${x.author}` : ''}</div></td>
-                <td><span className={`chip ${x.distance <= 3 ? 'mid' : 'neutral'}`}>{x.distance <= 3 ? 'prawie duplikat' : 'podobny'} · {x.distance} bit</span></td></tr>))}
-            </tbody></table> : <p className="small muted">Brak podobnych treści w bazie.</p>}
-          </Panel>
-        </div>
-      )}
-
-      {tab === 'Informacja o ryzyku' && (
-        <Panel title="18 reguł UKNF – informacja o ryzyku" meta={`render: ${m.layout_engine}`}>
-=======
         <>
-          <Summary materialId={id} analysis={a} tick={tick} onReviewed={reload} />
+          <Summary materialId={id} analysis={a} tick={tick} onReviewed={reload} isVideo={Boolean(m.video)} />
           <div className="grid g2" style={{ marginTop: 16 }}>
             <Panel title="Podmioty powiązane w analizie">
               <div className="notice" style={{ marginBottom: 10 }}>Powiązanie wykryte automatycznie nie potwierdza współpracy ani relacji biznesowej. Każdy wynik wymaga sprawdzenia.</div>
@@ -552,7 +490,6 @@ export default function Material() {
         <p className="small muted finding-help">M1 — promocja przez twórcę <HelpTip term="finfluencer" label="finfluencer" /> · M3 — możliwa oferta indywidualnej porady <HelpTip term="shadow_advisory" label="shadow advisory" /></p>
         <div role="tabpanel" id="finding-tab-content" aria-labelledby={`finding-tab-${findingModule}`} tabIndex={0}>
         {findingModule === 'm2' && <Panel title="Informacja o ryzyku" meta={`źródło pomiaru: ${m.layout_engine}`}>
->>>>>>> origin/frontend
           {m.video && <div className="notice" style={{ marginBottom: 8 }}>Wideo – mowa przepisana przez Whisper, napisy z klatek odczytane OCR. Reguły 4–6 oceniają wielkość, kontrast, położenie w kadrze i czas wyświetlania ostrzeżenia (min. 3 s); ostrzeżenie tylko w mowie oznaczane jest w regule 6.</div>}
           {m.layout_engine === 'ocr' && <div className="notice" style={{ marginBottom: 8 }}>Obraz reklamy (odczyt tekstu OCR) – reguły 4–6 ocenione na podstawie wysokości liter, kontrastu i położenia tekstu na obrazie; reguły 7–8 nie dotyczą obrazu statycznego.</div>}
           {!['playwright', 'ocr', 'video'].includes(m.layout_engine) && !m.video && <div className="notice" style={{ marginBottom: 8 }}>
@@ -561,31 +498,15 @@ export default function Material() {
               : 'Materiał tekstowy – reguły wizualne 4–8 wymagają renderu strony i nie zostały ocenione.'}</div>}
           {m.consent_hidden > 0 && <div className="small muted" style={{ marginBottom: 8 }}>Przed pomiarem ukryto nakładkę zgody na cookies ({m.consent_hidden}) – nie zasłania ostrzeżeń w ocenie reguły 5.</div>}
           <FindingsTable findings={byModule('m2')} rejected={rejectedSet} />
-<<<<<<< HEAD
-        </Panel>
-      )}
-
-      {tab === 'Reklama i publikujący' && (
-        <div className="grid g2">
-          <Panel title="Reklamowana firma i reklamujący">
-            <dl className="kv">
-              <dt>Publikujący</dt><dd>{r.m1?.publisher?.name ?? <i>nieustalone</i>}</dd>
-              <dt>Typ publikującego</dt><dd>{{ firma: 'sama firma inwestycyjna', podmiot_trzeci: 'podmiot trzeci / finfluencer', nieustalone: 'nieustalone (do ręcznej weryfikacji)' }[r.m1?.publisher?.type]}</dd>
-              <dt>Platforma</dt><dd>{r.m1?.publisher?.platform}</dd>
-              <dt>Firmy z rejestru</dt><dd>{(r.m1?.firms ?? []).map((f) => f.name + (f.demo ? ' [DEMO]' : '')).join(', ') || '–'}</dd>
-              <dt>Instrumenty</dt><dd>{(r.m1?.instruments ?? []).join(', ') || '–'}</dd>
-              <dt>URL</dt><dd className="mono">{m.url}</dd>
-=======
         </Panel>}
         {findingModule === 'm1' && <div className="grid g2">
-          <ProfilePanel r={r} m={m} />
+          <ProfilePanel r={r} m={m} onChange={reload} />
           <Panel title="Przesłanki dotyczące publikującego">
             <dl className="kv" style={{ marginBottom: 12 }}>
               <dt>Publikujący</dt><dd>{publisher?.name ?? <i>nieustalony</i>}</dd>
               <dt>Rola w analizie</dt><dd>{{ firma: 'profil firmowy', podmiot_trzeci: 'podmiot zewnętrzny', 'własne_usługi': 'własna oferta usługodawcy', nieustalone: 'nieustalona' }[publisher?.type] ?? 'nieustalona'}</dd>
               <dt>Platforma</dt><dd>{publisher?.platform ?? m.platform ?? '–'}</dd>
               <dt>Instrumenty</dt><dd>{(r.m1?.instruments ?? []).join(', ') || 'nie wykryto'}</dd>
->>>>>>> origin/frontend
             </dl>
             <FindingsTable findings={byModule('m1')} rejected={rejectedSet} />
             <h3 className="section-subhead">Podmioty wskazane w analizie</h3>
@@ -601,31 +522,15 @@ export default function Material() {
               </div>
             ))}</div> : <Empty>{(r.m1?.firms ?? []).length ? 'Analiza wskazała nazwy firm, ale nie udało się jednoznacznie dopasować ich do profili podmiotów.' : 'Nie wykryto jednoznacznego powiązania firmy z tym materiałem.'}</Empty>}
           </Panel>
-<<<<<<< HEAD
-          <Panel title="Wykryte problemy – reklama i publikujący"><FindingsTable findings={byModule('m1')} rejected={rejectedSet} /></Panel>
-        </div>
-      )}
-      {tab === 'Reklama i publikujący' && (
-        <div style={{ marginTop: 12 }}><ProfilePanel r={r} m={m} onChange={reload} /></div>
-      )}
-
-      {tab === 'Doradztwo inwestycyjne' && (
-        <div className="grid g2">
-          <Panel title="Klasyfikacja oferty">
-=======
         </div>}
         {findingModule === 'm3' && <div className="grid g2">
           <Panel title="Oferta doradcza">
->>>>>>> origin/frontend
             <dl className="kv">
               <dt>Wynik oceny</dt><dd><b>{{ indywidualne_doradztwo: 'możliwa oferta indywidualnego doradztwa', 'usługa_doradcza_ogólna': 'usługa doradcza (ogólna)', edukacja: 'materiał edukacyjny', brak: 'nie wykryto cech doradztwa' }[r.m3?.classification] ?? 'nie ustalono'}</b></dd>
               {(r.m3?.entities ?? []).map((e) => <Fragment key={e.name}><dt>{e.name}</dt><dd>{e.registry}</dd></Fragment>)}
             </dl>
             <div className="notice" style={{ marginTop: 10 }}>Brak podmiotu w rejestrze KNF nie oznacza automatycznie nielegalnej działalności – to sygnał do weryfikacji (art. 76 u.o.i.f.).</div>
           </Panel>
-<<<<<<< HEAD
-          <Panel title="Wykryte problemy – doradztwo"><FindingsTable findings={byModule('m3')} rejected={rejectedSet} /></Panel>
-=======
           <Panel title="Przesłanki dotyczące doradztwa"><FindingsTable findings={byModule('m3')} rejected={rejectedSet} /></Panel>
         </div>}
         </div>
@@ -634,7 +539,7 @@ export default function Material() {
 
       {tab === 'Publikujący' && (
         <div className="grid g2">
-          <ProfilePanel r={r} m={m} />
+          <ProfilePanel r={r} m={m} onChange={reload} />
           <Panel title="Podmioty powiązane w analizie">
             <div className="notice" style={{ marginBottom: 10 }}>Powiązanie automatyczne nie potwierdza współpracy. Sprawdź źródła i dane rejestrowe przed wyciągnięciem wniosków.</div>
             {entities.length ? <div className="entity-links">{entities.map((entity) => (
@@ -648,7 +553,6 @@ export default function Material() {
               </div>
             ))}</div> : <Empty>Brak jednoznacznie dopasowanych podmiotów. Sama wzmianka o firmie nie oznacza współpracy.</Empty>}
           </Panel>
->>>>>>> origin/frontend
         </div>
       )}
 

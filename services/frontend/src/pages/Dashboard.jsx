@@ -1,10 +1,6 @@
 import { useMemo } from 'react';
-<<<<<<< HEAD
 import { api } from '../api.js';
-import { useNavigate } from 'react-router-dom';
-=======
 import { Link } from 'react-router-dom';
->>>>>>> origin/frontend
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AreaGradient, axisProps, barCursor, ChartGrid, ChartTooltip, cursorStyle, Legend, useChartColors } from '../components/charts.jsx';
 import { Empty, fmtDate, MODULES, ModuleChips, Panel, RiskBadge, Score, StatCard } from '../components/ui.jsx';

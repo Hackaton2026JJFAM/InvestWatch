@@ -35,16 +35,9 @@ export default function Results() {
 
   return (
     <>
-<<<<<<< HEAD
-      <div className="page-head"><div><h1>Wyniki analiz</h1><p>Filtrowanie po dacie, źródle, module, ryzyku, typie publikującego i zasięgu</p></div>
-        <span className="btn-row">
-          <label className="toggle"><input type="checkbox" checked={f.demo === '1'} onChange={(e) => set('demo', e.target.checked ? '1' : '')} /> pokaż próbki demo</label>
-          <label className="toggle"><input type="checkbox" checked={Boolean(f.above)} onChange={(e) => set('above', e.target.checked ? '1' : '')} /> tylko powyżej progu ({data?.threshold ?? '–'})</label>
-        </span>
-=======
         <div className="page-head"><div><h1>Wyniki analiz</h1><p>Materiały z sygnałami do sprawdzenia. Filtruj po źródle, typie publikującego, zasięgu i wyniku.</p></div>
-        <label className="toggle"><input type="checkbox" checked={Boolean(f.above)} onChange={(e) => set('above', e.target.checked ? '1' : '')} /> tylko powyżej progu ({data?.threshold ?? '–'})</label>
->>>>>>> origin/frontend
+        <span className="btn-row"><label className="toggle"><input type="checkbox" checked={f.demo === '1'} onChange={(e) => set('demo', e.target.checked ? '1' : '')} /> pokaż próbki demo</label>
+        <label className="toggle"><input type="checkbox" checked={Boolean(f.above)} onChange={(e) => set('above', e.target.checked ? '1' : '')} /> tylko powyżej progu ({data?.threshold ?? '–'})</label></span>
       </div>
       <Panel>
         <div className="filters">
@@ -59,38 +52,23 @@ export default function Results() {
           <label className="f">Rodzaj<select value={f.media ?? ''} onChange={(e) => set('media', e.target.value)}><option value="">wszystkie</option><option value="video">wideo</option><option value="image">obraz (OCR)</option><option value="web">strona / tekst</option></select></label>
           <label className="f">Zasięg<select value={f.min_views ?? ''} onChange={(e) => set('min_views', e.target.value)}>{VIEWS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
           <label className="f">Język<select value={f.lang ?? ''} onChange={(e) => set('lang', e.target.value)}><option value="">wszystkie</option><option value="pl">polski</option><option value="other">inne</option></select></label>
-<<<<<<< HEAD
-          <label className="f">Tag<input placeholder="#kryptowaluty" value={f.tag ?? ''} onChange={(e) => set('tag', e.target.value.replace(/^#/, ''))} style={{ width: 130 }} /></label>
-          <label className="f">Sortuj<select value={f.sort ?? 'fetched_at'} onChange={(e) => set('sort', e.target.value)}><option value="fetched_at">najnowsze (pobrane)</option><option value="published_at">data publikacji</option><option value="score">wynik</option><option value="views">zasięg</option><option value="priority">priorytet (ryzyko × zasięg)</option></select></label>
-=======
           <label className="f">Tag<input aria-label="Filtruj po tagu" placeholder="#kryptowaluty" value={f.tag ?? ''} onChange={(e) => set('tag', e.target.value.replace(/^#/, ''))} style={{ width: 130 }} /></label>
-          <label className="f">Sortuj<select value={f.sort ?? 'fetched_at'} onChange={(e) => set('sort', e.target.value)}><option value="fetched_at">najnowsze</option><option value="score">wynik</option><option value="views">zasięg</option><option value="priority">priorytet (ryzyko × zasięg)</option></select></label>
+          <label className="f">Sortuj<select value={f.sort ?? 'fetched_at'} onChange={(e) => set('sort', e.target.value)}><option value="fetched_at">najnowsze (pobrane)</option><option value="published_at">data publikacji</option><option value="score">wynik</option><option value="views">zasięg</option><option value="priority">priorytet (ryzyko × zasięg)</option></select></label>
           {activeFilters.length > 0 && <button className="btn clear-filters" type="button" onClick={clearFilters}>Wyczyść filtry ({activeFilters.length})</button>}
->>>>>>> origin/frontend
         </div>
         {error && <div className="notice error-notice" role="alert">Nie udało się pobrać wyników. {error.message} <button className="btn" onClick={reload}>Spróbuj ponownie</button></div>}
         {data && (data.items.length ? (
           <>
             <div className="table-wrap"><table>
               <thead><tr>
-<<<<<<< HEAD
-                <th onClick={() => sort('title')} style={{ cursor: 'pointer' }}>Materiał</th><th>Źródło</th><th>Typ</th><th onClick={() => sort('views')} style={{ cursor: 'pointer' }}>Zasięg ↕</th><th>Moduły</th>
-                <th onClick={() => sort('score')} style={{ cursor: 'pointer' }}>Wynik ↕</th><th>Ryzyko</th><th>Status</th>
-                <th onClick={() => sort('published_at')} style={{ cursor: 'pointer' }}>Opublikowano ↕</th>
-                <th onClick={() => sort('fetched_at')} style={{ cursor: 'pointer' }}>Pobrano ↕</th>
-              </tr></thead>
-              <tbody>{data.items.map((m) => (
-                <tr key={m.id} className="click" onClick={() => nav(`/materials/${m.id}`)}>
-                  <td><div className="truncate">{m.title || '(bez tytułu)'}{m.demo && <span className="chip neutral" style={{ marginLeft: 6 }} title="Próbka kalibracyjna (dane demonstracyjne)">próbka</span>}{m.near_duplicate_of && <span className="chip mid" style={{ marginLeft: 6 }} title={`Prawie duplikat materiału #${m.near_duplicate_of}`}>duplikat #{m.near_duplicate_of}</span>}</div><div className="small muted truncate">{m.url}</div></td>
-=======
                 <th>{sortButton('Materiał', 'title')}</th><th>Źródło</th><th>Typ</th><th>{sortButton('Zasięg', 'views')}</th><th>Obszary analizy</th>
                 <th>{sortButton('Wynik', 'score')}</th><th>Poziom ryzyka</th><th>Status przeglądu</th>
+                <th>{sortButton('Data publikacji', 'published_at')}</th>
                 <th>{sortButton('Data pobrania', 'fetched_at')}</th>
               </tr></thead>
               <tbody>{data.items.map((m) => (
                 <tr key={m.id}>
-                  <td><div className="truncate"><Link to={`/materials/${m.id}`}>{m.title || '(bez tytułu)'}</Link>{m.near_duplicate_of && <span className="chip mid" style={{ marginLeft: 6 }} title={`Podobny do materiału #${m.near_duplicate_of}`}>podobny #{m.near_duplicate_of}</span>}</div><div className="small muted truncate">{m.url}</div></td>
->>>>>>> origin/frontend
+                  <td><div className="truncate"><Link to={`/materials/${m.id}`}>{m.title || '(bez tytułu)'}</Link>{m.demo && <span className="chip neutral" style={{ marginLeft: 6 }} title="Próbka testowa (dane demonstracyjne)">próbka</span>}{m.near_duplicate_of && <span className="chip mid" style={{ marginLeft: 6 }} title={`Podobny do materiału #${m.near_duplicate_of}`}>podobny #{m.near_duplicate_of}</span>}</div><div className="small muted truncate">{m.url}</div></td>
                   <td><span className="chip neutral">{m.platform}</span>{m.author && <div className="small muted">{m.author}</div>}</td>
                   <td><ProfileChip type={m.profile_type} />{m.is_video && <div className="small muted">wideo</div>}</td>
                   <td className="small">{m.views != null ? <><b>{fmtCount(m.views)}</b> wyśw.</> : '–'}{m.followers != null && <div className="muted">{fmtCount(m.followers)} obs.</div>}

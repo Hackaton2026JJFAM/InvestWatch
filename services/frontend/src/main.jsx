@@ -32,7 +32,6 @@ function Shell() {
           <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#1d5fa8" /><path d="M7 20l6-6 4 4 8-8" stroke="#ffd166" strokeWidth="3" fill="none" strokeLinecap="round" /></svg>
           <div>InvestWatch<small>monitoring reklam inwestycyjnych</small></div>
         </div>
-<<<<<<< HEAD
         <nav className="nav">
           <div className="nav-group">
             <span className="nav-heading">Przegląd</span>
@@ -52,23 +51,6 @@ function Shell() {
             <NavLink to="/reserves">Rezerwy giełd</NavLink>
             <NavLink to="/calibration">Kalibracja</NavLink>
           </div>
-=======
-        <nav className="nav" aria-label="Nawigacja główna">
-          <div className="nav-section">PRZEGLĄD</div>
-          <NavLink to="/" end>Pulpit</NavLink>
-          <NavLink to="/materials">Wyniki analiz</NavLink>
-          <NavLink to="/alerts">Alerty {unread > 0 && <span className="badge">{unread}</span>}</NavLink>
-          <div className="nav-section">ŹRÓDŁA I PODMIOTY</div>
-          <NavLink to="/monitor">Monitoring treści</NavLink>
-          <NavLink to="/entities">Podmioty</NavLink>
-          <NavLink to="/search">Wyszukiwarka (KRS, LEI)</NavLink>
-          <NavLink to="/reserves">Rezerwy giełd (PoR)</NavLink>
-          <div className="nav-note"><span>KRS i identyfikatory firm</span><HelpTip term="krs" label="KRS" /></div>
-          <div className="nav-note"><span>Raporty rezerw giełd</span><HelpTip term="por" label="Proof of Reserves" /></div>
-          <div className="nav-section">USTAWIENIA</div>
-          <NavLink to="/calibration">Kalibracja</NavLink>
-          <NavLink to="/scan">Skanowanie i źródła</NavLink>
->>>>>>> origin/frontend
         </nav>
         <div className="foot">
           <div><span className={`dot ${connected ? 'on' : ''}`} />{connected ? 'Aktualizacje na żywo' : 'Brak połączenia'} {connected && <HelpTip term="websocket" label="aktualizacje na żywo" />}</div>
