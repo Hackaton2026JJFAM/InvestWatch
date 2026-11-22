@@ -29,6 +29,13 @@ export function ProfileChip({ type }) {
   return p ? <span className={`chip ${p.tone}`}>{p.label}</span> : null;
 }
 export const fmtCount = (n) => (n == null ? '–' : Number(n).toLocaleString('pl-PL', { notation: Number(n) >= 10000 ? 'compact' : 'standard', maximumFractionDigits: 1 }));
+export const MATERIAL_TITLE_LIMIT = 50;
+export function shortMaterialTitle(value) {
+  const chars = Array.from(value ?? '');
+  return chars.length > MATERIAL_TITLE_LIMIT
+    ? `${chars.slice(0, MATERIAL_TITLE_LIMIT - 1).join('')}…`
+    : value;
+}
 
 export function Panel({ title, meta, actions, children, className = '' }) {
   return (
@@ -109,7 +116,8 @@ export function RecordDetails({ fields = [], children, label = 'Szczegóły', co
 }
 
 export function MaterialLink({ id, title, url }) {
-  return <Link to={`/materials/${id}`}>{title || url}</Link>;
+  const fullTitle = title || url;
+  return <Link title={fullTitle} to={`/materials/${id}`}>{shortMaterialTitle(fullTitle)}</Link>;
 }
 
 export const fmtDate = (d) => (d ? new Date(d).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' }) : '–');

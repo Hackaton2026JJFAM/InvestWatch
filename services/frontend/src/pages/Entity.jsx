@@ -6,7 +6,7 @@ import { axisProps, barCursor, ChartGrid, ChartTooltip, cursorStyle, Legend, use
 import { api } from '../api.js';
 import DataTree from '../components/DataTree.jsx';
 import { GleifRelations, GleifSummary, KrsSummary } from '../components/Registry.jsx';
-import { Empty, fmtDate, Panel, RecordDetails, RiskBadge, Score, StatCard } from '../components/ui.jsx';
+import { Empty, fmtDate, Panel, RecordDetails, RiskBadge, Score, shortMaterialTitle, StatCard } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 import { KIND, REG } from './Entities.jsx';
@@ -318,7 +318,7 @@ export default function Entity() {
       <div hidden={section !== 'materials'}>
       <Panel title="Materiały powiązane">
         {materials.length ? <div className="table-wrap"><table><thead><tr><th>Materiał</th><th>Wynik</th><th>Ryzyko</th></tr></thead>
-          <tbody>{materials.map((m) => <Fragment key={`${m.id}-${m.role}`}><tr><td><Link to={`/materials/${m.id}`}>{m.title || m.url}</Link><RecordDetails context={m.title || m.url} fields={ [['Rola podmiotu', { advertised_firm: 'firma wskazana w analizie', publisher: 'publikujący', advisor: 'podmiot przy ofercie doradczej' }[m.role] ?? m.role], ['Pobrano', fmtDate(m.fetched_at)], ['Adres', m.url]] } /></td><td><Score score={m.score} threshold={threshold} /></td><td><RiskBadge risk={m.risk} /></td></tr></Fragment>)}</tbody></table>
+          <tbody>{materials.map((m) => <Fragment key={`${m.id}-${m.role}`}><tr><td><Link title={m.title || m.url} to={`/materials/${m.id}`}>{shortMaterialTitle(m.title || m.url)}</Link><RecordDetails context={m.title || m.url} fields={ [['Pełny tytuł', m.title || m.url], ['Rola podmiotu', { advertised_firm: 'firma wskazana w analizie', publisher: 'publikujący', advisor: 'podmiot przy ofercie doradczej' }[m.role] ?? m.role], ['Pobrano', fmtDate(m.fetched_at)], ['Adres', m.url]] } /></td><td><Score score={m.score} threshold={threshold} /></td><td><RiskBadge risk={m.risk} /></td></tr></Fragment>)}</tbody></table>
           </div> : <Empty />}
       </Panel>
       </div>

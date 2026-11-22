@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { Link } from 'react-router-dom';
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AreaGradient, axisProps, barCursor, ChartGrid, ChartTooltip, cursorStyle, Legend, useChartColors } from '../components/charts.jsx';
-import { Empty, fmtDate, MODULES, ModuleChips, Panel, RecordDetails, RiskBadge, Score, StatCard } from '../components/ui.jsx';
+import { Empty, fmtDate, MODULES, ModuleChips, Panel, RecordDetails, RiskBadge, Score, shortMaterialTitle, StatCard } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
@@ -84,7 +84,7 @@ export default function Dashboard() {
               <thead><tr><th>Materiał</th><th>Wynik</th><th>Ryzyko</th></tr></thead>
               <tbody>{recent.map((m) => (
                 <tr key={m.id}>
-                  <td><Link to={`/materials/${m.id}`}>{m.title || m.url}</Link><RecordDetails context={m.title || m.url} fields={ [['Pobrano', fmtDate(m.fetched_at)]] }><ModuleChips modules={m.modules} /></RecordDetails></td>
+                  <td><Link title={m.title || m.url} to={`/materials/${m.id}`}>{shortMaterialTitle(m.title || m.url)}</Link><RecordDetails context={m.title || m.url} fields={ [['Pełny tytuł', m.title || m.url], ['Pobrano', fmtDate(m.fetched_at)]] }><ModuleChips modules={m.modules} /></RecordDetails></td>
                   <td><Score score={m.score} threshold={threshold} /></td>
                   <td><RiskBadge risk={m.risk} /></td>
                 </tr>))}

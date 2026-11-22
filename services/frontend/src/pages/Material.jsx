@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, PROFILE, ProfileChip, RecordDetails, RiskBadge, riskOf, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
+import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, PROFILE, ProfileChip, RecordDetails, RiskBadge, riskOf, Score, ScoreBar, shortMaterialTitle, StatusChip } from '../components/ui.jsx';
 import { HelpTip } from '../components/HelpTip.jsx';
 import { useData } from '../hooks.js';
 import { REG } from './Entities.jsx';
@@ -463,7 +463,7 @@ function AccountHistory({ account, prior }) {
             <thead><tr><th>Materiał</th><th>Wynik</th><th>Typ</th><th>Pobrano</th></tr></thead>
             <tbody>{account.items.map((x) => (
               <tr key={x.id}>
-                <td><Link to={`/materials/${x.id}`}>{x.title || x.url}</Link></td>
+                <td><Link title={x.title || x.url} to={`/materials/${x.id}`}>{shortMaterialTitle(x.title || x.url)}</Link></td>
                 <td><Score score={x.reviewed_score ?? x.score} /></td>
                 <td><ProfileChip type={x.profile} /></td>
                 <td className="small muted">{fmtDate(x.fetched_at)}</td>
@@ -498,7 +498,7 @@ export default function Material() {
     try {
       await action();
       await reload();
-      toast({ kind: 'info', title: label, text: m.title || m.url });
+      toast({ kind: 'info', title: label, text: shortMaterialTitle(m.title || m.url) });
     } catch (err) {
       toast({ kind: 'error', title: `Nie udało się: ${label.toLowerCase()}`, text: err.message });
     } finally { setBusyAction(''); }
@@ -507,9 +507,9 @@ export default function Material() {
     () => api.patch(`/materials/${id}/status`, { status }));
   // usunięcie materiału (operacja administratora – okno logowania pojawi się automatycznie)
   const remove = () => {
-    if (!window.confirm(`Usunąć materiał „${m.title || m.url}” wraz z analizami i alertami? Tej operacji nie można cofnąć.`)) return;
+    if (!window.confirm(`Usunąć materiał „${shortMaterialTitle(m.title || m.url)}” wraz z analizami i alertami? Tej operacji nie można cofnąć.`)) return;
     api.del(`/materials/${id}`)
-      .then(() => { toast({ kind: 'info', title: 'Usunięto materiał', text: m.title || m.url }); nav('/materials'); })
+      .then(() => { toast({ kind: 'info', title: 'Usunięto materiał', text: shortMaterialTitle(m.title || m.url) }); nav('/materials'); })
       .catch((err) => { if (err.auth !== 'cancelled') toast({ kind: 'alert', title: 'Nie usunięto materiału', text: err.message }); });
   };
   const reanalyze = () => act('reanalyze', 'Ponowna analiza zakończona', () => api.post(`/materials/${id}/reanalyze`));
@@ -522,7 +522,7 @@ export default function Material() {
     <>
       <div className="page-head">
         <div style={{ minWidth: 0 }}>
-          <h1>{m.title || '(bez tytułu)'}</h1>
+          <h1 title={m.title || undefined}>{shortMaterialTitle(m.title || '(bez tytułu)')}</h1>
           {data.prior_history?.repeat && <span className="chip high" title="Wcześniejsze materiały tego konta miały wysokie ryzyko lub podejrzenie oszustwa">⚠ konto z historią naruszeń ({data.prior_history.high + data.prior_history.scams})</span>}
           <p className="truncate" style={{ maxWidth: 760 }}><a href={m.final_url || m.url} target="_blank" rel="noreferrer noopener">{m.final_url || m.url}</a></p>
         </div>
@@ -600,7 +600,7 @@ export default function Material() {
                 <div className="kv">{Object.entries(r.ml?.max ?? {}).map(([k, v]) => <Fragment key={k}><dt>{k}</dt><dd>{pct(v)} (maks.)</dd></Fragment>)}</div>
                 <h3>Podobne materiały <HelpTip term="simhash" label="podobne materiały" /></h3>
                 {similar.length ? <table><tbody>{similar.map((x) => (
-                  <tr key={x.id}><td><Link to={`/materials/${x.id}`}>{x.title || x.url}</Link><div className="small muted">{x.platform}{x.author ? ` · ${x.author}` : ''}</div></td>
+                  <tr key={x.id}><td><Link title={x.title || x.url} to={`/materials/${x.id}`}>{shortMaterialTitle(x.title || x.url)}</Link><div className="small muted">{x.platform}{x.author ? ` · ${x.author}` : ''}</div></td>
                     <td><span className={`chip ${x.near ? 'mid' : 'neutral'}`}>{x.near ? 'duplikat' : 'podobny'} · {x.distance} bit{x.text_sim != null ? ` · treść ${Math.round(x.text_sim * 100)}%` : ''}</span></td></tr>))}
                 </tbody></table> : <p className="small muted">Nie znaleziono podobnych treści.</p>}
               </details>

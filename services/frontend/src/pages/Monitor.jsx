@@ -4,7 +4,7 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
-import { Empty, fmtCount, fmtDate, Panel, RecordDetails } from '../components/ui.jsx';
+import { Empty, fmtCount, fmtDate, Panel, RecordDetails, shortMaterialTitle } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
@@ -185,7 +185,7 @@ export default function Monitor() {
             </div>
             {junk.data?.length > 0 && (
               <div className="small">
-                Już pobrane materiały z tymi słowami lub obcojęzyczne: <b>{junk.data.length}</b> ({junk.data.slice(0, 3).map((m) => `„${(m.title || m.url).slice(0, 40)}”`).join(', ')}{junk.data.length > 3 ? '…' : ''}){' '}
+                Już pobrane materiały z tymi słowami lub obcojęzyczne: <b>{junk.data.length}</b> ({junk.data.slice(0, 3).map((m) => `„${shortMaterialTitle(m.title || m.url)}”`).join(', ')}{junk.data.length > 3 ? '…' : ''}){' '}
                 <button className="btn danger" onClick={purge}>Usuń je</button>
               </div>
             )}
@@ -251,7 +251,7 @@ export default function Monitor() {
               <tbody>{res.items.filter((i) => showExcluded || !i.excluded).map((i) => (
                 <tr key={i.url} className={i.passes ? '' : 'inactive-record'}>
                   <td><input type="checkbox" aria-label="Zaznacz do analizy" disabled={i.known || i.live || Boolean(i.excluded)} checked={sel.has(i.url)} onChange={(e) => setSel((s) => { const n = new Set(s); e.target.checked ? n.add(i.url) : n.delete(i.url); return n; })} /></td>
-                  <td><a href={i.url} target="_blank" rel="noreferrer noopener">{i.title || i.url}</a>
+                  <td><a title={i.title || i.url} href={i.url} target="_blank" rel="noreferrer noopener">{shortMaterialTitle(i.title || i.url)}</a>
                     <RecordDetails context={i.title || i.url} fields={[
                       ['Platforma', PLATFORMS[i.platform] ?? i.platform], ['Twórca', i.author],
                       ['Adres', i.url], ['Obserwujący', fmtCount(i.followers)],

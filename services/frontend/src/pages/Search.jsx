@@ -5,7 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, qs } from '../api.js';
 import DataTree from '../components/DataTree.jsx';
 import { GleifRelations, GleifSummary, KrsSummary } from '../components/Registry.jsx';
-import { Empty, Panel, RecordDetails, Score } from '../components/ui.jsx';
+import { Empty, Panel, RecordDetails, Score, shortMaterialTitle } from '../components/ui.jsx';
 import { useData, useDebounced } from '../hooks.js';
 import { useLive } from '../live.jsx';
 import { HelpTip } from '../components/HelpTip.jsx';
@@ -157,8 +157,8 @@ export default function Search() {
             <Panel title={`Materiały (${data.materials.length})`}>
               {data.materials.length ? data.materials.map((m) => (
                 <div key={m.id} className="result-row">
-                  <Link to={`/materials/${m.id}`}>{m.title || m.url}</Link> <Score score={m.score} threshold={threshold} />
-                  <RecordDetails context={m.title || m.url} fields={ [['Platforma', m.platform], ['Adres', m.url]] }>{m.snippet && <p>…{m.snippet}…</p>}</RecordDetails>
+                  <Link title={m.title || m.url} to={`/materials/${m.id}`}>{shortMaterialTitle(m.title || m.url)}</Link> <Score score={m.score} threshold={threshold} />
+                  <RecordDetails context={m.title || m.url} fields={ [['Pełny tytuł', m.title || m.url], ['Platforma', m.platform], ['Adres', m.url]] }>{m.snippet && <p>…{m.snippet}…</p>}</RecordDetails>
                 </div>)) : <Empty>Brak</Empty>}
             </Panel>
           )}
