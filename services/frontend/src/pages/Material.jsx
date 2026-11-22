@@ -550,17 +550,16 @@ export default function Material() {
         </div>
       </div>
 
-      {similar.some((x) => x.near) && (() => {
-        const dups = similar.filter((x) => x.near);
-        const where = [...new Set(dups.map((x) => x.platform).filter(Boolean))];
-        return (
-          <div className="notice" style={{ marginTop: 12, borderLeftColor: 'var(--mid)' }}>
-            <b>Duplikat treści.</b> Ta sama (lub prawie ta sama) treść występuje w {dups.length} innych materiałach{where.length ? ` (${where.join(', ')})` : ''}:{' '}
-            {dups.slice(0, 5).map((x, i) => <Fragment key={x.id}>{i > 0 && ', '}<Link to={`/materials/${x.id}`}>#{x.id}</Link></Fragment>)}
-            {' '}– odcisk simhash (odległość Hamminga) potwierdzony podobieństwem treści.
-          </div>
-        );
-      })()}
+      {m.locations?.length > 0 && (
+        <div className="notice" style={{ marginTop: 12, borderLeftColor: 'var(--mid)' }}>
+          <b>Ta sama treść opublikowana także w {m.locations.length} {m.locations.length === 1 ? 'innym miejscu' : 'innych miejscach'}</b> – duplikaty nie są zapisywane jako osobne materiały (simhash + podobieństwo treści):
+          <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+            {m.locations.map((l) => (
+              <li key={l.url} className="small"><a href={l.url} target="_blank" rel="noreferrer noopener">{l.url}</a>
+                {[l.platform, l.author, l.seen_at && fmtDate(l.seen_at)].filter(Boolean).length > 0 && <span className="muted"> · {[l.platform, l.author, l.seen_at && fmtDate(l.seen_at)].filter(Boolean).join(' · ')}</span>}</li>))}
+          </ul>
+        </div>
+      )}
       {r.context && !r.context.investment && (
         <div className="notice" style={{ marginTop: 12 }}>Treść nie dotyczy inwestycji ani instrumentów finansowych – reguły informacji o ryzyku (M2) i ocena obietnic zysku nie są stosowane. Wynik opiera się tylko na pozostałych sygnałach.</div>
       )}

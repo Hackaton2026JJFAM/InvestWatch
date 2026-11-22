@@ -18,8 +18,8 @@ flowchart LR
 
 1. Wejście: URL (ręcznie lub z harmonogramu), import HTML/tekstu albo próbka demo. Backend zapisuje `scan_jobs` i dodaje zadanie do kolejki BullMQ (3 próby, backoff wykładniczy).
 2. Scraper waliduje URL (każde przekierowanie i każde żądanie przeglądarki przechodzi blokadę SSRF), renderuje stronę w Chromium w trzech viewportach i zwraca jednolity JSON: treść, metadane (tytuł, autor, data, platforma, profil), linki, bloki tekstu ze stylami (rozmiar czcionki, kontrast, pozycja, widoczność, przesłonięcie, stopka/przypis, zwinięcie, ucięcie) i zrzut ekranu.
-3. Deduplikacja: `(url, content_hash)`. Identyczna treść nie jest analizowana ponownie.
-4. Analyzer: podział na zdania, klasyfikator zdań (TF-IDF + regresja logistyczna), Moduły 1–3, scoring noisy-OR, agregacja do jednego obiektu.
+3. Deduplikacja: `(url, content_hash)` przed analizą, a po analizie odcisk simhash (odległość Hamminga w PostgreSQL) potwierdzany podobieństwem treści (`pg_trgm`). Duplikat nie jest zapisywany – jego adres trafia do lokalizacji oryginału.
+4. Analyzer: podział na zdania, klasyfikator zdań (TF-IDF + regresja logistyczna), embeddingi LSA (TruncatedSVD), Moduły 1–3, scoring noisy-OR, agregacja do jednego obiektu.
 5. Backend w jednej transakcji zapisuje materiał, analizę, przesłanki, podmioty i rekordy rejestru. Gdy wynik przekracza próg, tworzy alert. Socket.io wysyła `material:new` i `alert:new`.
 6. Podsumowanie (Ollama lub szablon) zapisuje się asynchronicznie, więc nie blokuje wyników.
 
@@ -46,7 +46,7 @@ Statusy przesłanek: `fail`, `warn`, `pass`, `na` (nie dotyczy), `not_checked` (
 
 ## Scoring i próg
 
-Wynik modułu to `100 · (1 − Π(1 − wᵢ))`, gdzie `wᵢ` to waga reguły przy statusie `fail` albo połowa wagi przy `warn`. Wynik materiału to maksimum z modułów. Próg z panelu kalibracji zmienia tylko decyzję (alert i kategoria ryzyka), a nie wynik klasyfikatora. Kategorie: wysokie ≥ próg, średnie ≥ 0,6·próg.
+Wynik modułu to `100 · (1 − Π(1 − wᵢ))`, gdzie `wᵢ` to waga reguły przy statusie `fail` albo połowa wagi przy `warn`. Wynik materiału to maksimum z modułów. Próg z panelu kalibracji zmienia tylko decyzję (alert i kategoria ryzyka), a nie wynik klasyfikatora. Poziomy ryzyka w stałej skali: 0–30 niskie, 31–70 średnie, 71–100 wysokie.
 
 ## Wzbogacanie danych
 

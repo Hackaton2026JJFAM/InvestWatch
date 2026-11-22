@@ -7,7 +7,7 @@ import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
 const JOB = { queued: 'na', running: 'mid', done: 'pass', duplicate: 'neutral', excluded: 'neutral', failed: 'fail' };
-const JOB_LABEL = { queued: 'w kolejce', running: 'w toku', done: 'gotowe', duplicate: 'duplikat', excluded: 'wykluczone', failed: 'błąd' };
+const JOB_LABEL = { queued: 'w kolejce', running: 'w toku', done: 'gotowe', duplicate: 'duplikat – pominięty', excluded: 'wykluczone', failed: 'błąd' };
 
 export default function Scan() {
   const { tick, toast } = useLive();
@@ -15,7 +15,9 @@ export default function Scan() {
   const [upload, setUpload] = useState({ mode: 'text', body: '', url: '', title: '', author: '', platform: 'web' });
   const [source, setSource] = useState('');
   const [err, setErr] = useState(null);
-  const jobs = useData('/scans', tick);
+  const [showDups, setShowDups] = useState(false);
+  const jobs = useData(showDups ? '/scans?dups=1' : '/scans', tick);
+  const dupCount = useData('/scans/duplicates', tick);
   const sources = useData('/sources', tick);
 
   const run = (p) => p.then(() => setErr(null)).catch((e) => setErr(e.details?.map((d) => d.message).join('; ') || e.message));
@@ -71,6 +73,12 @@ export default function Scan() {
       <div style={{ marginTop: 16 }}><BulkImport onDone={(n) => toast({ title: 'Import zakończony', text: `${n} materiałów wysłano do analizy` })} /></div>
       <div className="grid g2" style={{ marginTop: 16 }}>
         <Panel title="Kolejka zadań" meta="na żywo">
+          {dupCount.data?.n > 0 && (
+            <p className="small muted" style={{ margin: '0 0 8px' }}>
+              {showDups ? 'Widoczne są też duplikaty' : `Pominięto ${dupCount.data.n} duplikatów`} – treść już przeanalizowana nie jest zapisywana drugi raz, a jej adres trafia do lokalizacji oryginału.{' '}
+              <button type="button" className="linkish" onClick={() => setShowDups((v) => !v)}>{showDups ? 'ukryj' : 'pokaż'}</button>
+            </p>
+          )}
           {jobs.data?.length ? <div className="table-wrap" style={{ maxHeight: 420, overflow: 'auto' }}><table>
             <thead><tr><th>Materiał</th><th>Status</th></tr></thead>
             <tbody>{jobs.data.map((j) => (

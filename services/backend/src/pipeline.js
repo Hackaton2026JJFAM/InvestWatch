@@ -7,7 +7,7 @@ import { log } from './log.js';
 import { analyzer, scraper, UpstreamError } from './services.js';
 import { emit } from './realtime.js';
 import { scheduleEnrichment } from './enrichment.js';
-import { findNearDuplicate } from './similarity.js';
+import { addLocation, findNearDuplicate } from './similarity.js';
 import { isVideoUrl, removeUpload } from './video.js';
 import { saveReach } from './reach.js';
 
@@ -129,7 +129,7 @@ export async function processScan(job) {
   const dup = await one('SELECT id FROM materials WHERE url = $1 AND content_hash = $2 AND layout_hash IS NOT DISTINCT FROM $3',
     [material.url, material.content_hash, material.layout_hash ?? null]);
   if (dup) {
-    await q("UPDATE scan_jobs SET status = 'duplicate', material_id = $2, finished_at = now() WHERE id = $1", [jobId, dup.id]);
+    await q("UPDATE scan_jobs SET status = 'duplicate', material_id = $2, error = $3, finished_at = now() WHERE id = $1", [jobId, dup.id, `ta sama treść pod tym samym adresem co materiał #${dup.id} – nie zapisano`]);
     emit('scan:update', { id: jobId, status: 'duplicate', materialId: dup.id });
     return { duplicate: true, materialId: dup.id };
   }
@@ -148,8 +148,18 @@ export async function processScan(job) {
 
   const threshold = await getThreshold();
   const simhash = result.doc?.simhash ?? null;
+  // duplikat znanej treści (ta sama lub prawie ta sama): nie zapisujemy drugiego materiału ani alertu –
+  // adres trafia do lokalizacji oryginału, zadanie dostaje status „duplikat” ze wskazaniem oryginału
   const nearDup = await findNearDuplicate(simhash, material.content_text);
-  // kopia już znanej treści: zapisana (kolejna lokalizacja), ale bez osobnego alertu
+  if (nearDup) {
+    await addLocation(nearDup.id, { url: material.url, platform: material.platform, author: material.author, title: material.title,
+      published_at: material.published_at });
+    const why = `duplikat materiału #${nearDup.id} (simhash ${nearDup.distance} bit${nearDup.text_sim != null ? `, treść ${Math.round(nearDup.text_sim * 100)}%` : ''}) – nie zapisano, adres dopisany do lokalizacji`;
+    await q("UPDATE scan_jobs SET status = 'duplicate', material_id = $2, error = $3, finished_at = now() WHERE id = $1", [jobId, nearDup.id, why]);
+    emit('scan:update', { id: jobId, status: 'duplicate', materialId: nearDup.id });
+    log.info('near duplicate skipped', { jobId, original: nearDup.id });
+    return { duplicate: true, materialId: nearDup.id };
+  }
 
   let saved;
   try {
@@ -165,7 +175,7 @@ export async function processScan(job) {
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) RETURNING id, fetched_at`,
       [data.sourceId ?? null, material.url, material.final_url, material.title, material.author,
         parseDate(material.published_at), material.lang, material.platform, material.content_text, material.content_hash,
-        { ...material, layout: { ...layoutNoShot, screenshot } }, data.groundTruth ?? null, simhash, nearDup?.id ?? null, material.layout_hash ?? null, Boolean(data.demo)],
+        { ...material, layout: { ...layoutNoShot, screenshot } }, data.groundTruth ?? null, simhash, null, material.layout_hash ?? null, Boolean(data.demo)],
     );
     const a = await t.one(
       `INSERT INTO analyses (material_id, score, module_scores, modules, result, analyzer_version)
@@ -182,7 +192,7 @@ export async function processScan(job) {
     await saveEntities(t, m.id, result);
     await saveReach(t, m.id, material, result, data.watchId ?? null);
     let alert = null;
-    if (result.score >= threshold && !nearDup) {
+    if (result.score >= threshold) {
       alert = await t.one(
         'INSERT INTO alerts (material_id, analysis_id, score, threshold) VALUES ($1, $2, $3, $4) RETURNING id, created_at',
         [m.id, a.id, result.score, threshold],

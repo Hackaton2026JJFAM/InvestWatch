@@ -57,3 +57,11 @@ def test_call_to_action_disables_education_gate():
     r = run(BONDS + " Kup teraz obligacje i zainwestuj oszczędności!")
     assert r["education"]["educational"] is False
     assert r["by_rule"]["2"]["status"] == "fail"
+
+
+def test_document_embedding_is_unit_vector():
+    import math
+    r = run(BONDS)
+    e = r["ml"]["embedding"]
+    assert e["dim"] == len(e["vector"]) and e["dim"] >= 2
+    assert abs(math.sqrt(sum(x * x for x in e["vector"])) - 1) < 0.01

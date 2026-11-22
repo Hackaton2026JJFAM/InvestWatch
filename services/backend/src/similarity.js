@@ -2,7 +2,7 @@
 // potwierdzana podobieństwem treści (pg_trgm). Ten sam post na 5 portalach, z innym wstępem albo z jednym
 // zmienionym słowem, to duplikat. Krótki tekst z jednym innym słowem ma simhash różny o ~10 bitów,
 // dlatego sam próg bitów nie wystarcza – kandydatów (≤ CANDIDATE_BITS) sprawdzamy jeszcze po treści.
-import { q } from './db.js';
+import { one, q } from './db.js';
 
 export const NEAR_DUP_BITS = 3;      // ta sama treść z drobnymi zmianami (pewne bez porównania tekstu)
 export const SIMILAR_BITS = 10;      // treść podobna (np. ta sama reklama z innym wstępem)
@@ -50,13 +50,39 @@ export async function findNearDuplicate(simhash, text, { excludeId = null, befor
   return hit ? { ...hit, id: hit.near_duplicate_of ?? hit.id } : null;
 }
 
-/** Jednorazowo: duplikaty wśród materiałów sprzed tej funkcji (każdy porównany z wcześniejszymi). */
-export async function backfillDuplicates() {
-  const rows = await q("SELECT id, simhash, content_text FROM materials WHERE near_duplicate_of IS NULL AND simhash IS NOT NULL ORDER BY id");
+/** Dopisuje miejsce publikacji duplikatu do oryginału (bez powtórzeń adresu). */
+export async function addLocation(materialId, loc) {
+  const entry = { url: loc.url, platform: loc.platform ?? null, author: loc.author ?? null, title: loc.title ?? null,
+    published_at: loc.published_at ?? null, seen_at: loc.seen_at ?? new Date().toISOString() };
+  await q(`UPDATE materials SET locations = locations || $2::jsonb
+            WHERE id = $1 AND url IS DISTINCT FROM $3
+              AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(locations) l WHERE l->>'url' = $3)`,
+    [materialId, JSON.stringify([entry]), entry.url]);
+}
+
+/**
+ * Usuwanie duplikatów: każdy materiał porównany z wcześniejszymi; kopia jest usuwana (z analizami, przesłankami
+ * i alertami), a jej adres trafia do listy lokalizacji oryginału. Zadania skanowania wskazują potem oryginał.
+ */
+export async function removeDuplicates() {
+  const rows = await q('SELECT id, simhash, content_text, near_duplicate_of FROM materials WHERE simhash IS NOT NULL ORDER BY id');
+  const gone = new Set();
   let n = 0;
   for (const m of rows) {
-    const dup = await findNearDuplicate(m.simhash, m.content_text, { beforeId: m.id });
-    if (dup && dup.id !== m.id) { await q('UPDATE materials SET near_duplicate_of = $2 WHERE id = $1', [m.id, dup.id]); n++; }
+    if (gone.has(m.id)) continue;
+    let origId = m.near_duplicate_of;
+    if (!origId || gone.has(origId)) origId = (await findNearDuplicate(m.simhash, m.content_text, { beforeId: m.id }))?.id ?? null;
+    if (!origId || origId === m.id || gone.has(origId)) continue;
+    const c = await one('SELECT url, platform, author, title, published_at, fetched_at, locations FROM materials WHERE id = $1', [m.id]);
+    await addLocation(origId, { ...c, seen_at: c.fetched_at });
+    for (const l of c.locations ?? []) await addLocation(origId, l);
+    await q("UPDATE scan_jobs SET material_id = $2, status = 'duplicate', error = $3 WHERE material_id = $1",
+      [m.id, origId, `duplikat materiału #${origId} – usunięty, adres dopisany do lokalizacji oryginału`]);
+    await q('UPDATE materials SET near_duplicate_of = NULL WHERE near_duplicate_of = $1', [m.id]);
+    await q('DELETE FROM materials WHERE id = $1', [m.id]);
+    gone.add(m.id);
+    n++;
   }
+  if (n) await q("DELETE FROM entities e WHERE NOT EXISTS (SELECT 1 FROM material_entities me WHERE me.entity_id = e.id) AND e.kind IN ('influencer', 'unknown')");
   return n;
 }

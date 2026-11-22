@@ -47,6 +47,8 @@ export async function waitForDb(retries = 30) {
 const MIGRATIONS = [
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS simhash TEXT',
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS near_duplicate_of INT REFERENCES materials(id) ON DELETE SET NULL',
+  // inne miejsca publikacji tej samej treści (duplikaty nie są zapisywane jako osobne materiały)
+  "ALTER TABLE materials ADD COLUMN IF NOT EXISTS locations JSONB NOT NULL DEFAULT '[]'::jsonb",
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS layout_hash TEXT',
   'ALTER TABLE materials DROP CONSTRAINT IF EXISTS materials_url_content_hash_key',
   "CREATE UNIQUE INDEX IF NOT EXISTS materials_version_uq ON materials (url, content_hash, coalesce(layout_hash, ''))",

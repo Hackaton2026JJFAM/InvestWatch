@@ -89,9 +89,9 @@ startScheduler();
 startReservesSchedule();
 startWatchSchedule();
 startTagSchedule();
-import('./similarity.js').then(async ({ backfillDuplicates }) => {
-  const n = await backfillDuplicates();
-  if (n) log.info('duplicates backfilled', { n });
+import('./similarity.js').then(async ({ removeDuplicates }) => {
+  const n = await removeDuplicates();
+  if (n) log.info('duplicates removed', { n });
 }).catch((err) => log.warn('duplicate backfill failed', { err: err.message }));
 import('./accounts.js').then(async ({ backfillAccountKeys }) => {
   await backfillAccountKeys();

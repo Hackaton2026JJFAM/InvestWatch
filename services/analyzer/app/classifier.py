@@ -12,6 +12,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
+from sklearn.decomposition import TruncatedSVD
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import FeatureUnion, Pipeline
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -19,6 +20,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from .text import Sentence, fold
 
 DATA = Path(__file__).parent / "data" / "sentences.tsv"
+EMBED_DIM = 64
 
 
 class SentenceClassifier:
@@ -35,6 +37,11 @@ class SentenceClassifier:
         ])
         self.pipeline.fit(texts, labels)
         self.classes = list(self.pipeline.classes_)
+        # embeddingi (gęsta reprezentacja wektorowa): LSA = TruncatedSVD na wektorach TF-IDF, lokalnie, bez zewnętrznych API
+        X = self.pipeline.named_steps["features"].transform(texts)
+        dim = max(2, min(EMBED_DIM, X.shape[1] - 1, len(rows) - 1))
+        self.svd = TruncatedSVD(n_components=dim, random_state=0).fit(X)
+        self.embed_model = f"tfidf-lsa-{dim}"
         self.n_train = len(rows)
         self.version = "tfidf-lr-" + hashlib.sha1(DATA.read_bytes()).hexdigest()[:8]
 
@@ -44,6 +51,17 @@ class SentenceClassifier:
         probs = self.pipeline.predict_proba([fold(s.text) for s in sentences])
         for s, p in zip(sentences, probs):
             s.labels = {c: round(float(v), 3) for c, v in zip(self.classes, p)}
+
+    def embed(self, sentences: list[Sentence]) -> dict:
+        """Embedding dokumentu: średnia znormalizowanych embeddingów zdań (wektor jednostkowy)."""
+        if not sentences:
+            return {"model": self.embed_model, "dim": self.svd.n_components, "vector": []}
+        X = self.pipeline.named_steps["features"].transform([fold(s.text) for s in sentences])
+        E = self.svd.transform(X)
+        E = E / np.maximum(np.linalg.norm(E, axis=1, keepdims=True), 1e-9)
+        v = E.mean(0)
+        v = v / max(float(np.linalg.norm(v)), 1e-9)
+        return {"model": self.embed_model, "dim": int(v.shape[0]), "vector": [round(float(x), 4) for x in v]}
 
     def document_profile(self, sentences: list[Sentence]) -> dict:
         if not sentences:

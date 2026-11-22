@@ -49,7 +49,7 @@ r.get('/alerts', async (req, res) => {
   res.json(await q(
     `SELECT al.*, COALESCE(m.title, e.name) AS title, m.url, COALESCE(m.platform, al.kind) AS platform, e.name AS entity_name,
             m.reviewed_score, m.status AS material_status,
-            (SELECT count(*)::int FROM materials c WHERE c.near_duplicate_of = m.id) AS copies
+            jsonb_array_length(m.locations) AS copies
        FROM alerts al LEFT JOIN materials m ON m.id = al.material_id LEFT JOIN entities e ON e.id = al.entity_id
       WHERE (m.id IS NULL OR ${D}) ${f.status ? 'AND al.status = $1' : ''} ORDER BY al.created_at DESC LIMIT 200`, f.status ? [f.status] : []));
 });

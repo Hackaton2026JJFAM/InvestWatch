@@ -38,7 +38,7 @@ export default function Results() {
   return (
     <>
         <div className="page-head"><div><h1>Wyniki analiz</h1><p>Materiały z sygnałami do sprawdzenia. Filtruj po źródle, typie publikującego, zasięgu i wyniku.</p></div>
-        <span className="btn-row"><label className="toggle"><input type="checkbox" checked={f.repeat === '1'} onChange={(e) => set('repeat', e.target.checked ? '1' : '')} /> tylko konta z historią naruszeń</label><label className="toggle"><input type="checkbox" checked={f.demo === '1'} onChange={(e) => set('demo', e.target.checked ? '1' : '')} /> pokaż próbki demo</label><label className="toggle" title="Kopie tej samej treści (simhash + podobieństwo tekstu) są domyślnie zgrupowane pod oryginałem"><input type="checkbox" checked={f.dups === '1'} onChange={(e) => set('dups', e.target.checked ? '1' : '')} /> pokaż duplikaty</label>
+        <span className="btn-row"><label className="toggle"><input type="checkbox" checked={f.repeat === '1'} onChange={(e) => set('repeat', e.target.checked ? '1' : '')} /> tylko konta z historią naruszeń</label><label className="toggle"><input type="checkbox" checked={f.demo === '1'} onChange={(e) => set('demo', e.target.checked ? '1' : '')} /> pokaż próbki demo</label>
         <label className="toggle"><input type="checkbox" checked={Boolean(f.above)} onChange={(e) => set('above', e.target.checked ? '1' : '')} /> tylko powyżej progu ({data?.threshold ?? '–'})</label></span>
       </div>
       <Panel>
@@ -68,7 +68,7 @@ export default function Results() {
               </tr></thead>
               <tbody>{data.items.map((m) => (
                 <tr key={m.id}>
-                  <td className="material-cell"><Link title={m.title || '(bez tytułu)'} to={`/materials/${m.id}`}>{shortMaterialTitle(m.title || '(bez tytułu)')}</Link>{m.copies > 0 && <> <Link className="chip neutral" to={`/materials?copies=${m.id}&demo=1`} title="Ta sama treść opublikowana w innych miejscach">+{m.copies} {m.copies === 1 ? 'kopia' : m.copies < 5 ? 'kopie' : 'kopii'}</Link></>}{m.near_duplicate_of && <span className="chip neutral" title={`Kopia materiału #${m.near_duplicate_of}`}> kopia #{m.near_duplicate_of}</span>}
+                  <td className="material-cell"><Link title={m.title || '(bez tytułu)'} to={`/materials/${m.id}`}>{shortMaterialTitle(m.title || '(bez tytułu)')}</Link>{m.copies > 0 && <> <span className="chip neutral" title="Ta sama treść opublikowana także pod innymi adresami (duplikaty usunięte)">+{m.copies} {m.copies === 1 ? 'inne miejsce' : 'inne miejsca'}</span></>}
                     {m.demo && <span className="chip neutral" style={{ marginLeft: 6 }}>próbka</span>}
                     <RecordDetails context={m.title || m.url} fields={[
                       ['Pełny tytuł', m.title], ['Źródło', m.platform], ['Autor', m.author], ['Adres', m.url],
@@ -79,7 +79,6 @@ export default function Results() {
                       ['Wynik automatyczny', m.reviewed ? `${Math.round(m.classifier_score)}/100` : 'bez korekty analityka'],
                     ]}>
                       <ProfileChip type={m.profile_type} /><ModuleChips modules={m.modules} />
-                      {m.near_duplicate_of && <Link to={`/materials/${m.near_duplicate_of}`}>Oryginał: materiał #{m.near_duplicate_of} →</Link>}
                       {m.account_others > 0 && <Link to={`/materials?account=${encodeURIComponent(m.account_key)}&demo=1`}>+{m.account_others} materiałów tego konta →</Link>}
                     </RecordDetails>
                   </td>

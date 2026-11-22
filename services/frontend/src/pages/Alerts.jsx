@@ -43,7 +43,7 @@ export default function Alerts() {
               <tr key={a.id} className={a.read ? '' : 'unread-row'}>
                 <td>{!a.read && <span className="dot" style={{ background: 'var(--high)' }} />}</td>
                 <td>{a.material_id
-                  ? <><Link title={a.title || a.url} to={`/materials/${a.material_id}`} onClick={() => !a.read && update(a.id, { read: true })}>{shortMaterialTitle(a.title || a.url)}</Link>{a.copies > 0 && <> <span className="chip neutral" title="Ta sama treść w innych miejscach – jeden alert dla całej grupy">+{a.copies} {a.copies === 1 ? 'kopia' : a.copies < 5 ? 'kopie' : 'kopii'}</span></>}</>
+                  ? <><Link title={a.title || a.url} to={`/materials/${a.material_id}`} onClick={() => !a.read && update(a.id, { read: true })}>{shortMaterialTitle(a.title || a.url)}</Link>{a.copies > 0 && <> <span className="chip neutral" title="Ta sama treść opublikowana także pod innymi adresami – jeden alert">+{a.copies} {a.copies === 1 ? 'inne miejsce' : 'inne miejsca'}</span></>}</>
                   : <Link title={`${a.entity_name ?? 'Podmiot'} – ${a.kind?.startsWith('reserves') ? 'Proof of Reserves' : a.kind}`} to={a.kind?.startsWith('reserves') ? '/reserves' : `/entities/${a.entity_id}`} onClick={() => !a.read && update(a.id, { read: true })}>{shortMaterialTitle(`${a.entity_name ?? 'Podmiot'} – ${a.kind?.startsWith('reserves') ? 'Proof of Reserves' : a.kind}`)}</Link>}
                   <RecordDetails context={a.title || a.entity_name} fields={[
                     ['Pełny tytuł', a.title || (a.entity_name ? `${a.entity_name} – ${a.kind}` : null)],

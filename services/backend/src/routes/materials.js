@@ -105,7 +105,7 @@ r.get('/materials', async (req, res) => {
   const items = await q(
     `SELECT m.id, m.url, m.title, m.author, m.platform, m.status, m.fetched_at, m.published_at, m.demo, m.ground_truth, m.near_duplicate_of,
             m.views, m.followers, m.tags, m.profile_type, m.scam_score, (m.raw->'layout' ? 'video') AS is_video,
-            (SELECT count(*)::int FROM materials c WHERE c.near_duplicate_of = m.id) AS copies,
+            jsonb_array_length(m.locations) AS copies,
             m.account_key, (SELECT count(*)::int FROM materials o WHERE o.account_key = m.account_key AND o.id <> m.id AND NOT o.demo) AS account_others,
             a.id AS analysis_id, a.score, a.classifier_score, (m.reviewed_score IS NOT NULL) AS reviewed, a.modules, a.module_scores,
             ${riskSql()} AS risk, ${aboveSql()} AS above_threshold

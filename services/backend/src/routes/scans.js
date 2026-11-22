@@ -61,9 +61,12 @@ r.post('/scans/video', express.raw({ type: (req) => VIDEO_TYPES.test(req.headers
   res.status(202).json(job);
 });
 
-r.get('/scans', async (_req, res) => {
-  res.json(await q('SELECT * FROM scan_jobs ORDER BY id DESC LIMIT 100'));
+r.get('/scans', async (req, res) => {
+  // duplikaty (treść już znana – nie zapisano) domyślnie ukryte
+  const all = req.query.dups === '1';
+  res.json(await q(`SELECT * FROM scan_jobs ${all ? '' : "WHERE status <> 'duplicate'"} ORDER BY id DESC LIMIT 100`));
 });
+r.get('/scans/duplicates', async (_req, res) => res.json(await one("SELECT count(*)::int AS n FROM scan_jobs WHERE status = 'duplicate'")));
 
 r.get('/scans/:id', async (req, res) => {
   const { id } = parse(z.object({ id: z.coerce.number().int().positive() }), req.params);
