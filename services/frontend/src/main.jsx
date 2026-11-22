@@ -55,8 +55,8 @@ function Shell() {
           </div>
         </nav>
         <div className="foot">
-          <div><span className={`dot ${connected ? 'on' : ''}`} />{connected ? 'Aktualizacje na żywo' : 'Brak połączenia'} {connected && <HelpTip term="websocket" label="aktualizacje na żywo" />}</div>
-          <div className="foot-line">Próg ryzyka: <b>{threshold ?? '–'}</b> <HelpTip term="risk_threshold" label="próg ryzyka" /></div>
+          <div><span className={`dot ${connected ? 'on' : ''}`} />{connected ? 'Aktualizacje na żywo' : 'Brak połączenia'} {connected && <HelpTip term="websocket" label="aktualizacje na żywo" dark />}</div>
+          <div className="foot-line">Próg ryzyka: <b>{threshold ?? '–'}</b> <HelpTip term="risk_threshold" label="próg ryzyka" dark /></div>
           <div className="foot-line">
             {admin.admin ? <>Administrator · <button className="linkbtn" onClick={admin.logout}>wyloguj</button></> : admin.enabled ? 'Tryb analityka' : 'Operacje admin. wyłączone'}
           </div>

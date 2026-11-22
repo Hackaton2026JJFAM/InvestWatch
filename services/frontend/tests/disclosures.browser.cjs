@@ -99,7 +99,7 @@ async function assertTextContrast(page) {
           const lightSidebar = await page.locator('.sidebar').evaluate(el => getComputedStyle(el).backgroundColor);
           await themeButtons.getByRole('button', { name: 'Ciemny' }).click();
           const darkSidebar = await page.locator('.sidebar').evaluate(el => getComputedStyle(el).backgroundColor);
-          assert.notEqual(lightSidebar, darkSidebar, 'Explicit light and dark themes should use different sidebar surfaces');
+          assert.equal(lightSidebar, darkSidebar, 'Sidebar should keep the same dark surface in both explicit themes');
           await page.emulateMedia({ colorScheme: 'dark' });
           await themeButtons.getByRole('button', { name: 'Auto' }).click();
           const autoDark = await page.locator('.sidebar').evaluate(el => getComputedStyle(el).backgroundColor);
@@ -107,6 +107,14 @@ async function assertTextContrast(page) {
           await page.emulateMedia({ colorScheme: 'light' });
           const autoLight = await page.locator('.sidebar').evaluate(el => getComputedStyle(el).backgroundColor);
           assert.equal(autoLight, lightSidebar, 'Auto theme should follow the light system preference');
+          await page.locator('.sidebar').getByRole('button', { name: 'Wyjaśnienie: próg ryzyka' }).hover();
+          const sidebarTooltip = page.getByRole('tooltip');
+          await sidebarTooltip.waitFor({ state: 'visible' });
+          const tooltipColors = await sidebarTooltip.evaluate(el => {
+            const css = getComputedStyle(el);
+            return { background: css.backgroundColor, color: css.color };
+          });
+          assert.deepEqual(tooltipColors, { background: 'rgb(18, 28, 37)', color: 'rgb(232, 238, 242)' });
         }
         if (path === '/alerts') {
           const trigger = page.locator('#main-content').getByRole('button', { name: 'Wyjaśnienie: próg ryzyka' });

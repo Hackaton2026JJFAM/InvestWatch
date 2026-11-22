@@ -32,7 +32,7 @@ const HelpIcon = () => (
   </svg>
 );
 
-export function HelpTip({ term, label }) {
+export function HelpTip({ term, label, dark = false }) {
   const id = useId();
   const ref = useRef(null);
   const tipRef = useRef(null);
@@ -126,7 +126,7 @@ export function HelpTip({ term, label }) {
       </button>
     </span>
     {visible && createPortal(
-      <span className="help-tip" role="tooltip" id={id} ref={tipRef}
+      <span className={`help-tip${dark ? ' help-tip-dark' : ''}`} role="tooltip" id={id} ref={tipRef}
         style={{ top: position.top, left: position.left }}
         onPointerEnter={keepOpen} onPointerLeave={closeOnLeave}>
         {text}
