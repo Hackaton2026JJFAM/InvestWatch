@@ -6,7 +6,7 @@ import { axisProps, barCursor, ChartGrid, ChartTooltip, cursorStyle, Legend, use
 import { api } from '../api.js';
 import DataTree from '../components/DataTree.jsx';
 import { GleifRelations, GleifSummary, KrsSummary } from '../components/Registry.jsx';
-import { Empty, fmtDate, Panel, RiskBadge, Score, StatCard } from '../components/ui.jsx';
+import { Empty, fmtDate, Panel, RecordDetails, RiskBadge, Score, StatCard } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 import { KIND, REG } from './Entities.jsx';
@@ -73,14 +73,16 @@ function LicensePanel({ entity, registry }) {
       <dl className="kv">
         <dt>Zakres (KNF)</dt><dd>{knf?.scope ?? 'brak danych'}</dd>
         <dt>Organ nadzoru</dt><dd>{knf?.supervisor ?? (knf?.country === 'PL' ? 'KNF' : 'brak danych')}</dd>
-        <dt>MiCA – CASP (ESMA) <HelpTip term="mica" label="MiCA" /><HelpTip term="esma" label="ESMA" /><HelpTip term="casp" label="CASP" /></dt><dd>{esma ? (esma.casp?.length ? esma.casp.map((c) => `${c.name} (${c.country}, ${c.authority})`).join('; ') : 'nie figuruje w rejestrze CASP') : 'nie sprawdzono'}</dd>
+        <dt>MiCA – CASP (ESMA) <HelpTip term="mica" label="MiCA" /><HelpTip term="esma" label="ESMA" /><HelpTip term="casp" label="CASP" /></dt><dd>{esma ? (esma.casp?.length ? `${esma.casp.length} wpisów w rejestrze CASP` : 'nie figuruje w rejestrze CASP') : 'nie sprawdzono'}</dd>
         <dt>LEI (GLEIF) <HelpTip term="lei" label="LEI" /><HelpTip term="gleif" label="GLEIF" /></dt>
-        <dd>{gleif ? (gleif.records?.length ? gleif.records.slice(0, 4).map((g) => (
-          <div key={g.lei}><a href={g.source_url} target="_blank" rel="noreferrer noopener" className="mono">{g.lei}</a> {g.name} · {g.country} · {g.entity_status}{g.lei === gleif.exact && <span className="chip pass" style={{ marginLeft: 6 }}>dokładne</span>}</div>))
-          : 'brak rekordów LEI') : 'nie sprawdzono'}</dd>
+        <dd>{gleif ? (gleif.records?.length ? `${gleif.records.length} rekordów${gleif.exact ? ' · dokładne dopasowanie' : ' · wymaga potwierdzenia'}` : 'brak rekordów LEI') : 'nie sprawdzono'}</dd>
       </dl>
+      {(gleif?.records?.length > 0 || esma?.casp?.length > 0) && <RecordDetails label="Wpisy licencyjne i rekordy LEI" context={entity.name}>
+        {esma?.casp?.map((c, i) => <div key={`casp-${i}`}><b>{c.name}</b><p>{c.country} · {c.authority}</p></div>)}
+        {gleif?.records?.map((g) => <div key={g.lei}><b>{g.name}</b> {g.lei === gleif.exact && <span className="chip pass">dokładne dopasowanie</span>}<p><a href={g.source_url} target="_blank" rel="noreferrer noopener">{g.lei}</a> · {g.country} · {g.entity_status}</p></div>)}
+        {esma?.casp?.[0]?.services?.length > 0 && <p>Usługi CASP: {esma.casp[0].services.join(' · ')}</p>}
+      </RecordDetails>}
       <GleifRelations detail={gleif?.detail} />
-      {esma?.casp?.[0]?.services?.length > 0 && <p className="small muted" style={{ marginBottom: 0 }}>Usługi CASP: {esma.casp[0].services.join(' · ')}</p>}
     </Panel>
   );
 }
@@ -97,24 +99,22 @@ function WarningsPanel({ registry }) {
       {sanctions.map((h, i) => (
         <div key={`s${i}`} className="evidence" style={{ borderLeftColor: 'var(--mid)', background: 'var(--mid-bg)' }}>
           <span className="where">Lista sankcji UE · {h.person ? 'osoba' : 'podmiot'} · wymaga weryfikacji</span>
-          <div><b>{h.name}</b> – program {h.programme ?? '–'}{h.ref ? ` · ${h.ref}` : ''}</div>
-          <div className="small">{[h.birth_dates?.length ? `ur. ${h.birth_dates.join(', ')}` : null, h.citizenships?.length ? `obywatelstwo ${h.citizenships.join(', ')}` : null].filter(Boolean).join(' · ') || 'brak danych identyfikujących'}</div>
-          <SourceLink url={h.source_url} label="akt prawny" />
+          <div><b>{h.name}</b></div>
+          <RecordDetails context={h.name} fields={ [['Program', h.programme], ['Numer', h.ref], ['Daty urodzenia', h.birth_dates?.join(', ')], ['Obywatelstwo', h.citizenships?.join(', ')]] }><SourceLink url={h.source_url} label="akt prawny" /></RecordDetails>
         </div>
       ))}
       {knf.map((h, i) => (
         <div key={`k${i}`} className="evidence" style={{ borderLeftColor: 'var(--high)', background: 'var(--high-bg)' }}>
-          <span className="where">Lista ostrzeżeń KNF · dopasowanie: {h.matched_by}</span>
-          <div><b>{h.name}</b> – {h.legal_basis ?? 'zawiadomienie o podejrzeniu przestępstwa'}</div>
-          <div className="small">{h.prosecutor}{h.judgments ? ` · ${h.judgments}` : ''}</div>
-          <SourceLink url={h.source_url} label="lista KNF" />
+          <span className="where">Lista ostrzeżeń KNF · wymaga weryfikacji</span>
+          <div><b>{h.name}</b></div>
+          <RecordDetails context={h.name} fields={ [['Dopasowanie', h.matched_by], ['Podstawa prawna', h.legal_basis ?? 'zawiadomienie o podejrzeniu przestępstwa'], ['Prokuratura', h.prosecutor], ['Orzeczenia', h.judgments]] }><SourceLink url={h.source_url} label="lista KNF" /></RecordDetails>
         </div>
       ))}
       {ncasp.map((h, i) => (
         <div key={`n${i}`} className="evidence" style={{ borderLeftColor: 'var(--high)', background: 'var(--high-bg)' }}>
-          <span className="where">ESMA – podmioty niezgodne z MiCA · dopasowanie: {h.matched_by}</span>
-          <div><b>{h.name}</b> ({h.country}, {h.authority})</div>
-          <div className="small">{h.reason}</div>
+          <span className="where">ESMA – podmioty niezgodne z MiCA</span>
+          <div><b>{h.name}</b></div>
+          <RecordDetails context={h.name} fields={ [['Dopasowanie', h.matched_by], ['Kraj', h.country], ['Organ', h.authority], ['Powód', h.reason]] } />
         </div>
       ))}
       {(knf.length > 0 || ncasp.length > 0 || sanctions.length > 0) && <p className="small muted" style={{ marginBottom: 0 }}>Dopasowanie po nazwie wymaga potwierdzenia; po domenie, KRS lub NIP jest mocniejsze. To sygnał do weryfikacji, nie wyrok.</p>}
@@ -282,6 +282,7 @@ export default function Entity() {
   const { id } = useParams();
   const { tick, threshold, subscribe } = useLive();
   const [refresh, setRefresh] = useState(0);
+  const [section, setSection] = useState('overview');
   const { data, error } = useData(`/entities/${id}`, `${tick}-${refresh}`);
   useEffect(() => subscribe((event, payload) => { if (event === 'entity:enriched' && String(payload?.id) === id) setRefresh((n) => n + 1); }), [subscribe, id]);
   if (error) return <Empty>{error.message}</Empty>;
@@ -289,26 +290,38 @@ export default function Entity() {
   const { entity, registries: registry, materials, persons, timeline, krsCandidates } = data;
   return (
     <>
+      <Link className="back-link" to="/entities">← Podmioty</Link>
       <div className="page-head">
         <div><h1>{entity.name}</h1><p>{KIND[entity.kind] ?? entity.kind} · <span className={`chip ${REG[entity.registry_status]?.[0]}`}>{REG[entity.registry_status]?.[1]}</span>
           {entity.lei && <> · LEI <span className="mono">{entity.lei}</span></>}</p></div>
       </div>
-      <Panel><EnrichBar entity={entity} candidates={krsCandidates} onDone={() => setRefresh((n) => n + 1)} /></Panel>
-      <div className="grid g3" style={{ marginTop: 16 }}>
+      <div className="notice" style={{ marginBottom: 16 }}>Wzmianka w materiale lub automatyczne dopasowanie nie potwierdzają współpracy. Brak wpisu w rejestrze nie jest dowodem nielegalnej działalności.</div>
+      <div className="tabs" role="group" aria-label="Sekcje profilu podmiotu">
+        {[['overview', 'Przegląd i ostrzeżenia'], ['materials', `Materiały (${materials.length})`], ['registry', 'Rejestry i osoby'], ['market', 'Dane rynkowe']].map(([key, label]) => <button key={key} className={section === key ? 'active' : ''} aria-pressed={section === key} onClick={() => setSection(key)}>{label}</button>)}
+      </div>
+      <div hidden={section !== 'overview'} className="grid g2" style={{ marginTop: 16 }}>
+        <WarningsPanel registry={registry} />
+        <HistoryPanel entity={entity} timeline={timeline} registry={registry} />
+      </div>
+      <div hidden={section !== 'registry'} className="section-stack">
+      <Panel title="Aktualizacja danych rejestrowych"><EnrichBar entity={entity} candidates={krsCandidates} onDone={() => setRefresh((n) => n + 1)} /></Panel>
+      <div className="grid g2" style={{ marginTop: 16 }}>
         <RegistryPanel entity={entity} registry={registry} />
         <LicensePanel entity={entity} registry={registry} />
-        <WarningsPanel registry={registry} />
         <PersonsPanel persons={persons} registry={registry} />
-        <HistoryPanel entity={entity} timeline={timeline} registry={registry} />
-        <ReservesPanel id={id} />
       </div>
-      <CrisisPanel id={id} entity={entity} refreshKey={`${tick}-${refresh}`} />
-      <AllRegistryData registry={registry} />
+      <details className="technical-details"><summary>Pełne odpowiedzi rejestrów i historia odpisów</summary><AllRegistryData registry={registry} /></details>
+      </div>
+      <div hidden={section !== 'market'} className="section-stack">
+      {section === 'market' && <><ReservesPanel id={id} /><CrisisPanel id={id} entity={entity} refreshKey={`${tick}-${refresh}`} /></>}
+      </div>
+      <div hidden={section !== 'materials'}>
       <Panel title="Materiały powiązane">
-        {materials.length ? <table><thead><tr><th>Materiał</th><th>Rola podmiotu</th><th>Wynik</th><th>Ryzyko</th><th>Data</th></tr></thead>
-          <tbody>{materials.map((m) => <Fragment key={`${m.id}-${m.role}`}><tr><td><Link to={`/materials/${m.id}`}>{m.title || m.url}</Link></td><td className="small">{m.role}</td><td><Score score={m.score} threshold={threshold} /></td><td><RiskBadge risk={m.risk} /></td><td className="small muted">{fmtDate(m.fetched_at)}</td></tr></Fragment>)}</tbody></table>
-          : <Empty />}
+        {materials.length ? <div className="table-wrap"><table><thead><tr><th>Materiał</th><th>Wynik</th><th>Ryzyko</th></tr></thead>
+          <tbody>{materials.map((m) => <Fragment key={`${m.id}-${m.role}`}><tr><td><Link to={`/materials/${m.id}`}>{m.title || m.url}</Link><RecordDetails context={m.title || m.url} fields={ [['Rola podmiotu', { advertised_firm: 'firma wskazana w analizie', publisher: 'publikujący', advisor: 'podmiot przy ofercie doradczej' }[m.role] ?? m.role], ['Pobrano', fmtDate(m.fetched_at)], ['Adres', m.url]] } /></td><td><Score score={m.score} threshold={threshold} /></td><td><RiskBadge risk={m.risk} /></td></tr></Fragment>)}</tbody></table>
+          </div> : <Empty />}
       </Panel>
+      </div>
     </>
   );
 }

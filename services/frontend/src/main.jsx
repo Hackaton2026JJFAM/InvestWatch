@@ -18,6 +18,8 @@ const Search = lazy(() => import('./pages/Search.jsx'));
 const Reserves = lazy(() => import('./pages/Reserves.jsx'));
 const Monitor = lazy(() => import('./pages/Monitor.jsx'));
 import './styles.css';
+import './enterprise.css';
+import './readability.css';
 
 applyTheme(readTheme()); // przed pierwszym renderem – bez mignięcia jasnego motywu
 

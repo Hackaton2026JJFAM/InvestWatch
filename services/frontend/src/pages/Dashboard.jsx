@@ -3,7 +3,7 @@ import { api } from '../api.js';
 import { Link } from 'react-router-dom';
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AreaGradient, axisProps, barCursor, ChartGrid, ChartTooltip, cursorStyle, Legend, useChartColors } from '../components/charts.jsx';
-import { Empty, fmtDate, MODULES, ModuleChips, Panel, RiskBadge, Score, StatCard } from '../components/ui.jsx';
+import { Empty, fmtDate, MODULES, ModuleChips, Panel, RecordDetails, RiskBadge, Score, StatCard } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
@@ -81,14 +81,12 @@ export default function Dashboard() {
         <Panel title="Najnowsze analizy" meta="aktualizowane na żywo">
           {recent.length ? (
             <div className="table-wrap"><table>
-              <thead><tr><th>Materiał</th><th>Moduły</th><th>Wynik</th><th>Ryzyko</th><th>Data</th></tr></thead>
+              <thead><tr><th>Materiał</th><th>Wynik</th><th>Ryzyko</th></tr></thead>
               <tbody>{recent.map((m) => (
                 <tr key={m.id}>
-                  <td className="truncate" style={{ maxWidth: 260 }}><Link to={`/materials/${m.id}`}>{m.title || m.url}</Link></td>
-                  <td><ModuleChips modules={m.modules} /></td>
+                  <td><Link to={`/materials/${m.id}`}>{m.title || m.url}</Link><RecordDetails context={m.title || m.url} fields={ [['Pobrano', fmtDate(m.fetched_at)]] }><ModuleChips modules={m.modules} /></RecordDetails></td>
                   <td><Score score={m.score} threshold={threshold} /></td>
                   <td><RiskBadge risk={m.risk} /></td>
-                  <td className="small muted">{fmtDate(m.fetched_at)}</td>
                 </tr>))}
               </tbody>
             </table></div>

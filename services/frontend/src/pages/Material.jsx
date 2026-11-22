@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, PROFILE, ProfileChip, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
+import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, PROFILE, ProfileChip, RecordDetails, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
 import { HelpTip } from '../components/HelpTip.jsx';
 import { useData } from '../hooks.js';
 import { REG } from './Entities.jsx';
@@ -31,16 +31,19 @@ function FindingsTable({ findings, rejected }) {
     <>
       <label className="small"><input type="checkbox" checked={onlyIssues} onChange={(e) => setOnlyIssues(e.target.checked)} /> pokaż tylko problemy</label>
       <div className="table-wrap"><table style={{ marginTop: 8 }}>
-        <thead><tr><th>ID</th><th>Co sprawdzamy</th><th>Ocena</th><th>Dlaczego (fragmenty)</th><th>Przepis</th></tr></thead>
+        <thead><tr><th>Przesłanka</th><th>Ocena</th></tr></thead>
         <tbody>{rows.map((f) => (
-          <tr key={f.id ?? f.rule_id} style={rejected?.has(f.rule_id) ? { opacity: 0.5 } : undefined}>
-            <td className="mono"><b>{f.rule_id}</b></td>
-            <td style={{ minWidth: 160 }}>{f.title}</td>
-            <td><StatusChip status={f.status} />{rejected?.has(f.rule_id) && <div className="small muted">odznaczone przez analityka</div>}</td>
-            <td style={{ minWidth: 320 }}>{f.explanation}<Evidence items={(f.evidence ?? []).filter((e, i) => !rejected?.has(`${f.rule_id}:${e.signal ?? i}`)).slice(0, 3)} />
+          <tr key={f.id ?? f.rule_id} className={rejected?.has(f.rule_id) ? 'inactive-record' : ''}>
+            <td><b>{f.title}</b><RecordDetails context={f.title} label="Uzasadnienie i źródła" fields={[
+              ['Reguła', f.rule_id], ['Podstawa prawna', f.legal_basis],
+            ]}>
+              <p>{f.explanation}</p>
+              <Evidence items={(f.evidence ?? []).filter((e, i) => !rejected?.has(`${f.rule_id}:${e.signal ?? i}`))} />
               {(f.evidence ?? []).some((e, i) => rejected?.has(`${f.rule_id}:${e.signal ?? i}`)) && (
-                <div className="small muted">odrzucone elementy: {(f.evidence ?? []).filter((e, i) => rejected?.has(`${f.rule_id}:${e.signal ?? i}`)).map((e) => e.where || e.text.slice(0, 40)).join('; ')}</div>)}</td>
-            <td className="small muted" style={{ minWidth: 140 }}>{f.legal_basis ?? '–'}</td>
+                <p>Odrzucone elementy: {(f.evidence ?? []).filter((e, i) => rejected?.has(`${f.rule_id}:${e.signal ?? i}`)).map((e) => e.where || e.text).join('; ')}</p>
+              )}
+            </RecordDetails></td>
+            <td><StatusChip status={f.status} />{rejected?.has(f.rule_id) && <div className="small muted">odznaczone przez analityka</div>}</td>
           </tr>))}
         </tbody>
       </table></div>
@@ -131,10 +134,11 @@ function ProfilePanel({ r, m, onChange }) {
         <ProfileChip type={effective} />
         {m.profile_manual && <span className="chip neutral">oznaczone ręcznie</span>}
         {!m.profile_manual && effective !== p.primary && <span className="chip neutral">po weryfikacji analityka</span>}
-        {p.tags.map((t) => <span key={t} className="chip neutral">{t}</span>)}
         <span className={`chip ${p.scam_score >= 55 ? 'high' : p.scam_score >= 30 ? 'mid' : 'low'}`}>sygnały oszustwa: {p.scam_score}/100</span>
         {m.scam_score != null && Number(m.scam_score) !== p.scam_score && <span className="chip neutral">po weryfikacji: {Math.round(m.scam_score)}/100</span>}
       </div>
+      <RecordDetails label="Dane publikującego i promocji" context={r.m1?.publisher?.name}>
+      <div>{p.tags.map((t) => <span key={t} className="chip neutral">{t}</span>)}</div>
       <dl className="kv" style={{ marginBottom: 10 }}>
         <dt>Publikujący</dt><dd>{r.m1?.publisher?.name ?? <i>nieustalone</i>} <span className="small muted">({{ firma: 'sama firma', podmiot_trzeci: 'podmiot trzeci', 'własne_usługi': 'strona własna usługodawcy', nieustalone: 'nieustalone' }[r.m1?.publisher?.type] ?? '–'})</span></dd>
         <dt>Zasięg</dt><dd>{m.views != null ? `${fmtCount(m.views)} wyświetleń` : '–'}{m.followers != null ? ` · ${fmtCount(m.followers)} obserwujących` : ''}</dd>
@@ -142,12 +146,13 @@ function ProfilePanel({ r, m, onChange }) {
         <dt>Uprawnienia</dt><dd>{lic?.declared ? `zadeklarowane${lic.number ? ` (nr ${lic.number})` : ''} – do weryfikacji w rejestrze KNF` : 'nie deklaruje'}</dd>
         {m.tags?.length > 0 && <><dt>Tagi</dt><dd>{m.tags.map((t) => <Link key={t} to={`/materials?tag=${encodeURIComponent(t)}`} style={{ marginRight: 6 }}>#{t}</Link>)}</dd></>}
       </dl>
+      </RecordDetails>
       {p.returns?.length > 0 && (
         <>
           <h3>Obietnice zysku (przeliczone na rok)</h3>
           {p.returns.slice(0, 5).map((c, i) => (
             <div key={i} className={`signal ${(c.annual_pct ?? 0) >= 50 || (c.multiplier && c.annual_pct == null) ? '' : 'warn'}`}>
-              <b>{RET(c)}</b>{c.historical && <span className="small muted"> (wynik historyczny)</span>}<div className="small muted">„{c.text.slice(0, 220)}”</div>
+              <b>{RET(c)}</b>{c.historical && <span className="small muted"> (wynik historyczny)</span>}<RecordDetails label="Fragment źródłowy" context={c.claim}>„{c.text}”</RecordDetails>
             </div>
           ))}
           <p className="small muted">Punkt odniesienia: lokaty i obligacje skarbowe – kilka procent rocznie; powyżej ~50% rocznie obietnica jest nierealistyczna.</p>
@@ -157,7 +162,7 @@ function ProfilePanel({ r, m, onChange }) {
         <>
           <h3>Sygnały typowe dla oszustw</h3>
           {p.signals.map((s) => (
-            <div key={s.key} className={`signal ${s.weight >= 30 ? '' : 'warn'}`}><b>{s.label}</b><div className="small muted">„{(s.evidence[0] ?? '').slice(0, 220)}”</div></div>
+            <div key={s.key} className={`signal ${s.weight >= 30 ? '' : 'warn'}`}><b>{s.label}</b><RecordDetails label="Fragmenty źródłowe" context={s.label}>{s.evidence.map((text, i) => <p key={i}>„{text}”</p>)}</RecordDetails></div>
           ))}
         </>
       )}
@@ -484,9 +489,9 @@ export default function Material() {
   if (!data) return <Empty>Ładowanie…</Empty>;
   const { material: m, analysis: a, findings, entities, history, threshold, risk, similar = [] } = data;
   const rejectedSet = new Set(data.rejected ?? []);
+  const r = a?.result ?? {};
   const score = data.effective_score ?? a?.score;
   const scam = m.scam_score != null ? Math.round(Number(m.scam_score)) : r.profile?.scam_score ?? null;
-  const r = a?.result ?? {};
   const byModule = (mod) => findings.filter((f) => f.module === mod);
   const act = async (key, label, action) => {
     setBusyAction(key);

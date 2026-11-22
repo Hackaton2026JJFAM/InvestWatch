@@ -92,6 +92,21 @@ export function Empty({ children = 'Brak danych' }) {
   return <div className="empty">{children}</div>;
 }
 
+// Native disclosure: keyboard accessible, collapsed by default, no data fetching.
+export function RecordDetails({ fields = [], children, label = 'Szczegóły', context }) {
+  return (
+    <details className="row-details record-details">
+      <summary aria-label={context ? `${label}: ${context}` : undefined}>{label}</summary>
+      <div className="record-details-body">
+        {fields.length > 0 && <dl className="kv">{fields.map(([name, value]) => (
+          <div className="detail-field" key={name}><dt>{name}</dt><dd>{value ?? '–'}</dd></div>
+        ))}</dl>}
+        {children}
+      </div>
+    </details>
+  );
+}
+
 export function MaterialLink({ id, title, url }) {
   return <Link to={`/materials/${id}`}>{title || url}</Link>;
 }

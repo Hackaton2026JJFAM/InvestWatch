@@ -5,7 +5,7 @@ const KEY = 'iw-theme';
 const EVENT = 'iw-themechange';
 
 export function readTheme() {
-  try { return localStorage.getItem(KEY) || 'system'; } catch { return 'system'; }
+  try { return localStorage.getItem(KEY) || 'dark'; } catch { return 'dark'; }
 }
 
 export function applyTheme(mode) {

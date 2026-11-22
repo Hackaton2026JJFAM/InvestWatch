@@ -4,7 +4,7 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
-import { Empty, fmtCount, fmtDate, Panel } from '../components/ui.jsx';
+import { Empty, fmtCount, fmtDate, Panel, RecordDetails } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
@@ -242,17 +242,20 @@ export default function Monitor() {
           )}
           {res && (res.items.filter((i) => showExcluded || !i.excluded).length ? (
             <div className="table-wrap monitor-results-wrap"><table className="monitor-results">
-              <thead><tr><th /><th>Platforma</th><th>Film / post</th><th>Twórca</th><th>Zasięg</th><th>Język</th><th>Status</th></tr></thead>
+              <thead><tr><th aria-label="Zaznacz do analizy" /><th>Materiał</th><th>Zasięg</th><th>Status</th></tr></thead>
               <tbody>{res.items.filter((i) => showExcluded || !i.excluded).map((i) => (
-                <tr key={i.url} style={{ opacity: i.passes ? 1 : 0.55 }}>
+                <tr key={i.url} className={i.passes ? '' : 'inactive-record'}>
                   <td><input type="checkbox" aria-label="Zaznacz do analizy" disabled={i.known || i.live || Boolean(i.excluded)} checked={sel.has(i.url)} onChange={(e) => setSel((s) => { const n = new Set(s); e.target.checked ? n.add(i.url) : n.delete(i.url); return n; })} /></td>
-                  <td><span className="chip neutral">{PLATFORMS[i.platform] ?? i.platform}</span></td>
-                  <td><a href={i.url} target="_blank" rel="noreferrer noopener">{i.title || i.url}</a></td>
-                  <td className="small">{i.author ?? '–'}{i.followers != null && <div className="muted">{fmtCount(i.followers)} obs.</div>}</td>
-                  <td>{i.views != null ? <b>{fmtCount(i.views)}</b> : i.likes != null ? <span className="small">{fmtCount(i.likes)} polub.</span> : <span className="small muted">nieznany</span>}
-                    <div className="small muted">{i.live ? 'na żywo' : fmtDur(i.duration)}</div></td>
-                  <td>{i.lang === 'pl' ? <span className="chip low">PL</span> : <span className="small muted">?</span>}</td>
-                  <td className="small">{i.known ? <Link to={`/materials?q=${encodeURIComponent(i.url)}`}>już przeanalizowany</Link> : i.excluded ? `wykluczone („${i.excluded}”)` : i.passes ? 'do analizy' : (opts.polish && i.lang !== 'pl' ? 'nie po polsku' : 'za mały zasięg')}</td>
+                  <td><a href={i.url} target="_blank" rel="noreferrer noopener">{i.title || i.url}</a>
+                    <RecordDetails context={i.title || i.url} fields={[
+                      ['Platforma', PLATFORMS[i.platform] ?? i.platform], ['Twórca', i.author],
+                      ['Adres', i.url], ['Obserwujący', fmtCount(i.followers)],
+                      ['Długość', i.live ? 'na żywo' : fmtDur(i.duration) || '–'],
+                      ['Język', i.lang || 'nieustalony'], ['Polubienia', fmtCount(i.likes)],
+                    ]} />
+                  </td>
+                  <td>{i.views != null ? <b>{fmtCount(i.views)}</b> : i.likes != null ? <span>{fmtCount(i.likes)} polub.</span> : 'nieznany'}</td>
+                  <td>{i.known ? <Link to={`/materials?q=${encodeURIComponent(i.url)}`}>już przeanalizowany</Link> : i.excluded ? `wykluczone („${i.excluded}”)` : i.passes ? 'do analizy' : (opts.polish && i.lang !== 'pl' ? 'nie po polsku' : 'za mały zasięg')}</td>
                 </tr>))}
               </tbody></table></div>
           ) : <Empty>Nic nie znaleziono. Spróbuj innego hashtagu albo frazy, albo zdejmij próg zasięgu.</Empty>)}
@@ -262,15 +265,20 @@ export default function Monitor() {
       <Panel title="Monitorowane stale" meta="system sam sprawdza te zapytania według harmonogramu · „auto” = dodane automatycznie z rankingu hashtagów"
         actions={<button className="btn" onClick={refreshRanking} title="Przelicz ranking hashtagów i zaktualizuj automatyczny monitoring">Przelicz ranking</button>}>
         {watches.data?.length ? <div className="table-wrap monitor-watches-wrap"><table className="monitor-watches">
-          <thead><tr><th>Zapytanie</th><th>Próg</th><th>Ostatnio sprawdzono</th><th>Znalezione materiały</th><th>Akcje</th></tr></thead>
+          <thead><tr><th>Zapytanie</th><th>Status</th><th>Materiały</th><th>Akcje</th></tr></thead>
           <tbody>{watches.data.map((w) => (
-            <tr key={w.id} style={{ opacity: w.enabled ? 1 : 0.55 }}>
-              <td><b>{w.kind === 'hashtag' ? `#${w.query}` : w.kind === 'profile' ? w.query : `„${w.query}”`}</b> {w.auto && <span className="chip info">auto</span>} {!w.enabled && <span className="chip neutral">wstrzymane</span>}
-                <div className="small muted">{KIND_LABEL[w.kind] ?? w.kind} · {PLATFORMS[w.platform] ?? w.platform}{w.polish ? ' · tylko PL' : ''}</div></td>
-              <td className="small">≥ {fmtCount(w.min_views)} wyśw. · maks. {w.max_per_run} na raz</td>
-              <td className="small">{w.last_run_at ? fmtDate(w.last_run_at) : 'jeszcze nie'}{w.last_run_at && !w.last_error && <div className="muted">znaleziono {w.last_found}, do analizy {w.last_queued}</div>}
-                {w.last_error && <div style={{ color: 'var(--high)' }}>{w.last_error}</div>}</td>
-              <td className="small"><Link to={`/materials?watch=${w.id}&sort=priority`}>{w.materials} materiałów</Link>{w.scams > 0 && <div style={{ color: 'var(--high)' }}>{w.scams} podejrzeń oszustwa</div>}</td>
+            <tr key={w.id} className={w.enabled ? '' : 'inactive-record'}>
+              <td><b>{w.kind === 'hashtag' ? `#${w.query}` : w.kind === 'profile' ? w.query : `„${w.query}”`}</b>
+                <RecordDetails context={w.query} label={w.last_error ? 'Szczegóły i błąd' : 'Szczegóły'} fields={[
+                  ['Rodzaj', KIND_LABEL[w.kind] ?? w.kind], ['Platforma', PLATFORMS[w.platform] ?? w.platform],
+                  ['Język', w.polish ? 'tylko PL' : 'wszystkie'], ['Tryb', w.auto ? 'automatyczny' : 'ręczny'],
+                  ['Próg wyświetleń', `≥ ${fmtCount(w.min_views)}`], ['Limit na przebieg', w.max_per_run],
+                  ['Ostatnio sprawdzono', w.last_run_at ? fmtDate(w.last_run_at) : 'jeszcze nie'],
+                  ['Znalezione', w.last_found], ['Przekazano do analizy', w.last_queued],
+                ]}>{w.last_error && <p className="record-error">{w.last_error}</p>}</RecordDetails>
+              </td>
+              <td><span className={`chip ${w.last_error ? 'warn' : w.enabled ? 'pass' : 'neutral'}`}>{w.last_error ? 'błąd' : w.enabled ? 'aktywne' : 'wstrzymane'}</span>{w.auto && <span className="chip info">auto</span>}</td>
+              <td><Link to={`/materials?watch=${w.id}&sort=priority`}>{w.materials} materiałów</Link>{w.scams > 0 && <div className="record-error">{w.scams} podejrzeń oszustwa</div>}</td>
               <td className="btn-row"><button className="btn" onClick={() => run(w)}>Sprawdź teraz</button><button className="btn" onClick={() => toggle(w)}>{w.enabled ? 'Wstrzymaj' : 'Wznów'}</button><button className="btn danger" onClick={() => remove(w)}>Usuń</button></td>
             </tr>))}
           </tbody></table></div> : <Empty>Nic nie jest jeszcze monitorowane. Wyszukaj coś powyżej i kliknij „Monitoruj stale”.</Empty>}
