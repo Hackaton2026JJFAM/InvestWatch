@@ -7,7 +7,7 @@ import { log } from './log.js';
 import { analyzer, scraper, UpstreamError } from './services.js';
 import { emit } from './realtime.js';
 import { scheduleEnrichment } from './enrichment.js';
-import { findSimilar, NEAR_DUP_BITS } from './similarity.js';
+import { findNearDuplicate } from './similarity.js';
 import { isVideoUrl, removeUpload } from './video.js';
 import { saveReach } from './reach.js';
 
@@ -148,7 +148,7 @@ export async function processScan(job) {
 
   const threshold = await getThreshold();
   const simhash = result.doc?.simhash ?? null;
-  const nearDup = (await findSimilar(simhash, { maxBits: NEAR_DUP_BITS, limit: 1 }))[0] ?? null;
+  const nearDup = await findNearDuplicate(simhash, material.content_text);
 
   let saved;
   try {

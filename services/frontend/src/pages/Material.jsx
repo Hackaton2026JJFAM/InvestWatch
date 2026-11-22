@@ -550,14 +550,14 @@ export default function Material() {
         </div>
       </div>
 
-      {similar.some((x) => x.distance <= 3) && (() => {
-        const dups = similar.filter((x) => x.distance <= 3);
+      {similar.some((x) => x.near) && (() => {
+        const dups = similar.filter((x) => x.near);
         const where = [...new Set(dups.map((x) => x.platform).filter(Boolean))];
         return (
           <div className="notice" style={{ marginTop: 12, borderLeftColor: 'var(--mid)' }}>
             <b>Duplikat treści.</b> Ta sama (lub prawie ta sama) treść występuje w {dups.length} innych materiałach{where.length ? ` (${where.join(', ')})` : ''}:{' '}
             {dups.slice(0, 5).map((x, i) => <Fragment key={x.id}>{i > 0 && ', '}<Link to={`/materials/${x.id}`}>#{x.id}</Link></Fragment>)}
-            {' '}– porównanie odcisków simhash (odległość Hamminga ≤ 3 bity).
+            {' '}– odcisk simhash (odległość Hamminga) potwierdzony podobieństwem treści.
           </div>
         );
       })()}
@@ -601,7 +601,7 @@ export default function Material() {
                 <h3>Podobne materiały <HelpTip term="simhash" label="podobne materiały" /></h3>
                 {similar.length ? <table><tbody>{similar.map((x) => (
                   <tr key={x.id}><td><Link to={`/materials/${x.id}`}>{x.title || x.url}</Link><div className="small muted">{x.platform}{x.author ? ` · ${x.author}` : ''}</div></td>
-                    <td><span className={`chip ${x.distance <= 3 ? 'mid' : 'neutral'}`}>{x.distance <= 3 ? 'bardzo podobny' : 'podobny'} · {x.distance} bit</span></td></tr>))}
+                    <td><span className={`chip ${x.near ? 'mid' : 'neutral'}`}>{x.near ? 'duplikat' : 'podobny'} · {x.distance} bit{x.text_sim != null ? ` · treść ${Math.round(x.text_sim * 100)}%` : ''}</span></td></tr>))}
                 </tbody></table> : <p className="small muted">Nie znaleziono podobnych treści.</p>}
               </details>
             </Panel>

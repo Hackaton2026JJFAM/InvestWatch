@@ -151,7 +151,7 @@ r.get('/materials/:id', async (req, res) => {
     account: m.account_key && !m.demo ? await accountHistory(m.account_key, { excludeId: m.id }) : null,
     prior_history: await historyOf(id),
     advisor_candidate: advisorCandidate(m, latest?.result),
-    similar: await findSimilar(m.simhash, { excludeId: m.id }),
+    similar: await findSimilar(m.simhash, { excludeId: m.id, text: m.content_text }),
     // wynik efektywny = po weryfikacji analityka (gdy jest), inaczej wynik klasyfikatora
     effective_score: analyses[0] ? Number(m.reviewed_score ?? analyses[0].score) : null,
     risk: analyses[0] ? riskLevel(Number(m.reviewed_score ?? analyses[0].score)) : null,
