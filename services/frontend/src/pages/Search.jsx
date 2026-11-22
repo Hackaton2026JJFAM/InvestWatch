@@ -5,7 +5,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api, qs } from '../api.js';
 import DataTree from '../components/DataTree.jsx';
 import { GleifRelations, GleifSummary, KrsSummary } from '../components/Registry.jsx';
-import { Empty, Panel, Score } from '../components/ui.jsx';
+import { Empty, Panel, RecordDetails, Score } from '../components/ui.jsx';
 import { useData, useDebounced } from '../hooks.js';
 import { useLive } from '../live.jsx';
 import { HelpTip } from '../components/HelpTip.jsx';
@@ -92,12 +92,12 @@ function GleifResults({ q, onOpen }) {
       {error && <Empty>{error.message}</Empty>}
       {!data && !error && <p className="small muted">Szukanie w GLEIF…</p>}
       {data && (data.length ? (
-        <table><tbody>{data.map((g) => (
+        <div className="table-wrap"><table><tbody>{data.map((g) => (
           <tr key={g.lei}>
-            <td><button type="button" className="text-button" onClick={() => onOpen({ lei: g.lei, name: g.name })}>{g.name}</button><div className="small muted mono">{g.lei} · {g.country} · {g.entity_status}</div></td>
+            <td><button type="button" className="text-button" onClick={() => onOpen({ lei: g.lei, name: g.name })}>{g.name}</button><RecordDetails context={g.name} fields={ [['LEI', g.lei], ['Kraj', g.country], ['Status podmiotu', g.entity_status]] } /></td>
             <td style={{ textAlign: 'right' }}>{g.krs ? <span className="chip pass">KRS {g.krs}</span> : <span className="chip na">bez KRS</span>}</td>
           </tr>))}
-        </tbody></table>
+        </tbody></table></div>
       ) : <Empty>Brak rekordów LEI dla tej nazwy.</Empty>)}
     </Panel>
   );
@@ -146,10 +146,10 @@ export default function Search() {
         <div className="grid" style={{ alignContent: 'start' }}>
           {internal && data?.entities && (
             <Panel title={`Podmioty w InvestWatch (${data.entities.length})`}>
-              {data.entities.length ? <table><tbody>{data.entities.map((e) => (
-                <tr key={e.id}><td><Link to={`/entities/${e.id}`}>{e.name}</Link><div className="small muted">{KIND[e.kind]}{e.krs ? ` · KRS ${e.krs}` : ''}{e.lei ? ` · LEI ${e.lei}` : ''}</div></td>
+              {data.entities.length ? <div className="table-wrap"><table><tbody>{data.entities.map((e) => (
+                <tr key={e.id}><td><Link to={`/entities/${e.id}`}>{e.name}</Link><RecordDetails context={e.name} fields={ [['Rodzaj', KIND[e.kind]], ['KRS', e.krs], ['LEI', e.lei]] } /></td>
                   <td style={{ textAlign: 'right' }}><span className={`chip ${REG[e.registry_status]?.[0]}`}>{REG[e.registry_status]?.[1]}</span></td></tr>))}
-              </tbody></table> : <Empty>Brak – możesz utworzyć kartę z wyników KRS/LEI.</Empty>}
+              </tbody></table></div> : <Empty>Brak – możesz utworzyć kartę z wyników KRS/LEI.</Empty>}
             </Panel>
           )}
           {showExternal && <GleifResults q={q} onOpen={setSel} />}
@@ -158,18 +158,16 @@ export default function Search() {
               {data.materials.length ? data.materials.map((m) => (
                 <div key={m.id} className="result-row">
                   <Link to={`/materials/${m.id}`}>{m.title || m.url}</Link> <Score score={m.score} threshold={threshold} />
-                  <div className="small muted truncate">{m.platform} · {m.url}</div>
-                  {m.snippet && <div className="small">…{m.snippet}…</div>}
+                  <RecordDetails context={m.title || m.url} fields={ [['Platforma', m.platform], ['Adres', m.url]] }>{m.snippet && <p>…{m.snippet}…</p>}</RecordDetails>
                 </div>)) : <Empty>Brak</Empty>}
             </Panel>
           )}
           {internal && data?.registry && (
             <Panel title={`Rejestr firm inwestycyjnych KNF (${data.registry.length})`} meta="snapshot publicznych list KNF">
-              {data.registry.length ? <table><tbody>{data.registry.map((f) => (
-                <tr key={f.name} className="click" onClick={() => setSel({ name: f.name, lei: null, krs: null, knf: f, search: f.name })}>
-                  <td>{f.name}{f.demo && <span className="chip mid" style={{ marginLeft: 6 }}>DEMO</span>}<div className="small muted">{f.category} · {f.country ?? '–'}</div></td>
-                  <td className="small muted" style={{ textAlign: 'right' }}>{Math.round(f.score)}%</td></tr>))}
-              </tbody></table> : <Empty>Brak</Empty>}
+              {data.registry.length ? <div className="table-wrap"><table><tbody>{data.registry.map((f) => (
+                <tr key={f.name}>
+                  <td><button className="text-button" onClick={() => setSel({ name: f.name, lei: null, krs: null, knf: f, search: f.name })}>{f.name}</button>{f.demo && <span className="chip mid" style={{ marginLeft: 6 }}>DEMO</span>}<RecordDetails context={f.name} fields={ [['Kategoria', f.category], ['Kraj', f.country], ['Dopasowanie nazwy', `${Math.round(f.score)}%`]] } /></td></tr>))}
+              </tbody></table></div> : <Empty>Brak</Empty>}
             </Panel>
           )}
         </div>
@@ -196,11 +194,11 @@ function KnfDetail({ sel, onClose, onOpen }) {
       </dl>
       <h3 style={{ marginTop: 14 }}>Rekordy LEI</h3>
       {!data ? <p className="small muted">Szukanie w GLEIF…</p> : data.length ? (
-        <table><tbody>{data.map((g) => (
-          <tr key={g.lei} className="click" onClick={() => onOpen({ lei: g.lei, name: g.name })}>
-            <td>{g.name}<div className="small muted mono">{g.lei} · {g.country}</div></td>
+        <div className="table-wrap"><table><tbody>{data.map((g) => (
+          <tr key={g.lei}>
+            <td><button className="text-button" onClick={() => onOpen({ lei: g.lei, name: g.name })}>{g.name}</button><RecordDetails context={g.name} fields={ [['LEI', g.lei], ['Kraj', g.country]] } /></td>
             <td style={{ textAlign: 'right' }}>{g.krs && <span className="chip pass">KRS {g.krs}</span>}</td></tr>))}
-        </tbody></table>) : <Empty>Brak rekordów LEI.</Empty>}
+        </tbody></table></div>) : <Empty>Brak rekordów LEI.</Empty>}
     </Panel>
   );
 }

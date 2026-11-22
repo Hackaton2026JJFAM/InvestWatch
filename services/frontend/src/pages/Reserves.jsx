@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { api } from '../api.js';
 import { axisProps, barCursor, ChartGrid, ChartTooltip, useChartColors } from '../components/charts.jsx';
-import { Empty, fmtDate, Panel, StatCard } from '../components/ui.jsx';
+import { Empty, fmtDate, Panel, RecordDetails, StatCard } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
@@ -69,29 +69,29 @@ export default function Reserves() {
             </Panel>
             <Panel title="Dane raportu" meta={<a href={rep.source_url} target="_blank" rel="noreferrer noopener">źródło: okx.com</a>}>
               <div className="table-wrap" style={{ maxHeight: 420, overflow: 'auto' }}>
-                <table><thead><tr><th>Aktywo</th><th>Zobowiązania</th><th>Rezerwy</th><th>Pokrycie</th></tr></thead>
+                <table><thead><tr><th>Aktywo</th><th>Pokrycie</th></tr></thead>
                   <tbody>{assets.map((a) => (
-                    <tr key={a.coin}><td><b>{a.coin}</b><div className="small muted">{a.name}</div></td><td className="mono small">{fmtNum(a.liabilities)}</td>
-                      <td className="mono small">{fmtNum(a.reserves)}</td><td><span className={`chip ${a.coverage < 1 ? 'high' : 'pass'}`}>{covPct(a.coverage)}</span></td></tr>))}
+                    <tr key={a.coin}><td><b>{a.coin}</b><RecordDetails context={a.coin} fields={ [['Nazwa', a.name], ['Zobowiązania', fmtNum(a.liabilities)], ['Rezerwy', fmtNum(a.reserves)]] } /></td>
+                      <td><span className={`chip ${a.coverage < 1 ? 'high' : 'pass'}`}>{covPct(a.coverage)} · {a.coverage < 1 ? 'poniżej 1:1' : 'pokrycie ≥ 1:1'}</span></td></tr>))}
                   </tbody></table>
               </div>
-              <p className="small muted" style={{ marginBottom: 0 }}>Korzeń drzewa Merkle: <span className="mono">{String(rep.merkle_root ?? '–').slice(0, 24)}…</span> · odczyt {fmtDate(rep.fetched_at)}</p>
+              <RecordDetails label="Dane techniczne raportu" fields={ [['Korzeń drzewa Merkle', rep.merkle_root], ['Odczyt', fmtDate(rep.fetched_at)]] } />
             </Panel>
           </div>
         </>
       )}
       <div className="grid g2" style={{ marginTop: 16 }}>
         <Panel title="Historia raportów">
-          {data.history.length ? <table><thead><tr><th>Raport</th><th>Data</th><th>Min. pokrycie</th><th>Poniżej 1:1</th></tr></thead>
+          {data.history.length ? <div className="table-wrap"><table><thead><tr><th>Raport</th><th>Min. pokrycie</th></tr></thead>
             <tbody>{data.history.map((h) => (
-              <tr key={h.id}><td className="mono">{h.audit_id}</td><td>{String(h.report_date).slice(0, 10)}</td><td>{covPct(Number(h.coverage))}</td><td>{h.below_one.join(', ') || '–'}</td></tr>))}
-            </tbody></table> : <Empty />}
+              <tr key={h.id}><td><b>{String(h.report_date).slice(0, 10)}</b><RecordDetails context={h.audit_id} fields={ [['Numer raportu', h.audit_id], ['Aktywa poniżej 1:1', h.below_one.join(', ') || 'brak']] } /></td><td>{covPct(Number(h.coverage))}{h.below_one.length > 0 && <div className="chip high">{h.below_one.length} poniżej 1:1</div>}</td></tr>))}
+            </tbody></table></div> : <Empty />}
         </Panel>
         <Panel title="Alerty Proof of Reserves">
-          {data.alerts.length ? <table><tbody>{data.alerts.map((a) => (
-            <tr key={a.id}><td className="small muted">{fmtDate(a.created_at)}</td><td>{a.message}</td>
+          {data.alerts.length ? <div className="table-wrap"><table><tbody>{data.alerts.map((a) => (
+            <tr key={a.id}><td>{a.message}<RecordDetails context={a.message} fields={ [['Utworzono', fmtDate(a.created_at)]] } /></td>
               <td><span className={`chip ${a.kind === 'reserves' ? 'high' : 'na'}`}>{a.kind === 'reserves' ? 'alert' : 'informacja'}</span></td></tr>))}
-          </tbody></table> : <Empty>Brak alertów.</Empty>}
+            </tbody></table></div> : <Empty>Brak alertów.</Empty>}
           {data.latest && <p className="small" style={{ marginBottom: 0 }}><Link to={`/entities/${data.latest.entity_id}`}>Karta podmiotu OKX →</Link></p>}
         </Panel>
       </div>

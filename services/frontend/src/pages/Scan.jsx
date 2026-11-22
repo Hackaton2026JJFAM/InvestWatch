@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import BulkImport from '../components/BulkImport.jsx';
-import { Empty, fmtDate, Panel } from '../components/ui.jsx';
+import { Empty, fmtDate, Panel, RecordDetails } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
@@ -72,11 +72,15 @@ export default function Scan() {
       <div className="grid g2" style={{ marginTop: 16 }}>
         <Panel title="Kolejka zadań" meta="na żywo">
           {jobs.data?.length ? <div className="table-wrap" style={{ maxHeight: 420, overflow: 'auto' }}><table>
-            <thead><tr><th>#</th><th>Adres</th><th>Wyzwalacz</th><th>Status</th><th>Próby</th><th>Utworzono</th></tr></thead>
+            <thead><tr><th>Materiał</th><th>Status</th></tr></thead>
             <tbody>{jobs.data.map((j) => (
-              <tr key={j.id}><td>{j.id}</td>
-                <td className="truncate" style={{ maxWidth: 260 }}>{j.material_id ? <Link to={`/materials/${j.material_id}`}>{j.url || '(import)'}</Link> : (j.url || '(import)')}{j.error && <div className="small" style={{ color: 'var(--high)' }}>{j.error}</div>}</td>
-                <td className="small">{j.trigger}</td><td><span className={`chip ${JOB[j.status]}`}>{JOB_LABEL[j.status] ?? j.status}</span></td><td>{j.attempts}</td><td className="small muted">{fmtDate(j.created_at)}</td></tr>))}
+              <tr key={j.id}>
+                <td>{j.material_id ? <Link to={`/materials/${j.material_id}`}>{j.url || '(import)'}</Link> : <b>{j.url || '(import)'}</b>}
+                  <RecordDetails context={`zadanie ${j.id}`} label={j.error ? 'Szczegóły i błąd zadania' : 'Szczegóły'} fields={[
+                    ['Numer zadania', j.id], ['Wyzwalacz', j.trigger], ['Próby', j.attempts], ['Utworzono', fmtDate(j.created_at)],
+                  ]}>{j.error && <p className="record-error">{j.error}</p>}</RecordDetails>
+                </td>
+                <td><span className={`chip ${JOB[j.status]}`}>{JOB_LABEL[j.status] ?? j.status}</span></td></tr>))}
             </tbody></table></div> : <Empty>Brak zadań.</Empty>}
         </Panel>
         <Panel title="Źródła monitorowane (harmonogram)">
@@ -84,11 +88,11 @@ export default function Scan() {
             <input placeholder="https://… (strona, profil, kanał)" value={source} onChange={(e) => setSource(e.target.value)} style={{ flex: 1 }} />
             <button className="btn primary" onClick={() => run(api.post('/sources', { url: source }).then(() => setSource('')))}>Dodaj źródło</button>
           </div>
-          {sources.data?.length ? <table><tbody>{sources.data.map((s) => (
-            <tr key={s.id}><td className="truncate" style={{ maxWidth: 280 }}>{s.url}</td><td className="small muted">{s.last_run_at ? fmtDate(s.last_run_at) : 'nie uruchamiano'}</td>
+          {sources.data?.length ? <div className="table-wrap"><table><thead><tr><th>Źródło</th><th>Status</th><th>Akcje</th></tr></thead><tbody>{sources.data.map((s) => (
+            <tr key={s.id} className={s.enabled ? '' : 'inactive-record'}><td><b>{s.url}</b><RecordDetails context={s.url} fields={ [['Ostatni skan', s.last_run_at ? fmtDate(s.last_run_at) : 'nie uruchamiano']] } /></td><td><span className="chip neutral">{s.enabled ? 'aktywne' : 'wstrzymane'}</span></td>
               <td className="btn-row"><button className="btn" onClick={() => run(api.patch(`/sources/${s.id}`, { enabled: !s.enabled }))}>{s.enabled ? 'Wyłącz' : 'Włącz'}</button>
                 <button className="btn danger" onClick={() => run(api.del(`/sources/${s.id}`))}>Usuń</button></td></tr>))}
-          </tbody></table> : <Empty>Brak źródeł. Harmonogram (cron) skanuje je cyklicznie i wyszukuje podstrony z ofertami.</Empty>}
+          </tbody></table></div> : <Empty>Brak źródeł. Harmonogram (cron) skanuje je cyklicznie i wyszukuje podstrony z ofertami.</Empty>}
         </Panel>
       </div>
     </>

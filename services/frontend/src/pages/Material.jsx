@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api.js';
-import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, ProfileChip, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
+import { Empty, Evidence, fmtCount, fmtDate, MAT_STATUS, ModuleChips, MODULES, Panel, pct, ProfileChip, RecordDetails, RiskBadge, Score, ScoreBar, StatusChip } from '../components/ui.jsx';
 import { HelpTip } from '../components/HelpTip.jsx';
 import { useData } from '../hooks.js';
 import { REG } from './Entities.jsx';
@@ -25,23 +25,23 @@ function moveTab(event, items, active, setActive, idFor) {
 }
 
 function FindingsTable({ findings, rejected }) {
-  const [onlyIssues, setOnlyIssues] = useState(false);
+  const [onlyIssues, setOnlyIssues] = useState(true);
   const rows = onlyIssues ? findings.filter((f) => f.status === 'fail' || f.status === 'warn') : findings;
   return (
     <>
       <label className="small"><input type="checkbox" checked={onlyIssues} onChange={(e) => setOnlyIssues(e.target.checked)} /> tylko niespełnione i do weryfikacji</label>
       <div className="table-wrap"><table style={{ marginTop: 8 }}>
-        <thead><tr><th>ID</th><th>Reguła</th><th>Wynik</th><th>Uzasadnienie i fragmenty</th><th>Podstawa prawna</th></tr></thead>
+        <thead><tr><th>Przesłanka</th><th>Wynik</th></tr></thead>
         <tbody>{rows.map((f) => (
-          <tr key={f.id ?? f.rule_id} style={rejected?.has(f.rule_id) ? { opacity: 0.5 } : undefined}>
-            <td className="mono"><b>{f.rule_id}</b></td>
-            <td style={{ minWidth: 160 }}>{f.title}</td>
+          <tr key={f.id ?? f.rule_id} className={rejected?.has(f.rule_id) ? 'inactive-record' : ''}>
+            <td><b>{f.title}</b><RecordDetails context={f.title} label="Uzasadnienie i źródła" fields={[
+              ['Reguła', f.rule_id], ['Podstawa prawna', f.legal_basis],
+            ]}><p>{f.explanation}</p><Evidence items={f.evidence ?? []} /></RecordDetails></td>
             <td><StatusChip status={f.status} />{rejected?.has(f.rule_id) && <div className="small muted">odrzucone przez analityka</div>}</td>
-            <td style={{ minWidth: 320 }}>{f.explanation}<Evidence items={(f.evidence ?? []).slice(0, 3)} /></td>
-            <td className="small muted" style={{ minWidth: 140 }}>{f.legal_basis ?? '–'}</td>
           </tr>))}
         </tbody>
       </table></div>
+      {!rows.length && <Empty>Brak przesłanek w tym widoku. Wyłącz filtr, aby zobaczyć wszystkie reguły.</Empty>}
     </>
   );
 }
@@ -112,9 +112,10 @@ function ProfilePanel({ r, m }) {
     <Panel title="Profil publikującego i wiarygodność oferty" meta="sygnały do weryfikacji, nie ocena prawna">
       <div className="btn-row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
         <ProfileChip type={p.primary} />
-        {p.tags.map((t) => <span key={t} className="chip neutral">{t}</span>)}
         <span className={`chip ${p.scam_score >= 55 ? 'high' : p.scam_score >= 30 ? 'mid' : 'low'}`}>sygnały oszustwa: {p.scam_score}/100</span>
       </div>
+      <RecordDetails label="Dane publikującego i oznaczenie promocji" context={r.m1?.publisher?.name}>
+      <div>{p.tags.map((t) => <span key={t} className="chip neutral">{t}</span>)}</div>
       <dl className="kv" style={{ marginBottom: 10 }}>
         <dt>Publikujący</dt><dd>{r.m1?.publisher?.name ?? <i>nieustalone</i>} <span className="small muted">({{ firma: 'sama firma', podmiot_trzeci: 'podmiot trzeci', 'własne_usługi': 'strona własna usługodawcy', nieustalone: 'nieustalone' }[r.m1?.publisher?.type] ?? '–'})</span></dd>
         <dt>Zasięg</dt><dd>{m.views != null ? `${fmtCount(m.views)} wyświetleń` : '–'}{m.followers != null ? ` · ${fmtCount(m.followers)} obserwujących` : ''}</dd>
@@ -122,12 +123,13 @@ function ProfilePanel({ r, m }) {
         <dt>Uprawnienia</dt><dd>{lic?.declared ? `zadeklarowane${lic.number ? ` (nr ${lic.number})` : ''} – do weryfikacji w rejestrze KNF` : 'nie deklaruje'}</dd>
         {m.tags?.length > 0 && <><dt>Tagi</dt><dd>{m.tags.map((t) => <Link key={t} to={`/materials?tag=${encodeURIComponent(t)}`} style={{ marginRight: 6 }}>#{t}</Link>)}</dd></>}
       </dl>
+      </RecordDetails>
       {p.returns?.length > 0 && (
         <>
           <h3>Obietnice zysku (przeliczone na rok)</h3>
           {p.returns.slice(0, 5).map((c, i) => (
             <div key={i} className={`signal ${(c.annual_pct ?? 0) >= 50 || (c.multiplier && c.annual_pct == null) ? '' : 'warn'}`}>
-              <b>{RET(c)}</b>{c.historical && <span className="small muted"> (wynik historyczny)</span>}<div className="small muted">„{c.text.slice(0, 220)}”</div>
+              <b>{RET(c)}</b>{c.historical && <span> (wynik historyczny)</span>}<RecordDetails label="Fragment źródłowy" context={c.claim}>„{c.text}”</RecordDetails>
             </div>
           ))}
           <p className="small muted">Punkt odniesienia: lokaty i obligacje skarbowe – kilka procent rocznie; powyżej ~50% rocznie obietnica jest nierealistyczna.</p>
@@ -137,7 +139,7 @@ function ProfilePanel({ r, m }) {
         <>
           <h3>Sygnały typowe dla oszustw</h3>
           {p.signals.map((s) => (
-            <div key={s.key} className={`signal ${s.weight >= 30 ? '' : 'warn'}`}><b>{s.label}</b><div className="small muted">„{(s.evidence[0] ?? '').slice(0, 220)}”</div></div>
+            <div key={s.key} className={`signal ${s.weight >= 30 ? '' : 'warn'}`}><b>{s.label}</b><RecordDetails label="Fragmenty źródłowe" context={s.label}>{s.evidence.map((text, i) => <p key={i}>„{text}”</p>)}</RecordDetails></div>
           ))}
         </>
       )}
@@ -186,7 +188,7 @@ function Summary({ materialId, analysis, tick, onReviewed }) {
         <button className="btn" disabled={refreshing} onClick={refresh}>{refreshing ? 'Odświeżanie…' : 'Odśwież'}</button>
       </span>;
   return (
-    <Panel title="Podsumowanie AI" meta={data ? `silnik: ${data.engine}${data.reviewed_score != null ? ` · po weryfikacji ${Math.round(data.reviewed_score)}/100` : ''}` : ''} actions={actions}>
+    <Panel title="Interpretacja wyniku" meta={data ? `silnik: ${data.engine}${data.reviewed_score != null ? ` · po weryfikacji ${Math.round(data.reviewed_score)}/100` : ''}` : ''} actions={actions}>
       {editing ? (
         <>
           <div className="notice" style={{ marginBottom: 10 }}>Odznacz punkty, które po weryfikacji nie są zasadne. Odrzucone nie liczą się do wyniku po weryfikacji ani do podsumowania; decyzja obowiązuje także po ponownej analizie.</div>
@@ -257,6 +259,7 @@ export default function Material() {
 
   return (
     <>
+      <Link className="back-link" to="/materials">← Wyniki analiz</Link>
       <div className="page-head">
         <div style={{ minWidth: 0 }}>
           <h1>{m.title || '(bez tytułu)'}</h1>
@@ -269,12 +272,14 @@ export default function Material() {
             title={m.status === s ? 'Obecny status' : `Zmień status na „${MAT_STATUS[s]}”`} onClick={() => setStatus(s)}>{m.status === s ? `✓ ${MAT_STATUS[s]}` : label}</button>
         ))}
           {m.status !== 'NEW' && <button className="btn" disabled={Boolean(busyAction)} onClick={() => setStatus('NEW')}>Przywróć „Nowy”</button>}
-          <button className="btn" disabled={Boolean(busyAction)} onClick={reanalyze}>{busyAction === 'reanalyze' ? 'Analizowanie…' : 'Analizuj ponownie'}</button>
-          <button className="btn danger" disabled={Boolean(busyAction)} onClick={remove}>Usuń</button>
+          <details className="action-details"><summary className="btn">Operacje dodatkowe</summary><div className="btn-row">
+            <button className="btn" disabled={Boolean(busyAction)} onClick={reanalyze}>{busyAction === 'reanalyze' ? 'Analizowanie…' : 'Analizuj ponownie'}</button>
+            <button className="btn danger" disabled={Boolean(busyAction)} onClick={remove}>Usuń materiał</button>
+          </div></details>
         </div>
       </div>
 
-      <div className="grid g4">
+      <div className="grid g4 analysis-overview">
         <div className="panel stat"><span className="label">Wynik punktowy <HelpTip term="scoring" label="wynik punktowy" /></span><span className="value"><Score score={a?.score} threshold={threshold} /><span className="muted small"> /100</span></span>{m.reviewed_score != null && <span className="sub">po weryfikacji analityka: <b>{Math.round(m.reviewed_score)}</b>/100 <HelpTip term="scoring_review" label="wynik po weryfikacji" /></span>}<ScoreBar score={a?.score} threshold={threshold} /></div>
         <div className="panel stat"><span className="label">Poziom ryzyka <HelpTip term="risk_threshold" label="próg ryzyka" /></span><span><RiskBadge risk={risk} />{data.above_threshold && <span className="chip high" style={{ marginLeft: 6 }}>powyżej progu {threshold}</span>}</span><span className="sub">Alert powstaje po przekroczeniu progu {threshold}. Wynik analizy pozostaje bez zmian.</span></div>
         <div className="panel stat"><span className="label">Status weryfikacji</span><span className="value" style={{ fontSize: '1.2rem' }}>{MAT_STATUS[m.status]}</span><span className="sub">pobrano {fmtDate(m.fetched_at)}</span></div>
@@ -297,14 +302,14 @@ export default function Material() {
               {entities.length ? <div className="entity-links">{entities.map((entity) => (
                 <div key={`${entity.id}-${entity.role}`} className="entity-link-row">
                   <div><Link to={`/entities/${entity.id}`}><b>{entity.name}</b><span className="entity-link-arrow"> — profil podmiotu →</span></Link>
-                    <div className="small muted">{{ advertised_firm: 'firma wskazana w analizie materiału', publisher: 'autor lub publikujący', advisor: 'podmiot wskazany przy ofercie doradczej' }[entity.role] ?? 'podmiot wykryty w analizie'}</div>
+                    <RecordDetails context={entity.name} fields={ [['Rola w analizie', { advertised_firm: 'firma wskazana w analizie materiału', publisher: 'autor lub publikujący', advisor: 'podmiot wskazany przy ofercie doradczej' }[entity.role] ?? 'podmiot wykryty w analizie']] } />
                   </div>
                   <span className={`chip ${REG[entity.registry_status]?.[0] ?? 'na'}`}>{REG[entity.registry_status]?.[1] ?? 'status nieustalony'}</span>
                 </div>
               ))}</div> : <Empty>Nie znaleziono jednoznacznie powiązanego profilu podmiotu. Sama wzmianka o nazwie firmy nie wystarcza do jej przypisania.</Empty>}
             </Panel>
             <Panel title="Oznacz materiał do kalibracji" meta="etykieta testowa">
-              <p className="small muted">Twoje oznaczenie pomaga oceniać jakość modelu. Nie zmienia wyniku analizy tego materiału.</p>
+              <p>Twoje oznaczenie pomaga oceniać jakość modelu. Nie zmienia wyniku analizy tego materiału.</p>
               <div className="btn-row">
                 <button className={`btn ${m.ground_truth === true ? 'primary' : ''}`} disabled={Boolean(busyAction)} onClick={() => label(true)}>Ryzykowny</button>
                 <button className={`btn ${m.ground_truth === false ? 'primary' : ''}`} disabled={Boolean(busyAction)} onClick={() => label(false)}>Poprawny</button>
@@ -357,9 +362,7 @@ export default function Material() {
             {advertisedFirms.length ? <div className="entity-links">{advertisedFirms.map((firm) => (
               <div key={firm.id} className="entity-link-row">
                 <div><Link to={`/entities/${firm.id}`}><b>{firm.name}</b><span className="entity-link-arrow"> — zobacz profil →</span></Link>
-                  <div className="small muted">Dopasowanie firmy w analizie; nie jest potwierdzeniem współpracy.</div>
-                  {firm.krs ? <div className="small">KRS: <span className="mono">{firm.krs}</span>{firm.krs_status === 'found' && <span className="chip pass">odpis dostępny</span>}{firm.krs_status === 'not_found' && <span className="chip warn">nie znaleziono odpisu</span>}{firm.krs_status === 'error' && <span className="chip warn">nie udało się sprawdzić odpisu</span>}</div>
-                    : <div className="small muted">Numer KRS nieustalony{firm.krs_status === 'not_found' ? ' — nie znaleziono wpisu w KRS' : firm.krs_status === 'error' ? ' — nie udało się sprawdzić rejestru' : ''}.</div>}
+                    <RecordDetails context={firm.name} fields={ [['KRS', firm.krs || 'Numer nieustalony'], ['Status odpisu', { found: 'odpis dostępny', not_found: 'nie znaleziono odpisu', error: 'nie udało się sprawdzić odpisu' }[firm.krs_status] ?? 'nieustalony']] }>Dopasowanie firmy w analizie nie jest potwierdzeniem współpracy.</RecordDetails>
                 </div>
                 <span className={`chip ${REG[firm.registry_status]?.[0] ?? 'na'}`}>{REG[firm.registry_status]?.[1] ?? 'status KNF nieustalony'}</span>
               </div>
@@ -388,9 +391,7 @@ export default function Material() {
             {entities.length ? <div className="entity-links">{entities.map((entity) => (
               <div key={`${entity.id}-${entity.role}`} className="entity-link-row">
                 <div><Link to={`/entities/${entity.id}`}><b>{entity.name}</b><span className="entity-link-arrow"> — profil →</span></Link>
-                  <div className="small muted">{{ advertised_firm: 'firma wskazana w analizie', publisher: 'autor lub publikujący', advisor: 'podmiot wskazany przy ofercie doradczej' }[entity.role] ?? 'podmiot wykryty w analizie'}</div>
-                  {entity.krs && <div className="small">KRS: <span className="mono">{entity.krs}</span></div>}
-                  {!entity.krs && <div className="small muted">Numer KRS nieustalony.</div>}
+                  <RecordDetails context={entity.name} fields={ [['Rola w analizie', { advertised_firm: 'firma wskazana w analizie', publisher: 'autor lub publikujący', advisor: 'podmiot wskazany przy ofercie doradczej' }[entity.role] ?? 'podmiot wykryty w analizie'], ['KRS', entity.krs || 'Numer nieustalony']] } />
                 </div>
                 <span className={`chip ${REG[entity.registry_status]?.[0] ?? 'na'}`}>{REG[entity.registry_status]?.[1] ?? 'status nieustalony'}</span>
               </div>
@@ -409,13 +410,10 @@ export default function Material() {
             )}
           </Panel>
           <Panel title="Treść i metadane">
-            <dl className="kv" style={{ marginBottom: 10 }}>
-              <dt>Autor</dt><dd>{m.author ?? 'nieustalone'}</dd>
-              <dt>Data publikacji</dt><dd>{m.published_at ? fmtDate(m.published_at) : 'brak danych'}</dd>
-              <dt>Język</dt><dd>{m.lang ?? '–'}</dd>
-              <dt>Platforma</dt><dd>{m.platform}</dd>
-              <dt>Hash treści</dt><dd className="mono">{m.content_hash.slice(0, 16)}…</dd>
-            </dl>
+             <RecordDetails label="Metadane materiału" fields={[
+               ['Autor', m.author ?? 'nieustalone'], ['Data publikacji', m.published_at ? fmtDate(m.published_at) : 'brak danych'],
+               ['Język', m.lang], ['Platforma', m.platform], ['Hash treści', m.content_hash],
+             ]} />
             <div className="content-text">{m.content_text}</div>
           </Panel>
         </div>
@@ -425,10 +423,10 @@ export default function Material() {
 
       {tab === 'Historia' && (
         <Panel title="Historia analiz">
-          <table><thead><tr><th>Data</th><th>Wynik</th><th>Moduły</th><th>Wersja analizatora</th><th>Podsumowanie</th></tr></thead>
+          <div className="table-wrap"><table><thead><tr><th>Analiza</th><th>Wynik</th></tr></thead>
             <tbody>{history.map((h) => (
-              <tr key={h.id}><td>{fmtDate(h.created_at)}</td><td><Score score={h.score} threshold={threshold} /></td><td><ModuleChips modules={h.modules} /></td><td className="mono">{h.analyzer_version}</td><td className="small">{h.summary_engine ?? '–'}</td></tr>))}
-            </tbody></table>
+              <tr key={h.id}><td><b>{fmtDate(h.created_at)}</b><RecordDetails context={fmtDate(h.created_at)} fields={ [['Wersja analizatora', h.analyzer_version], ['Silnik podsumowania', h.summary_engine]] }><ModuleChips modules={h.modules} /></RecordDetails></td><td><Score score={h.score} threshold={threshold} /></td></tr>))}
+            </tbody></table></div>
         </Panel>
       )}
       </div>

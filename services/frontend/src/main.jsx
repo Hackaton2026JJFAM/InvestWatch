@@ -18,6 +18,8 @@ const Search = lazy(() => import('./pages/Search.jsx'));
 const Reserves = lazy(() => import('./pages/Reserves.jsx'));
 const Monitor = lazy(() => import('./pages/Monitor.jsx'));
 import './styles.css';
+import './enterprise.css';
+import './readability.css';
 
 applyTheme(readTheme()); // przed pierwszym renderem – bez mignięcia jasnego motywu
 
@@ -29,7 +31,7 @@ function Shell() {
       <a className="skip-link" href="#main-content">Przejdź do treści</a>
       <aside className="sidebar">
         <div className="logo">
-          <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#1d5fa8" /><path d="M7 20l6-6 4 4 8-8" stroke="#ffd166" strokeWidth="3" fill="none" strokeLinecap="round" /></svg>
+          <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#19232D" stroke="#29465B" /><path d="M7 20l6-6 4 4 8-8" stroke="#32A6A0" strokeWidth="3" fill="none" strokeLinecap="round" /></svg>
           <div>InvestWatch<small>monitoring reklam inwestycyjnych</small></div>
         </div>
         <nav className="nav" aria-label="Nawigacja główna">
@@ -42,8 +44,6 @@ function Shell() {
           <NavLink to="/entities">Podmioty</NavLink>
           <NavLink to="/search">Wyszukiwarka (KRS, LEI)</NavLink>
           <NavLink to="/reserves">Rezerwy giełd (PoR)</NavLink>
-          <div className="nav-note"><span>KRS i identyfikatory firm</span><HelpTip term="krs" label="KRS" /></div>
-          <div className="nav-note"><span>Raporty rezerw giełd</span><HelpTip term="por" label="Proof of Reserves" /></div>
           <div className="nav-section">USTAWIENIA</div>
           <NavLink to="/calibration">Kalibracja</NavLink>
           <NavLink to="/scan">Skanowanie i źródła</NavLink>

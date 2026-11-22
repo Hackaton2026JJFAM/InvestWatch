@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api.js';
-import { Empty, fmtCount, fmtDate, Panel } from '../components/ui.jsx';
+import { Empty, fmtCount, fmtDate, Panel, RecordDetails } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
@@ -125,17 +125,20 @@ export default function Monitor() {
         {res && (res.items.length ? (
           <>
             <div className="table-wrap" style={{ marginTop: 10 }}><table>
-              <thead><tr><th /><th>Platforma</th><th>Post / film</th><th>Twórca</th><th>Zasięg</th><th>Język</th><th>Status</th></tr></thead>
+              <thead><tr><th aria-label="Zaznacz materiał" /><th>Post / film</th><th>Zasięg</th><th>Status</th></tr></thead>
               <tbody>{res.items.map((i) => (
-                <tr key={i.url} style={{ opacity: i.passes ? 1 : 0.55 }}>
+                <tr key={i.url} className={i.passes ? '' : 'inactive-record'}>
                   <td><input type="checkbox" disabled={i.known || i.live} checked={sel.has(i.url)} onChange={(e) => setSel((s) => { const n = new Set(s); e.target.checked ? n.add(i.url) : n.delete(i.url); return n; })} /></td>
-                  <td><span className="chip neutral">{PLATFORMS[i.platform] ?? i.platform}</span></td>
-                  <td><a href={i.url} target="_blank" rel="noreferrer noopener">{i.title || i.url}</a></td>
-                  <td className="small">{i.author ?? '–'}{i.followers != null && <div className="muted">{fmtCount(i.followers)} obs.</div>}</td>
-                  <td>{i.views != null ? <b>{fmtCount(i.views)}</b> : i.likes != null ? <span className="small">{fmtCount(i.likes)} polub.</span> : <span className="small muted">nieznany</span>}
-                    <div className="small muted">{i.live ? 'na żywo' : fmtDur(i.duration)}</div></td>
-                  <td>{i.lang === 'pl' ? <span className="chip low">PL</span> : <span className="small muted">?</span>}</td>
-                  <td className="small">{i.known ? <Link to={`/materials?q=${encodeURIComponent(i.url)}`}>już w bazie</Link> : i.passes ? 'kandydat' : (form.polish && i.lang !== 'pl' ? 'nie po polsku' : 'poniżej progu')}</td>
+                  <td><a href={i.url} target="_blank" rel="noreferrer noopener">{i.title || i.url}</a>
+                    <RecordDetails context={i.title || i.url} fields={[
+                      ['Platforma', PLATFORMS[i.platform] ?? i.platform], ['Twórca', i.author],
+                      ['Adres', i.url], ['Obserwujący', fmtCount(i.followers)],
+                      ['Długość', i.live ? 'na żywo' : fmtDur(i.duration) || '–'], ['Język', i.lang || 'nieustalony'],
+                      ['Polubienia', fmtCount(i.likes)],
+                    ]} />
+                  </td>
+                  <td>{i.views != null ? <b>{fmtCount(i.views)}</b> : i.likes != null ? <span>{fmtCount(i.likes)} polub.</span> : 'nieznany'}</td>
+                  <td>{i.known ? <Link to={`/materials?q=${encodeURIComponent(i.url)}`}>już w bazie</Link> : i.passes ? 'kandydat' : (form.polish && i.lang !== 'pl' ? 'nie po polsku' : 'poniżej progu')}</td>
                 </tr>))}
               </tbody></table></div>
             <div className="btn-row" style={{ marginTop: 10, justifyContent: 'space-between' }}>
@@ -148,15 +151,21 @@ export default function Monitor() {
 
       <Panel title="Stały monitoring" meta="uruchamiany według harmonogramu; „auto” = dodane i wstrzymywane automatycznie na podstawie popularności hashtagów">
         {watches.data?.length ? <div className="table-wrap"><table>
-          <thead><tr><th>Zapytanie</th><th>Próg</th><th>Ostatnie uruchomienie</th><th>Materiały</th><th>Akcje</th></tr></thead>
+          <thead><tr><th>Zapytanie</th><th>Status</th><th>Materiały</th><th>Akcje</th></tr></thead>
           <tbody>{watches.data.map((w) => (
-            <tr key={w.id} style={{ opacity: w.enabled ? 1 : 0.55 }}>
-              <td><b>{w.kind === 'hashtag' ? `#${w.query}` : `„${w.query}”`}</b> {w.auto && <span className="chip info">auto</span>}
-                <div className="small muted">{PLATFORMS[w.platform] ?? w.platform} · {w.kind}{w.polish ? ' · PL' : ''}{w.popularity != null ? ` · popularność ${Math.round(w.popularity)}` : ''}</div></td>
-              <td className="small">≥ {fmtCount(w.min_views)} · maks. {w.max_per_run}/przebieg</td>
-              <td className="small">{w.last_run_at ? fmtDate(w.last_run_at) : 'jeszcze nie'}{w.last_run_at && !w.last_error && <div className="muted">znaleziono {w.last_found}, do analizy {w.last_queued}</div>}
-                {w.last_error && <div style={{ color: 'var(--high)' }}>{w.last_error}</div>}</td>
-              <td className="small"><Link to={`/materials?watch=${w.id}&sort=priority`}>{w.materials} materiałów</Link>{w.scams > 0 && <div style={{ color: 'var(--high)' }}>{w.scams} podejrzeń oszustwa</div>}</td>
+            <tr key={w.id} className={w.enabled ? '' : 'inactive-record'}>
+              <td><b>{w.kind === 'hashtag' ? `#${w.query}` : `„${w.query}”`}</b>
+                <RecordDetails context={w.query} label={w.last_error ? 'Szczegóły i błąd monitoringu' : 'Szczegóły'} fields={[
+                  ['Platforma', PLATFORMS[w.platform] ?? w.platform], ['Rodzaj', w.kind],
+                  ['Język', w.polish ? 'tylko polski' : 'wszystkie'], ['Popularność', w.popularity != null ? Math.round(w.popularity) : '–'],
+                  ['Próg wyświetleń', fmtCount(w.min_views)], ['Limit na przebieg', w.max_per_run],
+                  ['Ostatnie uruchomienie', w.last_run_at ? fmtDate(w.last_run_at) : 'jeszcze nie'],
+                  ['Ostatnio znaleziono', w.last_found], ['Przekazano do analizy', w.last_queued],
+                  ['Tryb', w.auto ? 'automatyczny' : 'ręcznie zapisane zapytanie'],
+                ]}>{w.last_error && <p className="record-error">{w.last_error}</p>}</RecordDetails>
+              </td>
+              <td><span className={`chip ${w.last_error ? 'warn' : 'neutral'}`}>{w.last_error ? 'błąd uruchomienia' : w.enabled ? 'aktywny' : 'wstrzymany'}</span>{w.last_error && !w.enabled && <span className="chip neutral">wstrzymany</span>}</td>
+              <td><Link to={`/materials?watch=${w.id}&sort=priority`}>{w.materials} materiałów</Link>{w.scams > 0 && <div className="record-error">{w.scams} podejrzeń oszustwa</div>}</td>
               <td className="btn-row"><button className="btn" onClick={() => run(w)}>Uruchom teraz</button><button className="btn" onClick={() => toggle(w)}>{w.enabled ? 'Wstrzymaj' : 'Wznów'}</button><button className="btn danger" onClick={() => remove(w)}>Usuń</button></td>
             </tr>))}
           </tbody></table></div> : <Empty>Brak zapisanych zapytań.</Empty>}

@@ -2,7 +2,7 @@
 // labels.json ({ "plik.html": { "ground_truth": true } }) dodaje etykiety do kalibracji.
 import { useState } from 'react';
 import { api, uploadFile } from '../api.js';
-import { Panel } from './ui.jsx';
+import { Panel, RecordDetails } from './ui.jsx';
 
 const IMAGE_EXT = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tif', 'tiff'];
 const MAX_IMAGE = 10 * 1024 * 1024;
@@ -113,14 +113,19 @@ export default function BulkImport({ onDone }) {
         onDrop={(e) => { e.preventDefault(); setDrag(false); run(e.dataTransfer.files); }}>
         <p>Przeciągnij pliki tutaj albo wybierz:</p>
         <input type="file" multiple disabled={busy} accept=".html,.htm,.txt,.json,.csv,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.mp4,.m4v,.webm,.mov,.mkv,.avi,.3gp" onChange={(e) => run(e.target.files)} />
-        <p className="small muted">wideo .mp4/.webm/.mov (mowa → Whisper, napisy z klatek → OCR, do 250 MB) · obrazy i zdjęcia .png/.jpg/.webp (OCR, do 10 MB) · .html/.htm · .txt (treść lub lista URL) · .csv (URL w 1. kolumnie) · .json (obiekt lub tablica z polami text/html/url, title, author, platform) · <code>labels.json</code> dodaje etykiety do kalibracji</p>
+        <RecordDetails label="Obsługiwane formaty i limity">
+          <ul><li>Wideo .mp4/.webm/.mov — transkrypcja mowy i OCR napisów, do 250 MB.</li>
+            <li>Obrazy .png/.jpg/.webp — OCR, do 10 MB.</li>
+            <li>.html/.htm oraz .txt — treść lub lista URL.</li><li>.csv — adres URL w pierwszej kolumnie.</li>
+            <li>.json — obiekt lub tablica z polami text/html/url, title, author, platform.</li>
+            <li><code>labels.json</code> — etykiety do kalibracji.</li></ul>
+        </RecordDetails>
       </div>
       {rows.length > 0 && (
         <div className="table-wrap" style={{ maxHeight: 260, overflow: 'auto', marginTop: 10 }}>
-          <table><tbody>{rows.map((r, i) => (
-            <tr key={i}><td className="truncate" style={{ maxWidth: 260 }}>{r.name}</td>
-              <td>{r.gt !== undefined && <span className={`chip ${r.gt ? 'fail' : 'pass'}`}>{r.gt ? 'ryzykowny' : 'poprawny'}</span>}</td>
-              <td className="small" style={{ color: r.ok ? undefined : 'var(--high)' }}>{r.status}</td></tr>))}
+          <table><thead><tr><th>Plik / materiał</th><th>Status importu</th></tr></thead><tbody>{rows.map((r, i) => (
+            <tr key={i}><td><b>{r.name}</b><RecordDetails context={r.name} fields={ [['Etykieta kalibracyjna', r.gt === undefined ? 'brak' : r.gt ? 'ryzykowny' : 'poprawny']] }>{!r.ok && <p className="record-error">{r.status}</p>}</RecordDetails></td>
+              <td><span className={`chip ${r.ok ? 'neutral' : 'fail'}`}>{r.ok ? r.status : r.status.startsWith('pominięto') ? 'pominięto' : 'błąd importu'}</span></td></tr>))}
           </tbody></table>
         </div>
       )}

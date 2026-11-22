@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { AreaGradient, axisProps, barCursor, ChartGrid, ChartTooltip, cursorStyle, Legend, useChartColors } from '../components/charts.jsx';
-import { Empty, fmtDate, MODULES, ModuleChips, Panel, RiskBadge, Score, StatCard } from '../components/ui.jsx';
+import { Empty, fmtDate, MODULES, ModuleChips, Panel, RecordDetails, RiskBadge, Score, StatCard } from '../components/ui.jsx';
 import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
@@ -30,12 +30,17 @@ export default function Dashboard() {
     <>
       <div className="page-head">
         <div><h1>Pulpit</h1><p>Stan monitoringu treści inwestycyjnych · próg ryzyka {threshold}</p></div>
+        <Link className="btn primary" to="/scan">+ Dodaj materiał</Link>
       </div>
       <div className="grid g4">
         <StatCard label="Przeanalizowane materiały" value={totals.materials} />
         <StatCard label="Wysokie ryzyko" value={totals.high} tone="high" sub={`wynik ≥ ${threshold}`} />
         <StatCard label="Nowe alerty" value={totals.new} tone="mid" sub={`${totals.unread} nieprzeczytanych`} />
         <StatCard label="Wymaga weryfikacji" value={totals.to_verify} sub="status „Nowy”, ryzyko średnie lub wysokie" />
+      </div>
+      <div className="work-queue">
+        <div><span className="eyebrow">KOLEJKA ANALITYKA</span><h2>{totals.to_verify} materiałów do weryfikacji</h2><p>Rozpocznij od sygnałów o najwyższym ryzyku i zasięgu.</p></div>
+        <div className="btn-row"><Link className="btn primary" to="/materials?above=1&status=NEW&sort=priority">Przejdź do wyników →</Link><Link className="btn" to="/alerts">Alerty ({totals.unread} nieprzeczytanych)</Link></div>
       </div>
       <div className="grid g2" style={{ marginTop: 16 }}>
         <Panel title="Trend wykryć" meta="ostatnie 30 dni">
@@ -72,17 +77,15 @@ export default function Dashboard() {
         </Panel>
       </div>
       <div className="grid g2" style={{ marginTop: 16 }}>
-        <Panel title="Najnowsze analizy" meta="aktualizowane na żywo">
+        <Panel title="Najnowsze analizy" meta="aktualizowane na żywo" actions={<Link to="/materials">Wszystkie wyniki →</Link>}>
           {recent.length ? (
             <div className="table-wrap"><table>
-              <thead><tr><th>Materiał</th><th>Moduły</th><th>Wynik</th><th>Ryzyko</th><th>Data</th></tr></thead>
+              <thead><tr><th>Materiał</th><th>Wynik</th><th>Ryzyko</th></tr></thead>
               <tbody>{recent.map((m) => (
                 <tr key={m.id}>
-                  <td className="truncate" style={{ maxWidth: 260 }}><Link to={`/materials/${m.id}`}>{m.title || m.url}</Link></td>
-                  <td><ModuleChips modules={m.modules} /></td>
+                  <td><Link to={`/materials/${m.id}`}>{m.title || m.url}</Link><RecordDetails context={m.title || m.url} fields={ [['Pobrano', fmtDate(m.fetched_at)]] }><ModuleChips modules={m.modules} /></RecordDetails></td>
                   <td><Score score={m.score} threshold={threshold} /></td>
                   <td><RiskBadge risk={m.risk} /></td>
-                  <td className="small muted">{fmtDate(m.fetched_at)}</td>
                 </tr>))}
               </tbody>
             </table></div>
