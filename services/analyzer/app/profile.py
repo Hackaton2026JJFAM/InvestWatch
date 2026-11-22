@@ -39,7 +39,7 @@ NOT_RETURN = T.rx(r"prowizj", r"oplat", r"rabat", r"znizk", r"podat", r"inflacj"
                   r"\bltv\b", r"\bdzwigni\w*", r"\blewar\w*", r"\bdepozyt\w* zabezpieczaj")
 RETURN_CONTEXT = T.rx(r"zysk", r"zarob", r"zwrot", r"stop\w* zwrotu", r"dochod", r"profit", r"return", r"earn", r"\broi\b", r"zarabia", r"wzrost",
                       r"\bpomnoz", r"\bpodwo", r"\bwyplat", r"oprocentowan", r"odsetk", r"\bpasywn")
-INVEST_CTX = T.rx(r"monet", r"token", r"krypto", r"bitcoin", r"btc", r"kapital", r"pieniad", r"inwest", r"akcj", r"portfel", r"kurs", r"wartos")
+INVEST_CTX = T.rx(r"monet", r"token", r"krypto", r"bitcoin", r"\bbtc\b", r"kapital", r"pieniad", r"inwest", r"akcj", r"portfel", r"kurs", r"wartos")
 REALISTIC_ANNUAL = 20.0   # powyżej ~20% rocznie = obietnica wysoka (lokaty/obligacje: kilka %)
 UNREALISTIC_ANNUAL = 50.0  # powyżej ~50% rocznie = nierealistyczna
 

@@ -485,6 +485,7 @@ export default function Material() {
   const { material: m, analysis: a, findings, entities, history, threshold, risk, similar = [] } = data;
   const rejectedSet = new Set(data.rejected ?? []);
   const score = data.effective_score ?? a?.score;
+  const scam = m.scam_score != null ? Math.round(Number(m.scam_score)) : r.profile?.scam_score ?? null;
   const r = a?.result ?? {};
   const byModule = (mod) => findings.filter((f) => f.module === mod);
   const act = async (key, label, action) => {
@@ -533,14 +534,23 @@ export default function Material() {
       </div>
 
       <div className="grid g4">
-        <div className="panel stat"><span className="label">Ocena ryzyka{m.reviewed_score != null ? ' (po weryfikacji)' : ''} <HelpTip term="scoring" label="wynik punktowy" /></span><span className="value"><Score score={score} threshold={threshold} /><span className="muted small"> /100</span></span>{m.reviewed_score != null && <span className="sub">automat: <s>{Math.round(a?.score)}</s> · zmieniona przez analityka</span>}<ScoreBar score={score} threshold={threshold} /></div>
-        <div className="panel stat"><span className="label">Poziom ryzyka <HelpTip term="risk_threshold" label="próg ryzyka" /></span><span><RiskBadge risk={risk} />{data.above_threshold && <span className="chip high" style={{ marginLeft: 6 }}>powyżej progu {threshold}</span>}</span><span className="sub">Moduły: <ModuleChips modules={a?.modules} /></span></div>
+        <div className="panel stat"><span className="label">Ryzyko naruszeń reklamy{m.reviewed_score != null ? ' (po weryfikacji)' : ''} <HelpTip term="risk_vs_scam" label="ryzyko naruszeń a sygnały oszustwa" /></span><span className="value"><Score score={score} threshold={threshold} /><span className="muted small"> /100</span></span>{m.reviewed_score != null && <span className="sub">automat: <s>{Math.round(a?.score)}</s> · zmieniona przez analityka</span>}<ScoreBar score={score} threshold={threshold} /></div>
+        <div className="panel stat"><span className="label">Sygnały oszustwa <HelpTip term="scam_signals" label="sygnały oszustwa" /></span>
+          <span className="value"><span className={`score ${scam >= 55 ? 'high' : scam >= 30 ? 'mid' : 'low'}`}>{scam ?? '–'}</span><span className="muted small"> /100</span></span>
+          <span className="sub">{scam >= 45 ? 'mocne – podnoszą ryzyko co najmniej do tego poziomu' : scam > 0 ? 'słabe – tylko informacyjnie' : 'brak wzorców oszustwa'}</span>
+          <span className="sub">Poziom ryzyka: <RiskBadge risk={risk} />{data.above_threshold && <span className="chip high" style={{ marginLeft: 6 }}>powyżej progu {threshold}</span>}</span></div>
         <div className="panel stat"><span className="label">Status weryfikacji</span><span className="value" style={{ fontSize: '1.2rem' }}>{MAT_STATUS[m.status]}</span><span className="sub">opublikowano: <b>{m.published_at ? fmtDate(m.published_at) : 'brak danych'}</b> · pobrano {fmtDate(m.fetched_at)}</span></div>
         <div className="panel stat"><span className="label">Wyniki obszarów</span>
           {Object.entries(m.reviewed_modules ?? a?.module_scores ?? {}).map(([k, v]) => <span key={k} className="small">{MODULES[k]}: <b>{Math.round(v)}</b></span>)}
         </div>
       </div>
 
+      {r.context && !r.context.investment && (
+        <div className="notice" style={{ marginTop: 12 }}>Treść nie dotyczy inwestycji ani instrumentów finansowych – reguły informacji o ryzyku (M2) i ocena obietnic zysku nie są stosowane. Wynik opiera się tylko na pozostałych sygnałach.</div>
+      )}
+      {r.score_floor === 'scam_signals' && (
+        <div className="notice" style={{ marginTop: 12, borderLeftColor: 'var(--high)' }}>Ocena ryzyka podniesiona do poziomu sygnałów oszustwa ({r.profile?.scam_score}/100) – mocne wzorce oszustwa liczą się nawet wtedy, gdy materiał formalnie zawiera ostrzeżenia.</div>
+      )}
       <div className="tabs" role="tablist" aria-label="Szczegóły materiału" onKeyDown={(event) => moveTab(event, TABS, tab, setTab, (_item, index) => `material-tab-${index}`)}>
         {TABS.map((t, index) => <button key={t} id={`material-tab-${index}`} type="button" role="tab" aria-selected={tab === t} aria-controls="material-tab-content" tabIndex={tab === t ? 0 : -1} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{t}</button>)}
       </div>

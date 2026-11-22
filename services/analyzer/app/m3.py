@@ -58,7 +58,7 @@ def run(doc: Doc) -> dict:
     instrument_recs = [x for x in recommend if any(T.has(p, x.text) for p in T.INSTRUMENTS.values()) or T.has(T.rx(r"\bkonkretn\w*", r"\bco kupic\b",
                        r"\b(?:kupuj|sprzedaj|trzymaj)\b", r"\bsygnal\w*", r"\bspolk\w*", r"\bakcj\w*"), x.text)]
 
-    consult = [x for x in s if T.has(T.rx(r"konsultacj\w*", r"spotkani\w*", r"sesj\w* (?:1:1|indywidualn)"), x.text)]
+    consult = [x for x in s if T.has(T.rx(r"\bkonsultacj\w*", r"\bspotkani\w*", r"\bsesj\w* (?:1:1|indywidualn)"), x.text)]
     if not (service or (recommend and personal) or (planning and (personal or consult) and (commercial or consult))):
         return {"findings": [Finding("m3", "M3.1", "Oferta doradztwa inwestycyjnego", NA, 0, None,
                                      "Nie wykryto opisu usług doradczych ani indywidualnych rekomendacji.")],

@@ -138,3 +138,33 @@ def test_english_bot_scam_signals():
     r = run("How to set up an AI crypto trading bot for easy gains. No experience needed, message me on Telegram.", platform="youtube", author="X")
     keys = {s["key"] for s in r["profile"]["signals"]}
     assert {"bot_ai", "bez_wiedzy", "kontakt_prywatny"} <= keys
+
+
+# ------------------------------------------------------------------ kontekst inwestycyjny i próg od sygnałów oszustwa
+def test_non_investment_free_money_is_not_rated_by_m2():
+    r = run("DARMOWA KASA na Steam! Idle Master zbiera karty i zarabia środki w portfelu Steam. 100% za darmo, zero ryzyka bana.",
+            platform="youtube", author="Gracz")
+    assert r["context"]["investment"] is False
+    assert all(f["status"] == "na" for f in r["findings"] if f["module"] == "m2")
+    assert "M1.9" not in r["by_rule"]
+    assert r["score"] < 30
+
+
+def test_investment_content_keeps_m2():
+    r = run("Zainwestuj w nasz fundusz – zysk nawet 12% rocznie! Wejdź na stronę i otwórz konto.")
+    assert r["context"]["investment"] is True
+    assert r["by_rule"]["3"]["status"] in ("fail", "warn")
+
+
+def test_strong_scam_signals_set_a_floor_on_risk():
+    r = run("Nasz bot AI zarabia za ciebie. Zacznij od 250 zł, napisz do mnie na WhatsApp. Zostało tylko 10 miejsc! "
+            "Inwestowanie wiąże się z ryzykiem utraty kapitału.", platform="tiktok", author="@x")
+    assert r["profile"]["scam_score"] >= 45
+    assert r["score"] >= r["profile"]["scam_score"]
+
+
+def test_ambiguous_words_do_not_make_content_investment():
+    r = run("Powiedz kilka słów o całej akcji. Możecie dostać fundusze na Steama, to jest darmowe!", platform="youtube", author="Gracz")
+    assert r["context"]["investment"] is False
+    r = run("Kupiłem akcje spółki CD Projekt i fundusz obligacji – zysk 8% rocznie.")
+    assert r["context"]["investment"] is True

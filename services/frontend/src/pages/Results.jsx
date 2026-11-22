@@ -75,7 +75,7 @@ export default function Results() {
                   <td className="small">{m.views != null ? <><b>{fmtCount(m.views)}</b> wyśw.</> : '–'}{m.followers != null && <div className="muted">{fmtCount(m.followers)} obs.</div>}
                     {m.tags?.length > 0 && <div className="muted truncate" style={{ maxWidth: 140 }}>{m.tags.slice(0, 3).map((t) => `#${t}`).join(' ')}</div>}</td>
                   <td><ModuleChips modules={m.modules} /></td>
-                  <td style={{ minWidth: 90 }}><Score score={m.score} threshold={data.threshold} />{m.reviewed && <span className="small muted" title={`Wynik po weryfikacji analityka (automat: ${Math.round(m.classifier_score)})`}> ✎</span>}<ScoreBar score={m.score} threshold={data.threshold} /></td>
+                  <td style={{ minWidth: 90 }}><Score score={m.score} threshold={data.threshold} />{m.scam_score >= 30 && <span className="small" style={{ color: m.scam_score >= 55 ? 'var(--high)' : 'var(--mid)' }} title="Sygnały oszustwa (0–100)"> · osz. {Math.round(m.scam_score)}</span>}{m.reviewed && <span className="small muted" title={`Wynik po weryfikacji analityka (automat: ${Math.round(m.classifier_score)})`}> ✎</span>}<ScoreBar score={m.score} threshold={data.threshold} /></td>
                   <td><RiskBadge risk={m.risk} /></td>
                   <td className="small">{MAT_STATUS[m.status]}</td>
                   <td className="small">{m.published_at ? fmtDate(m.published_at) : <span className="muted">–</span>}</td>

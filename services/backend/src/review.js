@@ -86,6 +86,17 @@ export function withVerifiedAdvisor(result, advisor) {
     modules: Object.entries(s.module_scores).filter(([, v]) => v >= 20).map(([m]) => m) };
 }
 
+// Mocne sygnały oszustwa zawsze widoczne w ocenie: ryzyko nie niższe niż wynik sygnałów (jak analyzer/app/main.py)
+export const SCAM_FLOOR = 45;
+export function withScamFloor(result) {
+  const scam = result.profile?.scam_score ?? 0;
+  const m1 = result.module_scores?.m1 ?? 0;
+  if (scam < SCAM_FLOOR || scam <= m1) return result;
+  const module_scores = { ...result.module_scores, m1: scam };
+  return { ...result, module_scores, score: Math.max(result.score, scam), score_floor: 'scam_signals',
+    modules: Object.entries(module_scores).filter(([, v]) => v >= 20).map(([m]) => m) };
+}
+
 /** Konto z historią naruszeń: przesłanka „do sprawdzenia” (M1.11) na podstawie wcześniejszych materiałów konta. */
 export function historyFinding(h) {
   if (!h?.repeat) return null;
@@ -115,11 +126,11 @@ export function withHistory(result, history) {
 export function reviewResult(result, rejected = [], manual = [], advisor = null, history = null) {
   const verified = withVerifiedAdvisor(withHistory(result, history), advisor);
   const base = rejected.length ? withoutRejected(verified, rejected) : verified;
-  if (!manual.length) return base;
+  if (!manual.length) return withScamFloor(base);
   const findings = [...base.findings, ...manual.map(manualFinding)];
   const s = scoreOf(findings);
-  return { ...base, findings, score: s.score, module_scores: { ...base.module_scores, ...s.module_scores },
-    modules: Object.entries(s.module_scores).filter(([, v]) => v >= 20).map(([m]) => m) };
+  return withScamFloor({ ...base, findings, score: s.score, module_scores: { ...base.module_scores, ...s.module_scores },
+    modules: Object.entries(s.module_scores).filter(([, v]) => v >= 20).map(([m]) => m) });
 }
 
 /** Wynik analizy bez odrzuconych przesłanek/elementów (do podsumowania i wyniku po weryfikacji). */

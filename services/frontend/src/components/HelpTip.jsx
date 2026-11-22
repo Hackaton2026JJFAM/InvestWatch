@@ -4,6 +4,8 @@ export const TERMS = {
   finfluencer: 'Twórca internetowy, który publikuje treści o finansach lub inwestowaniu. Sama publikacja nie potwierdza współpracy z firmą.',
   shadow_advisory: 'Możliwa oferta indywidualnej porady inwestycyjnej przedstawiana jako ogólna informacja lub edukacja. To sygnał do sprawdzenia, nie rozstrzygnięcie prawne.',
   scoring: 'Wynik punktowy analizy w skali 0–100. Pokazuje siłę wykrytych sygnałów; nie jest prawdopodobieństwem naruszenia prawa.',
+  risk_vs_scam: 'Ryzyko naruszeń – czy reklama łamie zasady reklamy inwestycyjnej: ukryta współpraca (M1), brak lub słaba informacja o ryzyku (M2), doradztwo bez zezwolenia (M3); to najwyższy wynik z tych obszarów. Sygnały oszustwa – czy treść wygląda na oszustwo (gwarancja zysku, bot AI, „pisz na WhatsApp”, lista ostrzeżeń KNF). Legalny broker bez ostrzeżenia o ryzyku ma wysokie ryzyko i zero sygnałów oszustwa; mocne sygnały oszustwa (≥ 45) zawsze podnoszą ryzyko co najmniej do swojego poziomu.',
+  scam_signals: 'Wynik z samych wzorców typowych dla oszustw inwestycyjnych (0–100). Od 45 punktów ryzyko naruszeń nie może być niższe niż ten wynik.',
   risk_threshold: 'Ustawiona granica wyniku, od której system tworzy alert. Zmienia alerty i kategorie ryzyka, nie sam wynik analizy.',
   false_positive: 'Wynik oznaczony jako ryzykowny, który po sprawdzeniu okazuje się prawidłowy.',
   false_negative: 'Treść wymagająca uwagi, której analiza nie oznaczyła jako ryzykownej.',

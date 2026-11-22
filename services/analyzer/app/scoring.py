@@ -8,6 +8,9 @@ from __future__ import annotations
 
 from .model import FAIL, WARN, Finding
 
+# wynik sygnałów oszustwa, od którego ocena ryzyka nie może być niższa (ten sam próg co w backend/src/review.js)
+SCAM_FLOOR = 45
+
 
 def module_score(findings: list[Finding]) -> float:
     keep = 1.0

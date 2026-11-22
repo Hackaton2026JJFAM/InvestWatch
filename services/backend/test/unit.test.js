@@ -189,3 +189,16 @@ test('historia konta: wcześniejsze naruszenia oznaczają kolejny materiał (M1.
   assert.equal(withHistory(result, { repeat: false }), result);
   assert.equal(reviewResult(result, ['M1.11'], [], null, bad).findings.some((x) => x.rule_id === 'M1.11'), false); // analityk może odznaczyć
 });
+
+test('próg od sygnałów oszustwa: mocne sygnały (≥ 45) nie pozwalają na niższe ryzyko, słabe nie zmieniają wyniku', async () => {
+  const { reviewResult, withScamFloor } = await import('../src/review.js');
+  const base = { score: 20, module_scores: { m1: 0, m2: 20 }, findings: [{ module: 'm2', rule_id: '3', status: 'warn', severity: 40, title: 'x', evidence: [] }],
+    profile: { primary: 'podejrzenie_oszustwa', scam_score: 58, signals: [] } };
+  const r = withScamFloor(base);
+  assert.equal(r.score, 58);
+  assert.equal(r.module_scores.m1, 58);
+  assert.equal(r.score_floor, 'scam_signals');
+  assert.equal(withScamFloor({ ...base, profile: { scam_score: 30 } }).score, 20);
+  // po weryfikacji (np. problem ręczny) próg nadal obowiązuje
+  assert.equal(reviewResult(base, [], [{ id: 1, module: 'm2', title: 'x', severity: 20 }]).score, 58);
+});

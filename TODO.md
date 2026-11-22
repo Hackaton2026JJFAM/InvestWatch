@@ -67,6 +67,12 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [ ] Instagram: zasięg (wyświetlenia) bez logowania niedostępny – tylko polubienia/opis; Facebook: metadane ograniczone
 - [ ] Rejestr licencjonowanych doradców inwestycyjnych KNF – dziś licencja „zadeklarowana, do weryfikacji” (numer wyciągany z treści)
 
+## Ryzyko naruszeń a sygnały oszustwa (22.11.2026)
+- [x] Interfejs: dwie podpisane liczby z objaśnieniem – „Ryzyko naruszeń reklamy” (M1–M3, najwyższy obszar) i „Sygnały oszustwa” (same wzorce oszustw); w wynikach „osz. N” przy wyniku
+- [x] Bramka „treść inwestycyjna” (`analyzer/app/context.py`): reguły M2 i ocena obietnic zysku (M1.9) tylko dla treści o inwestycjach (instrumenty – „akcja”/„fundusze” tylko w kontekście rynku, firmy z rejestru, oferta doradcza, słownictwo inwestycyjne, wzorce oszustw inwestycyjnych, stopa zwrotu w czasie); inaczej „nie dotyczy” – Steam 91 → 0, „darmowy towar” 74 → 0; kalibracja bez zmian (TP 14, FP 0, FN 1, TN 7)
+- [x] Próg: sygnały oszustwa ≥ 45 podnoszą ryzyko co najmniej do swojego poziomu (analyzer i przeliczenie po weryfikacji w backendzie)
+- [x] Naprawione wzorce z literalnym znakiem backspace zamiast `` (m3.py – konsultacje/spotkania/sesje 1:1, profile.py – „btc”), które nigdy nie pasowały
+
 ## Historia konta (22.11.2026)
 - [x] Klucz konta publikującego (platforma + profil/kanał z adresu lub metadanych, dla stron – domena), uzupełniony dla istniejących materiałów
 - [x] Konto z historią naruszeń (≥ 2 wcześniejsze materiały z wynikiem klasyfikatora ≥ 70 albo ≥ 1 podejrzenie oszustwa): nowy materiał dostaje punkt M1.11 „Konto z historią naruszeń” (do sprawdzenia, waga 20–50 wg liczby naruszeń) i tag profilu; statystyki z wyniku klasyfikatora (oznaczenie nie napędza samo siebie); analityk może M1.11 odznaczyć

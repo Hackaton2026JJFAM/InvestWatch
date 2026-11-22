@@ -22,7 +22,9 @@ from .classifier import get_classifier, simhash
 from .model import Doc
 from .registry import get_registry
 from .watchlists import get_watchlists
-from .scoring import aggregate
+from .scoring import aggregate, SCAM_FLOOR
+from .context import investment_context
+from .model import Finding, NA
 from .summary import summarize
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -141,10 +143,24 @@ def analyze_material(m: dict) -> dict:
     sig = signals.run(doc, r3["classification"])
     advertised = any(f.rule_id == "M1.1" and f.status != "na" for f in r1["findings"])
     prof = profile.run(doc, r3["classification"], sig["hits"], r1["publisher"]["type"], advertised)
+    # reguły informacji o ryzyku i ocena obietnic zysku – tylko dla treści inwestycyjnych (gry, Steam, konkursy: nie dotyczy)
+    ctx = investment_context(doc, r1["firms"], r3["classification"], prof["profile"]["signals"], prof["profile"]["returns"])
+    if not ctx["investment"]:
+        f2 = [Finding("m2", f.rule_id, f.title, NA, 0, f.legal_basis,
+                      "Nie dotyczy – materiał nie dotyczy inwestycji ani instrumentów finansowych (brak instrumentów, firm inwestycyjnych, "
+                      "oferty doradczej i słownictwa inwestycyjnego).") for f in f2]
+        prof["findings"] = [f for f in prof["findings"] if f.rule_id != "M1.9"]
     extra = sig["findings"] + prof["findings"]
     by_module = {"m1": r1["findings"] + [f for f in extra if f.module == "m1"], "m2": f2,
                  "m3": r3["findings"] + [f for f in extra if f.module == "m3"]}
     agg = aggregate(by_module)
+    # mocne sygnały oszustwa zawsze widoczne w ocenie: ryzyko nie niższe niż wynik sygnałów (M1 – reklamy i publikujący)
+    scam = prof["profile"]["scam_score"]
+    if scam >= SCAM_FLOOR and scam > agg["module_scores"].get("m1", 0):
+        agg["module_scores"]["m1"] = float(scam)
+        agg["score"] = max(agg["score"], float(scam))
+        agg["modules"] = [m for m, v in agg["module_scores"].items() if v >= 20]
+        agg["score_floor"] = "scam_signals"
     findings = [f.to_dict() for fs in by_module.values() for f in fs]
     return {
         **agg,
@@ -154,6 +170,7 @@ def analyze_material(m: dict) -> dict:
         "profile": prof["profile"],
         "watchlists": sig["hits"],
         "ml": {"model": clf.version, "train_size": clf.n_train, **clf.document_profile(doc.sentences)},
+        "context": ctx,
         "doc": {"lang": doc.lang, "domain": doc.domain, "sentences": len(doc.sentences), "layout": doc.layout.get("engine"),
                 "simhash": simhash(doc.content_text), "highlights": rules_m2.highlights(doc),
                 "identifiers": sig["identifiers"]},
