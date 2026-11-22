@@ -95,9 +95,16 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
+    color-scheme: dark;
     --bg: #0c1117; --surface: #19232d; --surface-2: #121c25;
     --border: #29465b; --text: #e8eef2; --muted: #a4b6c5;
     --brand: #73cbc5; --brand-2: #32a6a0; --on-brand: #071817;
+    --high: #ff8989; --high-bg: #3b222b;
+    --mid: #f2bb66; --mid-bg: #372e20;
+    --low: #7dd6a0; --low-bg: #19392c;
+    --na: #a4b6c5; --na-bg: #23333f;
+    --notice-bg: #142830; --notice-border: #29465b; --notice-text: #b9d6de;
+    --evidence-bg: #121c25; --chip-brand-bg: #173b3e;
     --chart-surface: #19232d; --series-1: #32a6a0; --series-2: #f18d75;
     --grid: #29404f; --axis: #a4b6c5; --tooltip-bg: #121c25;
     --sidebar-bg: #0c1117; --sidebar-border: #29404f;
@@ -122,6 +129,9 @@
 .sidebar .linkbtn { color: var(--brand-2); }
 .theme-toggle button { background: var(--sidebar-toggle-bg); border-color: var(--sidebar-toggle-border); color: var(--sidebar-text); }
 .theme-toggle button.active { background: var(--sidebar-toggle-active); border-color: var(--sidebar-active-border); color: var(--sidebar-active-text); }
+.help-tip-sidebar .help-tip-trigger { background: #16232d; border-color: #29465b; color: #d7e0ec; }
+.help-tip-sidebar .help-tip-trigger:hover,
+.help-tip-sidebar.is-open .help-tip-trigger { background: #182833; border-color: #32a6a0; color: #b8eeea; }
 .sidebar .foot { padding-top: 24px; }
 .sidebar .linkbtn { color: #73cbc5; }
 .main { margin-inline: auto; padding-top: 32px; }

@@ -108,7 +108,7 @@ export function HelpTip({ term, label, dark = false }) {
   if (!text) return null;
   return (
     <>
-    <span className={`help-tip-wrap${visible ? ' is-open' : ''}`} ref={ref}
+    <span className={`help-tip-wrap${visible ? ' is-open' : ''}${dark ? ' help-tip-sidebar' : ''}`} ref={ref}
       onPointerEnter={keepOpen} onPointerLeave={closeOnLeave} onFocus={keepOpen} onBlur={closeOnLeave}>
       <button
         className="help-tip-trigger"
