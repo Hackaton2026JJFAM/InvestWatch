@@ -34,6 +34,26 @@ def citations_ok(text: str, result: dict) -> bool:
     return True
 
 
+PUBLISHER = {"podmiot_trzeci": "podmiot trzeci", "firma": "sama firma", "własne_usługi": "usługodawca na własnej stronie",
+             "nieustalone": "nieustalony publikujący"}
+
+
+def advertised_line(result: dict) -> str | None:
+    """Zdanie o wykrytej reklamie podmiotu z rejestru KNF (Moduł 1) – bez wniosku prawnego."""
+    m1 = result.get("m1") or {}
+    firms = m1.get("firms") or []
+    if not firms:
+        return None
+    names = ", ".join(f["name"] + (" (podmiot DEMO)" if f.get("demo") else "") for f in firms[:3])
+    pub = m1.get("publisher") or {}
+    who = PUBLISHER.get(pub.get("type"), "nieustalony publikujący")
+    if pub.get("official"):
+        who = "oficjalny materiał firmy"
+    by = f"{who}{' – ' + pub['name'] if pub.get('name') and pub.get('type') != 'firma' else ''}{' · ' + pub['platform'] if pub.get('platform') else ''}"
+    noun = "reklamę podmiotu" if len(firms) == 1 else "reklamę podmiotów"
+    return f"Wykryto {noun} z rejestru firm inwestycyjnych KNF: {names}. Publikujący: {by}."
+
+
 def template(result: dict) -> str:
     issues = [f for f in result["findings"] if f["status"] in ("fail", "warn")]
     if not issues:
@@ -60,6 +80,13 @@ def _facts(result: dict) -> dict:
 
 
 async def summarize(result: dict) -> tuple[str, str]:
+    """Podsumowanie poprzedzone zdaniem o reklamowanym podmiocie (gdy Moduł 1 go wykrył) – dla szablonu i LLM."""
+    text, engine = await _summarize(result)
+    line = advertised_line(result)
+    return ("\n".join((line, text)) if line else text), engine
+
+
+async def _summarize(result: dict) -> tuple[str, str]:
     if not OLLAMA_URL:
         return template(result), "template"
     prompt = (

@@ -228,6 +228,33 @@ r.get('/analyses/:id', async (req, res) => {
 });
 
 
+/**
+ * Reklamowane podmioty (Moduł 1): firmy z rejestru KNF wykryte w materiale, z numerem KRS/LEI z karty podmiotu
+ * (gdy wzbogacanie go odczytało) – do podsumowania i odnośnika do wyszukiwarki KRS/LEI. Pusta lista = brak reklamy.
+ */
+async function advertisedOf(materialId, result) {
+  const firms = result?.m1?.firms ?? [];
+  const advertised = (result?.findings ?? []).some((f) => f.rule_id === 'M1.1' && f.status !== 'na') || firms.length > 0;
+  if (!advertised || !firms.length) return null;
+  const linked = await q(
+    `SELECT e.id, e.name, e.krs, e.lei, e.registry_status FROM material_entities me JOIN entities e ON e.id = me.entity_id
+      WHERE me.material_id = $1 AND me.role = 'advertised_firm'`, [materialId]);
+  const byName = new Map(linked.map((e) => [e.name.toLowerCase(), e]));
+  const pub = result.m1?.publisher ?? {};
+  return {
+    firms: firms.slice(0, 5).map((f) => {
+      const e = byName.get(String(f.name).toLowerCase());
+      // KRS to rejestr polski – numer przy firmie zagranicznej (np. dopasowany po nazwie przy wzbogacaniu) pomijamy
+      const polish = !f.country || /^(pl|polska)$/i.test(f.country);
+      return { name: f.name, category: f.category ?? null, country: f.country ?? null, demo: Boolean(f.demo),
+        entity_id: e?.id ?? null, krs: polish ? e?.krs ?? null : null, lei: e?.lei ?? null,
+        // wyszukiwarka: numer KRS otwiera od razu odpis z KRS, inaczej wyszukiwanie po nazwie (KNF, GLEIF, podmioty)
+        search: (polish && e?.krs) || e?.lei || f.name };
+    }),
+    publisher: { type: pub.type ?? null, name: pub.name ?? null, platform: pub.platform ?? null, official: Boolean(pub.official) },
+  };
+}
+
 r.get('/summary/:materialId', async (req, res) => {
   const { materialId } = parse(z.object({ materialId: z.coerce.number().int().positive() }), req.params);
   const a = await one('SELECT id, score, result, summary, summary_engine FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [materialId]);
@@ -243,7 +270,7 @@ r.get('/summary/:materialId', async (req, res) => {
     await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   }
   res.json({ ...s, points: summaryPoints(withVerifiedAdvisor(withHistory(a.result, history), advisor), rejected, manual), score: Number(a.score), reviewed_score: reviewed ? reviewed.score : null,
-    verified_advisor: advisor,
+    verified_advisor: advisor, advertised: await advertisedOf(materialId, a.result),
     module_scores: a.result.module_scores, reviewed_modules: reviewed?.module_scores ?? null });
 });
 

@@ -65,3 +65,12 @@ def test_document_embedding_is_unit_vector():
     e = r["ml"]["embedding"]
     assert e["dim"] == len(e["vector"]) and e["dim"] >= 2
     assert abs(math.sqrt(sum(x * x for x in e["vector"])) - 1) < 0.01
+
+
+def test_summary_names_advertised_firm():
+    from app.summary import advertised_line
+    r = run("Polecam brokera XTB S.A. – załóż konto z moim kodem polecającym i odbierz bonus!",
+            url="https://www.tiktok.com/@krypto/video/1", platform="tiktok", author="@krypto")
+    line = advertised_line(r)
+    assert line and "XTB S.A." in line and "@krypto" in line and "tiktok" in line
+    assert advertised_line(run(BONDS)) is None

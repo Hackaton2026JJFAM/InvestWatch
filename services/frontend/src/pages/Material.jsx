@@ -248,6 +248,29 @@ function ScoreBreakdown({ score, reviewed, modules, reviewedModules }) {
   );
 }
 
+const PUBLISHER_LABEL = { podmiot_trzeci: 'podmiot trzeci', firma: 'sama firma', 'własne_usługi': 'usługodawca na własnej stronie', nieustalone: 'nieustalony publikujący' };
+
+// Wykryta reklama podmiotu (Moduł 1): nazwa prowadzi do wyszukiwarki KRS / LEI z tym podmiotem
+function AdvertisedFirms({ adv }) {
+  const pub = adv.publisher ?? {};
+  const who = pub.official ? 'oficjalny materiał firmy' : PUBLISHER_LABEL[pub.type] ?? 'nieustalony publikujący';
+  return (
+    <div className="notice advertised-firms" style={{ marginBottom: 12 }}>
+      <b>Wykryto reklamę {adv.firms.length === 1 ? 'podmiotu' : 'podmiotów'}:</b>{' '}
+      {adv.firms.map((f, i) => (
+        <Fragment key={f.name}>{i > 0 && ', '}
+          <Link to={`/search?q=${encodeURIComponent(f.search)}`} title={f.krs ? `Otwórz odpis z KRS (${f.krs})` : 'Szukaj w KRS / LEI i rejestrze KNF'}>{f.name}</Link>
+          {f.demo ? <span className="chip mid" style={{ marginLeft: 6 }}>DEMO</span>
+            : <span className="small muted"> ({[f.category ? f.category.replaceAll('_', ' ') : 'rejestr KNF', f.krs && `KRS ${f.krs}`].filter(Boolean).join(' · ')})</span>}
+        </Fragment>))}
+      <div className="small" style={{ marginTop: 4 }}>
+        Publikujący: {who}{pub.name && pub.type !== 'firma' ? ` – ${pub.name}` : ''}{pub.platform ? ` · ${pub.platform}` : ''}.
+        {' '}Kliknij nazwę, aby sprawdzić podmiot w wyszukiwarce KRS / LEI.
+      </div>
+    </div>
+  );
+}
+
 function Summary({ materialId, analysis, tick, onReviewed, isVideo }) {
   const { toast } = useLive();
   const { data, reload } = useData(`/summary/${materialId}`, `${tick}-${analysis?.id}`);
@@ -320,7 +343,8 @@ function Summary({ materialId, analysis, tick, onReviewed, isVideo }) {
   );
   return (
     <Panel title="Podsumowanie" meta={data ? `silnik: ${data.engine}` : ''} actions={actions}>
-      {adding && <AddProblem materialId={materialId} isVideo={isVideo} onCancel={() => setAdding(false)} onDone={() => { setAdding(false); done(); }} />}
+      {data?.advertised?.firms?.length > 0 && <AdvertisedFirms adv={data.advertised} />}
+      {adding &&<AddProblem materialId={materialId} isVideo={isVideo} onCancel={() => setAdding(false)} onDone={() => { setAdding(false); done(); }} />}
       {editing ? (
         <>
           <div className="notice" style={{ marginBottom: 10 }}>Odznacz punkty albo pojedyncze elementy (np. źle rozpoznany fragment transkrypcji), które są błędne. Wynik poniżej zmienia się od razu; po zapisaniu zastępuje wynik automatyczny.</div>
