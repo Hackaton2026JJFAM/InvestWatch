@@ -1,12 +1,51 @@
 /* Shared analytical workspace. Light/system preferences remain available. */
 :root {
   --radius: 10px;
-  --brand: #217b77;
-  --brand-2: #217b77;
-  --sidebar-bg: #0c1117;
-  --sidebar-text: #c4d1dc;
-  --sidebar-muted: #8fa4b5;
-  --shadow: none;
+  --bg: #f2f6f5;
+  --surface: #ffffff;
+  --surface-2: #f6f9f8;
+  --border: #d4dfdc;
+  --text: #172827;
+  --muted: #526461;
+  --brand: #176b66;
+  --brand-2: #176b66;
+  --on-brand: #ffffff;
+  --accent: #e0b34f;
+  --high: #a82d3b;
+  --high-bg: #fbeaec;
+  --mid: #80500b;
+  --mid-bg: #fff4dc;
+  --low: #286446;
+  --low-bg: #e8f4ec;
+  --na: #687875;
+  --na-bg: #edf2f0;
+  --sidebar-bg: #f8fbfa;
+  --sidebar-border: #d4dfdc;
+  --sidebar-text: #263b37;
+  --sidebar-muted: #5b706b;
+  --sidebar-hover: #eaf2f0;
+  --sidebar-active-bg: #deeeea;
+  --sidebar-active-text: #124e49;
+  --sidebar-active-border: #bddbd5;
+  --sidebar-active-mark: #176b66;
+  --sidebar-badge-bg: #fbeaec;
+  --sidebar-badge-text: #a82d3b;
+  --sidebar-toggle-bg: #eef4f2;
+  --sidebar-toggle-border: #cbd9d5;
+  --sidebar-toggle-active: #dcece8;
+  --notice-bg: #eaf3f1;
+  --notice-border: #c8ded9;
+  --notice-text: #264d47;
+  --evidence-bg: #fff9eb;
+  --chip-brand-bg: #e3f0ed;
+  --chart-surface: #ffffff;
+  --series-1: #176b66;
+  --series-2: #c55d3e;
+  --series-3: #547ab4;
+  --grid: #dce5e2;
+  --axis: #526461;
+  --tooltip-bg: #ffffff;
+  --shadow: 0 1px 2px rgba(16, 40, 35, .06), 0 5px 18px rgba(16, 40, 35, .05);
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -39,6 +78,20 @@
   --grid: #29404f;
   --axis: #a4b6c5;
   --tooltip-bg: #121c25;
+  --sidebar-bg: #0c1117;
+  --sidebar-border: #29404f;
+  --sidebar-text: #d7e0ec;
+  --sidebar-muted: #8ea2bd;
+  --sidebar-hover: #182833;
+  --sidebar-active-bg: #173337;
+  --sidebar-active-text: #b8eeea;
+  --sidebar-active-border: #295550;
+  --sidebar-active-mark: #32a6a0;
+  --sidebar-badge-bg: #3b222b;
+  --sidebar-badge-text: #ff8989;
+  --sidebar-toggle-bg: #16232d;
+  --sidebar-toggle-border: #29465b;
+  --sidebar-toggle-active: #24403f;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
@@ -47,16 +100,28 @@
     --brand: #73cbc5; --brand-2: #32a6a0; --on-brand: #071817;
     --chart-surface: #19232d; --series-1: #32a6a0; --series-2: #f18d75;
     --grid: #29404f; --axis: #a4b6c5; --tooltip-bg: #121c25;
+    --sidebar-bg: #0c1117; --sidebar-border: #29404f;
+    --sidebar-text: #d7e0ec; --sidebar-muted: #8ea2bd;
+    --sidebar-hover: #182833; --sidebar-active-bg: #173337;
+    --sidebar-active-text: #b8eeea; --sidebar-active-border: #295550;
+    --sidebar-active-mark: #32a6a0; --sidebar-badge-bg: #3b222b;
+    --sidebar-badge-text: #ff8989; --sidebar-toggle-bg: #16232d;
+    --sidebar-toggle-border: #29465b; --sidebar-toggle-active: #24403f;
   }
 }
 [hidden] { display: none !important; }
 .app { grid-template-columns: 240px minmax(0, 1fr); }
-.sidebar { border-right: 1px solid #29465b; overflow-y: auto; scrollbar-width: thin; }
+.sidebar { border-right: 1px solid var(--sidebar-border); overflow-y: auto; scrollbar-width: thin; }
+.logo { color: var(--sidebar-text); }
+.nav a:hover { background: var(--sidebar-hover); }
 .logo { font-size: 1.12rem; }
 .logo small { font-size: .66rem; }
 .nav a { border: 1px solid transparent; border-radius: 6px; }
-.nav a.active { background: #173337; color: #b8eeea; border-color: #295550; box-shadow: inset 3px 0 #32a6a0; }
-.nav .badge { background: #3b222b; color: #ff8989; }
+.nav a.active { background: var(--sidebar-active-bg); color: var(--sidebar-active-text); border-color: var(--sidebar-active-border); box-shadow: inset 3px 0 var(--sidebar-active-mark); }
+.nav .badge { background: var(--sidebar-badge-bg); color: var(--sidebar-badge-text); }
+.sidebar .linkbtn { color: var(--brand-2); }
+.theme-toggle button { background: var(--sidebar-toggle-bg); border-color: var(--sidebar-toggle-border); color: var(--sidebar-text); }
+.theme-toggle button.active { background: var(--sidebar-toggle-active); border-color: var(--sidebar-active-border); color: var(--sidebar-active-text); }
 .sidebar .foot { padding-top: 24px; }
 .sidebar .linkbtn { color: #73cbc5; }
 .main { margin-inline: auto; padding-top: 32px; }
@@ -137,6 +202,5 @@ td a:hover { color: var(--brand); }
   .tabs { gap: 8px; }
   .material-cell .truncate { max-width: 240px; }
   .analysis-overview { gap: 10px; }
-  .help-tip { position: fixed; left: 16px; width: calc(100vw - 32px); top: auto; margin-top: 36px; }
   .analysis-overview .chip { white-space: normal; }
 }

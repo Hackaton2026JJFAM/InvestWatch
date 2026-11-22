@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export const TERMS = {
   finfluencer: 'Twórca internetowy, który publikuje treści o finansach lub inwestowaniu. Sama publikacja nie potwierdza współpracy z firmą.',
@@ -34,22 +35,26 @@ const HelpIcon = () => (
 export function HelpTip({ term, label }) {
   const id = useId();
   const ref = useRef(null);
+  const tipRef = useRef(null);
+  const closeTimer = useRef(null);
   const [open, setOpen] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
   const text = TERMS[term];
+  const visible = open || hovered;
 
   useEffect(() => {
-    if (!open) return undefined;
+    if (!visible) return undefined;
     const onPointerDown = (event) => {
-      if (!ref.current?.contains(event.target)) {
+      if (!ref.current?.contains(event.target) && !tipRef.current?.contains(event.target)) {
         setOpen(false);
-        setDismissed(false);
+        setHovered(false);
       }
     };
     const onKeyDown = (event) => {
       if (event.key === 'Escape') {
         setOpen(false);
-        setDismissed(true);
+        setHovered(false);
       }
     };
     document.addEventListener('pointerdown', onPointerDown);
@@ -58,11 +63,53 @@ export function HelpTip({ term, label }) {
       document.removeEventListener('pointerdown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open]);
+  }, [visible]);
+
+  useLayoutEffect(() => {
+    if (!visible) return undefined;
+    const place = () => {
+      const trigger = ref.current?.getBoundingClientRect();
+      const tip = tipRef.current;
+      if (!trigger || !tip) return;
+      const bounds = tip.getBoundingClientRect();
+      const gap = 9;
+      const margin = 12;
+      const left = Math.max(margin, Math.min(
+        trigger.left + trigger.width / 2 - bounds.width / 2,
+        window.innerWidth - bounds.width - margin,
+      ));
+      const above = trigger.top - bounds.height - gap;
+      const top = above >= margin
+        ? above
+        : Math.min(window.innerHeight - bounds.height - margin, trigger.bottom + gap);
+      setPosition({ top: Math.max(margin, top), left });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [visible, text]);
+
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+
+  const keepOpen = () => {
+    window.clearTimeout(closeTimer.current);
+    setHovered(true);
+  };
+  const closeOnLeave = (event) => {
+    if (ref.current?.contains(event.relatedTarget) || tipRef.current?.contains(event.relatedTarget)) return;
+    window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setHovered(false), 140);
+  };
 
   if (!text) return null;
   return (
-    <span className={`help-tip-wrap${open ? ' is-open' : ''}${dismissed ? ' is-dismissed' : ''}`} ref={ref} onPointerLeave={() => setDismissed(false)}>
+    <>
+    <span className={`help-tip-wrap${visible ? ' is-open' : ''}`} ref={ref}
+      onPointerEnter={keepOpen} onPointerLeave={closeOnLeave} onFocus={keepOpen} onBlur={closeOnLeave}>
       <button
         className="help-tip-trigger"
         type="button"
@@ -72,12 +119,20 @@ export function HelpTip({ term, label }) {
         onClick={() => {
           const next = !open;
           setOpen(next);
-          setDismissed(!next);
+          setHovered(next);
         }}
       >
         <HelpIcon />
       </button>
-      <span className="help-tip" role="tooltip" id={id}>{text}</span>
     </span>
+    {visible && createPortal(
+      <span className="help-tip" role="tooltip" id={id} ref={tipRef}
+        style={{ top: position.top, left: position.left }}
+        onPointerEnter={keepOpen} onPointerLeave={closeOnLeave}>
+        {text}
+      </span>,
+      document.body,
+    )}
+    </>
   );
 }

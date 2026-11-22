@@ -83,6 +83,7 @@ async function assertTextContrast(page) {
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
+    await page.addInitScript(() => localStorage.setItem('iw-theme', 'light'));
     await page.route('**/api/**', route => {
       const path = new URL(route.request().url()).pathname.replace('/api', '');
       return route.fulfill({ json: fixtures[path] ?? {} });
@@ -92,6 +93,34 @@ async function assertTextContrast(page) {
       for (const path of ['/', '/materials', '/alerts', '/entities', '/scan', '/monitor', '/materials/1', '/materials/1?test=publisher', '/entities/1', '/entities/1?test=registry', '/entities/1?test=warnings', '/search?q=Test', '/reserves']) {
         await page.goto((process.env.TEST_URL || 'http://127.0.0.1:4173') + path);
         await page.locator('h1').waitFor();
+        if (path === '/' && width === 1440) {
+          const themeButtons = page.locator('.theme-toggle');
+          await themeButtons.getByRole('button', { name: 'Jasny' }).click();
+          const lightSidebar = await page.locator('.sidebar').evaluate(el => getComputedStyle(el).backgroundColor);
+          await themeButtons.getByRole('button', { name: 'Ciemny' }).click();
+          const darkSidebar = await page.locator('.sidebar').evaluate(el => getComputedStyle(el).backgroundColor);
+          assert.notEqual(lightSidebar, darkSidebar, 'Explicit light and dark themes should use different sidebar surfaces');
+          await page.emulateMedia({ colorScheme: 'dark' });
+          await themeButtons.getByRole('button', { name: 'Auto' }).click();
+          const autoDark = await page.locator('.sidebar').evaluate(el => getComputedStyle(el).backgroundColor);
+          assert.equal(autoDark, darkSidebar, 'Auto theme should follow the dark system preference');
+          await page.emulateMedia({ colorScheme: 'light' });
+          const autoLight = await page.locator('.sidebar').evaluate(el => getComputedStyle(el).backgroundColor);
+          assert.equal(autoLight, lightSidebar, 'Auto theme should follow the light system preference');
+        }
+        if (path === '/alerts') {
+          const trigger = page.locator('#main-content').getByRole('button', { name: 'Wyjaśnienie: próg ryzyka' });
+          await trigger.hover();
+          const tooltip = page.getByRole('tooltip');
+          await tooltip.waitFor({ state: 'visible' });
+          const bounds = await tooltip.evaluate(el => {
+            const r = el.getBoundingClientRect();
+            return { top: r.top, left: r.left, right: r.right, bottom: r.bottom, zIndex: getComputedStyle(el).zIndex };
+          });
+          assert(bounds.top >= 0 && bounds.left >= 0 && bounds.right <= width && bounds.bottom <= 1000, `Tooltip outside viewport at ${width}px: ${JSON.stringify(bounds)}`);
+          assert.equal(bounds.zIndex, '10000');
+          await assertNoOverflow(page, `tooltip at ${width}px`);
+        }
         if (path === '/materials/1') await page.getByRole('tab', { name: 'Przesłanki', exact: true }).click();
         if (path === '/materials/1?test=publisher') {
           await page.getByRole('tab', { name: 'Przesłanki', exact: true }).click();

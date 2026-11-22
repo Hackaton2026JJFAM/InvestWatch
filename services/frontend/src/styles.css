@@ -419,9 +419,8 @@ label.f { gap: 5px; font-size: .77rem; font-weight: 600; }
 .help-tip-trigger { display: inline-grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--brand-2); cursor: pointer; }
 .help-tip-trigger svg { width: 15px; height: 15px; }
 .help-tip-trigger:hover { background: var(--chip-brand-bg); }
-.help-tip { position: absolute; z-index: 80; top: calc(100% + 8px); left: -8px; width: min(300px, calc(100vw - 36px)); padding: 11px 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--tooltip-bg); color: var(--text); box-shadow: 0 8px 24px rgba(0,0,0,.2); font-size: .84rem; font-weight: 400; line-height: 1.5; text-align: left; visibility: hidden; opacity: 0; transform: translateY(-3px); transition: opacity .12s ease, transform .12s ease, visibility .12s; pointer-events: none; }
-.help-tip-wrap:hover .help-tip, .help-tip-wrap:focus-within .help-tip, .help-tip-wrap.is-open .help-tip { visibility: visible; opacity: 1; transform: translateY(0); pointer-events: auto; }
-.help-tip-wrap.is-dismissed .help-tip { visibility: hidden; opacity: 0; pointer-events: none; }
+.help-tip { position: fixed; z-index: 10000; width: min(360px, calc(100vw - 24px)); max-height: calc(100vh - 24px); overflow: auto; overscroll-behavior: contain; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--tooltip-bg); color: var(--text); box-shadow: 0 12px 36px rgba(10, 25, 23, .24); font-size: .86rem; font-weight: 400; line-height: 1.55; text-align: left; overflow-wrap: anywhere; }
+.help-tip-wrap.is-open .help-tip-trigger { background: var(--chip-brand-bg); border-color: var(--brand-2); }
 .sort-btn { min-height: 32px; padding: 2px 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
 .sort-btn:hover { color: var(--brand-2); }
 .clear-filters { align-self: end; }
@@ -473,7 +472,6 @@ label.f { gap: 5px; font-size: .77rem; font-weight: 600; }
   html { scroll-behavior: auto; }
   .toast { animation: none; }
   .btn, .help-tip { transition: none; }
-  .help-tip { transform: none; }
 }
 
 /* monitoring: jedno pole wyszukiwania z rozpoznawaniem rodzaju zapytania */
