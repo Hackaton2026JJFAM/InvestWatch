@@ -7,6 +7,7 @@ import { analyzer } from '../services.js';
 import { requireAdmin } from '../auth.js';
 import { enrichEntity, krsCandidates } from '../enrichment.js';
 import { parse, aboveSql, riskSql, LATEST, LATEST_RAW, demoSql, uniqueSql } from '../validate.js';
+import { CATEGORIES, statusColumns } from '../entityStatus.js';
 
 const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
@@ -157,8 +158,8 @@ r.get('/search', async (req, res) => {
 
 r.get('/entities', async (_req, res) => {
   res.json(await q(
-    `SELECT e.id, e.name, e.kind, e.registry_status, e.country, count(me.material_id)::int AS materials,
-            max(a.score) AS max_score
+    `SELECT e.id, e.name, e.kind, e.registry_status, e.country, e.krs, e.lei, ${statusColumns('e')},
+            count(me.material_id)::int AS materials, max(a.score) AS max_score
        FROM entities e LEFT JOIN material_entities me ON me.entity_id = e.id
        LEFT JOIN LATERAL (SELECT score FROM analyses WHERE material_id = me.material_id ORDER BY created_at DESC LIMIT 1) a ON TRUE
       GROUP BY e.id ORDER BY max_score DESC NULLS LAST LIMIT 300`));
@@ -167,7 +168,7 @@ r.get('/entities', async (_req, res) => {
 r.get('/entities/:id', async (req, res) => {
   const { id } = parse(idParam, req.params);
   const t = await getThreshold();
-  const e = await one('SELECT * FROM entities WHERE id = $1', [id]);
+  const e = await one(`SELECT e.*, ${statusColumns('e')} FROM entities e WHERE e.id = $1`, [id]);
   if (!e) return res.status(404).json({ error: 'Nie znaleziono podmiotu' });
   const registry = await q('SELECT DISTINCT ON (registry) * FROM registry_records WHERE entity_id = $1 ORDER BY registry, checked_at DESC', [id]);
   const materials = await q(
@@ -181,6 +182,22 @@ r.get('/entities/:id', async (req, res) => {
        FROM material_entities me JOIN materials m ON m.id = me.material_id WHERE me.entity_id = $1 GROUP BY 1 ORDER BY 1`, [id]);
   const krsCandidatesList = await krsCandidates(id);
   res.json({ entity: e, registry, registries: Object.fromEntries(registry.map((x) => [x.registry, x])), materials, persons, timeline, krsCandidates: krsCandidatesList });
+});
+
+// Ręczne oznaczenie podmiotu przez analityka: kategoria i potwierdzenie (null = powrót do wartości automatycznej)
+r.patch('/entities/:id/verification', async (req, res) => {
+  const { id } = parse(idParam, req.params);
+  const b = parse(z.object({ category: z.enum(CATEGORIES).nullable().optional(), verified: z.boolean().nullable().optional() })
+    .refine((x) => x.category !== undefined || x.verified !== undefined, 'Podaj kategorię albo potwierdzenie'), req.body);
+  const sets = [];
+  const params = [id];
+  if (b.category !== undefined) { params.push(b.category); sets.push(`category_manual = $${params.length}`); }
+  if (b.verified !== undefined) { params.push(b.verified); sets.push(`verified_manual = $${params.length}`, `verified_at = CASE WHEN $${params.length}::boolean THEN now() END`); }
+  const row = await one(`UPDATE entities e SET ${sets.join(', ')} WHERE e.id = $1
+    RETURNING e.id, e.name, ${statusColumns('e')}`, params);
+  if (!row) return res.status(404).json({ error: 'Nie znaleziono podmiotu' });
+  emit('entity:update', row);
+  res.json(row);
 });
 
 // Wzbogacenie podmiotu (KRS, GLEIF, listy ostrzeżeń KNF, rejestr MiCA). Odczyt danych publicznych – dostępne dla analityka.

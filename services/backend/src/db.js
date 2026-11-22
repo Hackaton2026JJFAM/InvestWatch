@@ -114,6 +114,10 @@ const MIGRATIONS = [
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS reviewed_score NUMERIC',
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS profile_manual TEXT',
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS reviewed_modules JSONB',
+  // oznaczenie podmiotu przez analityka: kategoria (spółka / podmiot doradczy) i potwierdzenie (NULL = automatycznie)
+  'ALTER TABLE entities ADD COLUMN IF NOT EXISTS category_manual TEXT',
+  'ALTER TABLE entities ADD COLUMN IF NOT EXISTS verified_manual BOOLEAN',
+  'ALTER TABLE entities ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ',
   // konto publikującego (platforma + profil / domena) – historia zachowań konta
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS account_key TEXT',
   'CREATE INDEX IF NOT EXISTS materials_account ON materials (account_key, fetched_at DESC)',
