@@ -149,6 +149,7 @@ export async function processScan(job) {
   const threshold = await getThreshold();
   const simhash = result.doc?.simhash ?? null;
   const nearDup = await findNearDuplicate(simhash, material.content_text);
+  // kopia już znanej treści: zapisana (kolejna lokalizacja), ale bez osobnego alertu
 
   let saved;
   try {
@@ -181,7 +182,7 @@ export async function processScan(job) {
     await saveEntities(t, m.id, result);
     await saveReach(t, m.id, material, result, data.watchId ?? null);
     let alert = null;
-    if (result.score >= threshold) {
+    if (result.score >= threshold && !nearDup) {
       alert = await t.one(
         'INSERT INTO alerts (material_id, analysis_id, score, threshold) VALUES ($1, $2, $3, $4) RETURNING id, created_at',
         [m.id, a.id, result.score, threshold],

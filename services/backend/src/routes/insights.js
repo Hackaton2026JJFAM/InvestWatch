@@ -6,7 +6,7 @@ import { emit } from '../realtime.js';
 import { analyzer } from '../services.js';
 import { requireAdmin } from '../auth.js';
 import { enrichEntity, krsCandidates } from '../enrichment.js';
-import { parse, aboveSql, riskSql, LATEST, LATEST_RAW, demoSql } from '../validate.js';
+import { parse, aboveSql, riskSql, LATEST, LATEST_RAW, demoSql, uniqueSql } from '../validate.js';
 
 const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
@@ -14,7 +14,7 @@ const ALERT_STATUSES = ['NEW', 'IN_REVIEW', 'REVIEWED', 'DISMISSED'];
 
 r.get('/dashboard/stats', async (_req, res) => {
   const t = await getThreshold();
-  const D = demoSql(await getShowDemo());
+  const D = `${demoSql(await getShowDemo())} AND ${uniqueSql()}`;
   const totals = await one(
     `SELECT count(*)::int AS materials,
             count(*) FILTER (WHERE a.score >= $1)::int AS high,
@@ -45,10 +45,11 @@ r.get('/dashboard/stats', async (_req, res) => {
 
 r.get('/alerts', async (req, res) => {
   const f = parse(z.object({ status: z.enum(ALERT_STATUSES).optional() }), req.query);
-  const D = demoSql(await getShowDemo());
+  const D = `${demoSql(await getShowDemo())} AND ${uniqueSql()}`;
   res.json(await q(
     `SELECT al.*, COALESCE(m.title, e.name) AS title, m.url, COALESCE(m.platform, al.kind) AS platform, e.name AS entity_name,
-            m.reviewed_score, m.status AS material_status
+            m.reviewed_score, m.status AS material_status,
+            (SELECT count(*)::int FROM materials c WHERE c.near_duplicate_of = m.id) AS copies
        FROM alerts al LEFT JOIN materials m ON m.id = al.material_id LEFT JOIN entities e ON e.id = al.entity_id
       WHERE (m.id IS NULL OR ${D}) ${f.status ? 'AND al.status = $1' : ''} ORDER BY al.created_at DESC LIMIT 200`, f.status ? [f.status] : []));
 });

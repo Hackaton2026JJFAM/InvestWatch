@@ -9,7 +9,7 @@ import { emit } from '../realtime.js';
 import { analyzer } from '../services.js';
 import { findSimilar } from '../similarity.js';
 import { requireAdmin } from '../auth.js';
-import { parse, riskLevel, aboveSql, riskSql, LATEST, demoSql } from '../validate.js';
+import { parse, riskLevel, aboveSql, riskSql, LATEST, demoSql, uniqueSql } from '../validate.js';
 
 const r = Router();
 const idParam = z.object({ id: z.coerce.number().int().positive() });
@@ -58,6 +58,7 @@ r.get('/materials', async (req, res) => {
     media: z.enum(['video', 'image', 'web']).optional(), watch: z.coerce.number().int().positive().optional(),
     lang: z.enum(['pl', 'other']).optional(), demo: z.enum(['0', '1', 'only']).optional(), repeat: z.enum(['1']).optional(),
     account: z.string().max(300).optional(),
+    dups: z.enum(['1']).optional(), copies: z.coerce.number().int().positive().optional(),
     sort: z.enum(['score', 'fetched_at', 'published_at', 'title', 'views', 'priority']).default('fetched_at'), dir: z.enum(['asc', 'desc']).default('desc'),
     page: z.coerce.number().int().min(1).default(1), size: z.coerce.number().int().min(1).max(200).default(50),
   }), req.query);
@@ -89,6 +90,9 @@ r.get('/materials', async (req, res) => {
   if (f.repeat) where.push(`m.account_key IS NOT NULL AND EXISTS (SELECT 1 FROM materials o JOIN LATERAL (SELECT score, result FROM analyses
       WHERE material_id = o.id ORDER BY created_at DESC LIMIT 1) oa ON TRUE WHERE o.account_key = m.account_key AND o.id <> m.id AND NOT o.demo
       AND (oa.score >= 70 OR oa.result->'profile'->>'primary' = 'podejrzenie_oszustwa'))`);
+  // jedna pozycja na treść; kopie – na żądanie (dups=1) albo jako grupa wybranego oryginału (copies=id)
+  if (f.copies) add('(m.id = ? OR m.near_duplicate_of = ?)', f.copies);
+  else if (!f.dups) where.push(uniqueSql());
   if (f.demo === 'only') where.push('m.demo');
   else if (f.demo !== '1') where.push(demoSql(f.demo === '0' ? false : await getShowDemo()));
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -101,6 +105,7 @@ r.get('/materials', async (req, res) => {
   const items = await q(
     `SELECT m.id, m.url, m.title, m.author, m.platform, m.status, m.fetched_at, m.published_at, m.demo, m.ground_truth, m.near_duplicate_of,
             m.views, m.followers, m.tags, m.profile_type, m.scam_score, (m.raw->'layout' ? 'video') AS is_video,
+            (SELECT count(*)::int FROM materials c WHERE c.near_duplicate_of = m.id) AS copies,
             m.account_key, (SELECT count(*)::int FROM materials o WHERE o.account_key = m.account_key AND o.id <> m.id AND NOT o.demo) AS account_others,
             a.id AS analysis_id, a.score, a.classifier_score, (m.reviewed_score IS NOT NULL) AS reviewed, a.modules, a.module_scores,
             ${riskSql()} AS risk, ${aboveSql()} AS above_threshold

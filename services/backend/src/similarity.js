@@ -24,16 +24,16 @@ const MAX_TEXT = 20000;
  * Podobne materiały. `text` (treść badanego materiału) włącza porównanie treści: wynik ma `text_sim` (0–1)
  * i `near` = duplikat (≤ NEAR_DUP_BITS bitów albo treść podobna ≥ NEAR_DUP_TEXT).
  */
-export async function findSimilar(simhash, { excludeId = null, maxBits = SIMILAR_BITS, limit = 10, text = null } = {}) {
+export async function findSimilar(simhash, { excludeId = null, maxBits = SIMILAR_BITS, limit = 10, text = null, beforeId = null } = {}) {
   if (!simhash || !HEX64.test(simhash)) return [];
   const rows = await q(
     `SELECT s.*, CASE WHEN $5::text IS NULL THEN NULL
                       ELSE round(similarity(left(s.content_text, ${MAX_TEXT}), left($5::text, ${MAX_TEXT}))::numeric, 2)::float END AS text_sim
-       FROM (SELECT m.id, m.title, m.url, m.platform, m.author, m.fetched_at, m.content_text, ${DISTANCE}::int AS distance
-               FROM materials m WHERE m.simhash ~* '^[0-9a-f]{16}$' AND m.id IS DISTINCT FROM $2) s
+       FROM (SELECT m.id, m.title, m.url, m.platform, m.author, m.fetched_at, m.content_text, m.near_duplicate_of, ${DISTANCE}::int AS distance
+               FROM materials m WHERE m.simhash ~* '^[0-9a-f]{16}$' AND m.id IS DISTINCT FROM $2 AND ($6::int IS NULL OR m.id < $6)) s
       WHERE s.distance <= $3
       ORDER BY s.distance, s.id DESC LIMIT $4`,
-    [simhash, excludeId, Math.max(maxBits, text ? CANDIDATE_BITS : 0), Math.max(limit, 50), text]);
+    [simhash, excludeId, Math.max(maxBits, text ? CANDIDATE_BITS : 0), Math.max(limit, 50), text, beforeId]);
   return rows
     .map(({ content_text: _c, ...r }) => ({ ...r, near: r.distance <= NEAR_DUP_BITS || (r.text_sim ?? 0) >= NEAR_DUP_TEXT }))
     .filter((r) => r.distance <= maxBits || r.near)
@@ -41,7 +41,22 @@ export async function findSimilar(simhash, { excludeId = null, maxBits = SIMILAR
     .slice(0, limit);
 }
 
-/** Najbliższy duplikat nowego materiału (do `near_duplicate_of`) albo null. */
-export async function findNearDuplicate(simhash, text, excludeId = null) {
-  return (await findSimilar(simhash, { excludeId, maxBits: NEAR_DUP_BITS, limit: 1, text })).find((r) => r.near) ?? null;
+/**
+ * Oryginał, którego kopią jest nowy materiał (do `near_duplicate_of`), albo null. Wskazuje zawsze pierwszy materiał
+ * z grupy (kopia kopii -> oryginał), więc lista i alerty pokazują jedną pozycję na treść.
+ */
+export async function findNearDuplicate(simhash, text, { excludeId = null, beforeId = null } = {}) {
+  const hit = (await findSimilar(simhash, { excludeId, beforeId, maxBits: NEAR_DUP_BITS, limit: 10, text })).find((r) => r.near);
+  return hit ? { ...hit, id: hit.near_duplicate_of ?? hit.id } : null;
+}
+
+/** Jednorazowo: duplikaty wśród materiałów sprzed tej funkcji (każdy porównany z wcześniejszymi). */
+export async function backfillDuplicates() {
+  const rows = await q("SELECT id, simhash, content_text FROM materials WHERE near_duplicate_of IS NULL AND simhash IS NOT NULL ORDER BY id");
+  let n = 0;
+  for (const m of rows) {
+    const dup = await findNearDuplicate(m.simhash, m.content_text, { beforeId: m.id });
+    if (dup && dup.id !== m.id) { await q('UPDATE materials SET near_duplicate_of = $2 WHERE id = $1', [m.id, dup.id]); n++; }
+  }
+  return n;
 }

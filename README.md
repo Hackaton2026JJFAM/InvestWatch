@@ -137,6 +137,6 @@ Architektura: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Proces pracy z asyst
 - Próbki demo używają fikcyjnych podmiotów i domen `.example`.
 - Poziom ryzyka: 0–30 niskie, 31–70 średnie, 71–100 wysokie. Próg alertu (panel kalibracji) jest osobny i decyduje tylko o alercie.
 - Oficjalny materiał firmy (plik/tekst bez autora i domeny, podpisany przez firmę z rejestru KNF) nie jest oceniany w Module 1 – moduł dotyczy podmiotów trzecich i finfluencerów. Materiał edukacyjny bez wezwań do działania nie podlega regułom 1–2 Modułu 2.
-- Duplikaty: odcisk simhash (64 bity) i odległość Hamminga w PostgreSQL, potwierdzane podobieństwem treści (`pg_trgm`); ta sama treść na kilku portalach albo z kilkoma zmienionymi słowami jest oznaczana jako duplikat (≤ 3 bity albo treść podobna ≥ 85%).
+- Duplikaty: odcisk simhash (64 bity) i odległość Hamminga w PostgreSQL, potwierdzane podobieństwem treści (`pg_trgm`); ta sama treść na kilku portalach albo z kilkoma zmienionymi słowami jest oznaczana jako duplikat (≤ 3 bity albo treść podobna ≥ 85%). Kopia nie tworzy osobnego alertu, a listy pokazują jedną pozycję na treść z oznaczeniem „+N kopii” (przełącznik „pokaż duplikaty”).
 - Monitoring zbiera tylko materiały polskojęzyczne (ustawienie `polish_only`); ręczna analiza działa dla każdego języka.
 - Treści z platform społecznościowych są pobierane z publicznych metadanych lub importowane ręcznie. System nie obchodzi zabezpieczeń platform.

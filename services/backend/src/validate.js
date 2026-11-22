@@ -34,6 +34,8 @@ export const LATEST = `JOIN LATERAL (SELECT id, material_id, modules, result, su
 export const LATEST_RAW = 'JOIN LATERAL (SELECT * FROM analyses WHERE material_id = m.id ORDER BY created_at DESC LIMIT 1) a ON TRUE';
 // próbki demo/kalibracyjne ukryte w widokach operacyjnych, chyba że włączono ich pokazywanie
 export const demoSql = (show, alias = 'm') => (show ? 'TRUE' : `NOT ${alias}.demo`);
+// jedna pozycja na treść: kopie (ta sama/prawie ta sama treść) są ukryte w listach, alertach i statystykach
+export const uniqueSql = (alias = 'm') => `${alias}.near_duplicate_of IS NULL`;
 
 // Czy wynik przekracza próg alertów (parametr zapytania – zwykle $1)
 export const aboveSql = (alias = 'a', param = '$1') => `(${alias}.score >= ${param}::numeric)`;
