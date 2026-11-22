@@ -7,7 +7,7 @@ import { useData } from '../hooks.js';
 import { REG } from './Entities.jsx';
 import { useLive } from '../live.jsx';
 
-const TABS = ['Podsumowanie', 'Przesłanki', 'Publikujący', 'Materiał', 'Historia'];
+const TABS = ['Podsumowanie', 'Przesłanki', 'Materiał', 'Historia'];
 const FINDING_MODULES = [['m2', 'Zgodność'], ['m1', 'Publikujący'], ['m3', 'Doradztwo']];
 
 function moveTab(event, items, active, setActive, idFor) {
@@ -649,6 +649,21 @@ export default function Material() {
               </div>
             ))}</div> : <Empty>{(r.m1?.firms ?? []).length ? 'Analiza wskazała nazwy firm, ale nie udało się jednoznacznie dopasować ich do profili podmiotów.' : 'Nie wykryto jednoznacznego powiązania firmy z tym materiałem.'}</Empty>}
           </Panel>
+          <AdvisorVerification key={data.verified_advisor?.id ?? 'none'} m={m} verified={data.verified_advisor} candidate={data.advisor_candidate} onChange={reload} />
+          <AccountHistory account={data.account} prior={data.prior_history} />
+          {entities.some((entity) => entity.role !== 'advertised_firm') && <Panel title="Pozostałe podmioty powiązane">
+            <div className="notice" style={{ marginBottom: 10 }}>Powiązanie automatyczne nie potwierdza współpracy. Sprawdź źródła i dane rejestrowe przed wyciągnięciem wniosków.</div>
+            <div className="entity-links">{entities.filter((entity) => entity.role !== 'advertised_firm').map((entity) => (
+              <div key={`${entity.id}-${entity.role}`} className="entity-link-row">
+                <div><Link to={`/entities/${entity.id}`}><b>{entity.name}</b><span className="entity-link-arrow"> — profil →</span></Link>
+                  <div className="small muted">{{ publisher: 'autor lub publikujący', advisor: 'podmiot wskazany przy ofercie doradczej' }[entity.role] ?? 'podmiot wykryty w analizie'}</div>
+                  {entity.krs && <div className="small">KRS: <span className="mono">{entity.krs}</span></div>}
+                  {!entity.krs && <div className="small muted">Numer KRS nieustalony.</div>}
+                </div>
+                <span className={`chip ${REG[entity.registry_status]?.[0] ?? 'na'}`}>{REG[entity.registry_status]?.[1] ?? 'status nieustalony'}</span>
+              </div>
+            ))}</div>
+          </Panel>}
         </div>}
         {findingModule === 'm3' && <div className="grid g2">
           <Panel title="Oferta doradcza">
@@ -665,27 +680,6 @@ export default function Material() {
         </div>}
         </div>
         </>
-      )}
-
-      {tab === 'Publikujący' && (
-        <div className="grid g2">
-          <ProfilePanel r={r} m={m} onChange={reload} />
-          <AdvisorVerification key={data.verified_advisor?.id ?? 'none'} m={m} verified={data.verified_advisor} candidate={data.advisor_candidate} onChange={reload} />
-          <AccountHistory account={data.account} prior={data.prior_history} />
-          <Panel title="Podmioty powiązane w analizie">
-            <div className="notice" style={{ marginBottom: 10 }}>Powiązanie automatyczne nie potwierdza współpracy. Sprawdź źródła i dane rejestrowe przed wyciągnięciem wniosków.</div>
-            {entities.length ? <div className="entity-links">{entities.map((entity) => (
-              <div key={`${entity.id}-${entity.role}`} className="entity-link-row">
-                <div><Link to={`/entities/${entity.id}`}><b>{entity.name}</b><span className="entity-link-arrow"> — profil →</span></Link>
-                  <div className="small muted">{{ advertised_firm: 'firma wskazana w analizie', publisher: 'autor lub publikujący', advisor: 'podmiot wskazany przy ofercie doradczej' }[entity.role] ?? 'podmiot wykryty w analizie'}</div>
-                  {entity.krs && <div className="small">KRS: <span className="mono">{entity.krs}</span></div>}
-                  {!entity.krs && <div className="small muted">Numer KRS nieustalony.</div>}
-                </div>
-                <span className={`chip ${REG[entity.registry_status]?.[0] ?? 'na'}`}>{REG[entity.registry_status]?.[1] ?? 'status nieustalony'}</span>
-              </div>
-            ))}</div> : <Empty>Brak jednoznacznie dopasowanych podmiotów. Sama wzmianka o firmie nie oznacza współpracy.</Empty>}
-          </Panel>
-        </div>
       )}
 
       {tab === 'Materiał' && (

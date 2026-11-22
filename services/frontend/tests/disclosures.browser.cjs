@@ -93,7 +93,10 @@ async function assertTextContrast(page) {
         await page.goto((process.env.TEST_URL || 'http://127.0.0.1:4173') + path);
         await page.locator('h1').waitFor();
         if (path === '/materials/1') await page.getByRole('tab', { name: 'Przesłanki', exact: true }).click();
-        if (path === '/materials/1?test=publisher') await page.getByRole('tab', { name: 'Publikujący', exact: true }).click();
+        if (path === '/materials/1?test=publisher') {
+          await page.getByRole('tab', { name: 'Przesłanki', exact: true }).click();
+          await page.getByRole('tab', { name: 'Publikujący', exact: true }).click();
+        }
         if (path === '/entities/1') await page.getByRole('button', { name: 'Materiały (1)', exact: true }).click();
         if (path === '/entities/1?test=registry') await page.getByRole('button', { name: 'Rejestry i osoby', exact: true }).click();
         if (path === '/monitor') {

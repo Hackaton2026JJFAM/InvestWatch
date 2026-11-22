@@ -7,9 +7,12 @@ import { useData } from '../hooks.js';
 import { useLive } from '../live.jsx';
 
 const LABEL = { NEW: 'Nowy', IN_REVIEW: 'W trakcie weryfikacji', REVIEWED: 'Zweryfikowany', DISMISSED: 'Odrzucony' };
+const ALERT_TITLE_LIMIT = 50;
 const shortAlertTitle = (value) => {
   const chars = Array.from(value ?? '');
-  return chars.length > 50 ? `${chars.slice(0, 49).join('')}…` : value;
+  return chars.length > ALERT_TITLE_LIMIT
+    ? `${chars.slice(0, ALERT_TITLE_LIMIT - 1).join('')}…`
+    : value;
 };
 
 export default function Alerts() {
@@ -43,9 +46,9 @@ export default function Alerts() {
         {error && <div className="notice error-notice" role="alert">Nie udało się pobrać alertów. {error.message} <button className="btn" onClick={reload}>Spróbuj ponownie</button></div>}
         {data && (data.length ? (
           <div className="table-wrap alert-table-wrap"><table className="alert-table">
-            <thead><tr><th></th><th>Materiał</th><th>Wynik</th><th>Status</th><th>Akcje</th></tr></thead>
+            <thead><tr><th aria-label="Nieprzeczytany"></th><th>Materiał / podmiot</th><th>Wynik</th><th>Status</th><th>Akcje</th></tr></thead>
             <tbody>{data.map((a) => (
-              <tr key={a.id} style={{ fontWeight: a.read ? 400 : 600 }}>
+              <tr key={a.id} className={a.read ? '' : 'unread-row'}>
                 <td>{!a.read && <span className="dot" style={{ background: 'var(--high)' }} />}</td>
                 <td>{a.material_id
                   ? <Link title={a.title || a.url} to={`/materials/${a.material_id}`} onClick={() => !a.read && update(a.id, { read: true })}>{shortAlertTitle(a.title || a.url)}</Link>
@@ -56,7 +59,7 @@ export default function Alerts() {
                     ['Źródło', a.platform], ['Adres', a.url], ['Odczyt', a.read ? 'przeczytany' : 'nieprzeczytany'],
                   ]}>{a.message && <p>{a.message}</p>}</RecordDetails>
                 </td>
-                <td><Score score={a.score} threshold={threshold} /><div className="small muted">próg: {a.threshold ?? '–'}</div></td>
+                <td><Score score={a.score} threshold={threshold} /></td>
                 <td><span className={`chip ${a.status === 'NEW' ? 'high' : a.status === 'REVIEWED' ? 'pass' : a.status === 'IN_REVIEW' ? 'mid' : 'na'}`}>{LABEL[a.status]}</span></td>
                 <td>
                   <div className="btn-row alert-actions">
