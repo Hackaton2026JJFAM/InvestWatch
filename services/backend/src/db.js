@@ -112,6 +112,9 @@ const MIGRATIONS = [
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS reviewed_score NUMERIC',
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS profile_manual TEXT',
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS reviewed_modules JSONB',
+  // konto publikującego (platforma + profil / domena) – historia zachowań konta
+  'ALTER TABLE materials ADD COLUMN IF NOT EXISTS account_key TEXT',
+  'CREATE INDEX IF NOT EXISTS materials_account ON materials (account_key, fetched_at DESC)',
   // próbki kalibracyjne (SEED_DEMO) – oddzielone od prawdziwych wyników monitoringu
   'ALTER TABLE materials ADD COLUMN IF NOT EXISTS demo BOOLEAN NOT NULL DEFAULT FALSE',
   `UPDATE materials SET demo = TRUE WHERE NOT demo AND id IN (SELECT material_id FROM scan_jobs WHERE trigger = 'seed' AND material_id IS NOT NULL)`,

@@ -36,7 +36,7 @@ export default function Results() {
   return (
     <>
         <div className="page-head"><div><h1>Wyniki analiz</h1><p>Materiały z sygnałami do sprawdzenia. Filtruj po źródle, typie publikującego, zasięgu i wyniku.</p></div>
-        <span className="btn-row"><label className="toggle"><input type="checkbox" checked={f.demo === '1'} onChange={(e) => set('demo', e.target.checked ? '1' : '')} /> pokaż próbki demo</label>
+        <span className="btn-row"><label className="toggle"><input type="checkbox" checked={f.repeat === '1'} onChange={(e) => set('repeat', e.target.checked ? '1' : '')} /> tylko konta z historią naruszeń</label><label className="toggle"><input type="checkbox" checked={f.demo === '1'} onChange={(e) => set('demo', e.target.checked ? '1' : '')} /> pokaż próbki demo</label>
         <label className="toggle"><input type="checkbox" checked={Boolean(f.above)} onChange={(e) => set('above', e.target.checked ? '1' : '')} /> tylko powyżej progu ({data?.threshold ?? '–'})</label></span>
       </div>
       <Panel>
@@ -69,7 +69,8 @@ export default function Results() {
               <tbody>{data.items.map((m) => (
                 <tr key={m.id}>
                   <td><div className="truncate"><Link to={`/materials/${m.id}`}>{m.title || '(bez tytułu)'}</Link>{m.demo && <span className="chip neutral" style={{ marginLeft: 6 }} title="Próbka testowa (dane demonstracyjne)">próbka</span>}{m.near_duplicate_of && <span className="chip mid" style={{ marginLeft: 6 }} title={`Podobny do materiału #${m.near_duplicate_of}`}>podobny #{m.near_duplicate_of}</span>}</div><div className="small muted truncate">{m.url}</div></td>
-                  <td><span className="chip neutral">{m.platform}</span>{m.author && <div className="small muted">{m.author}</div>}</td>
+                  <td><span className="chip neutral">{m.platform}</span>{m.author && <div className="small muted">{m.author}</div>}
+                    {m.account_others > 0 && <div className="small"><Link to={`/materials?account=${encodeURIComponent(m.account_key)}&demo=1`}>+{m.account_others} tego konta</Link></div>}</td>
                   <td><ProfileChip type={m.profile_type} />{m.is_video && <div className="small muted">wideo</div>}</td>
                   <td className="small">{m.views != null ? <><b>{fmtCount(m.views)}</b> wyśw.</> : '–'}{m.followers != null && <div className="muted">{fmtCount(m.followers)} obs.</div>}
                     {m.tags?.length > 0 && <div className="muted truncate" style={{ maxWidth: 140 }}>{m.tags.slice(0, 3).map((t) => `#${t}`).join(' ')}</div>}</td>

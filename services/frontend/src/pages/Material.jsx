@@ -430,6 +430,48 @@ function AdvisorVerification({ m, verified, candidate, onChange }) {
 }
 const r_lic = (c) => (c?.license_no ? `W treści podano numer licencji: ${c.license_no} – sprawdź go w rejestrze KNF.` : 'Publikujący nie został jeszcze sprawdzony przez analityka.');
 
+// Historia konta: inne materiały tego samego publikującego i jego wcześniejsze zachowanie
+function AccountHistory({ account, prior }) {
+  if (!account) return (
+    <Panel title="Historia konta"><Empty>Nie ustalono konta publikującego (brak profilu/domeny).</Empty></Panel>
+  );
+  const label = account.key.replace(/^web:/, '').replace(/^(\w+):/, (_, p) => `${p} · @`);
+  return (
+    <Panel title="Historia konta" meta={label}>
+      {prior?.repeat && (
+        <div className="notice" style={{ marginBottom: 10, borderLeftColor: 'var(--high)' }}>
+          <b>Konto z historią naruszeń.</b> Przed tym materiałem konto opublikowało {prior.high > 0 && <>{prior.high} materiał(y) wysokiego ryzyka</>}
+          {prior.high > 0 && prior.scams > 0 && ' i '}{prior.scams > 0 && <>{prior.scams} z podejrzeniem oszustwa</>} – dlatego materiał ma dodatkowy punkt M1.11
+          (można go odznaczyć w podsumowaniu, jeśli historia nie ma związku).
+        </div>
+      )}
+      {account.materials ? (
+        <>
+          <div className="btn-row" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
+            <span className="chip neutral">inne materiały: {account.materials}</span>
+            <span className={`chip ${account.high ? 'high' : 'low'}`}>wysokie ryzyko: {account.high}</span>
+            <span className={`chip ${account.scams ? 'high' : 'low'}`}>podejrzenia oszustwa: {account.scams}</span>
+            {account.avg_score != null && <span className="chip neutral">średni wynik: {account.avg_score}</span>}
+            {account.first_seen && <span className="small muted">od {fmtDate(account.first_seen)}</span>}
+          </div>
+          <div className="table-wrap"><table>
+            <thead><tr><th>Materiał</th><th>Wynik</th><th>Typ</th><th>Pobrano</th></tr></thead>
+            <tbody>{account.items.map((x) => (
+              <tr key={x.id}>
+                <td><Link to={`/materials/${x.id}`}>{x.title || x.url}</Link></td>
+                <td><Score score={x.reviewed_score ?? x.score} /></td>
+                <td><ProfileChip type={x.profile} /></td>
+                <td className="small muted">{fmtDate(x.fetched_at)}</td>
+              </tr>))}
+            </tbody>
+          </table></div>
+          {account.materials > account.items.length && <p className="small"><Link to={`/materials?account=${encodeURIComponent(account.key)}&demo=1`}>Wszystkie materiały konta ({account.materials + 1}) →</Link></p>}
+        </>
+      ) : <Empty>To pierwszy przeanalizowany materiał tego konta.</Empty>}
+    </Panel>
+  );
+}
+
 export default function Material() {
   const { id } = useParams();
   const { tick, toast } = useLive();
@@ -438,7 +480,7 @@ export default function Material() {
   const [busyAction, setBusyAction] = useState('');
   const nav = useNavigate();
   const { data, error, reload } = useData(`/materials/${id}`, tick);
-  if (error) return <Empty>{error.message}</Empty>;
+  if (error) return <Empty>{/nie znaleziono|404/i.test(error.message) ? <>Ten materiał nie istnieje – mógł zostać usunięty. <Link to="/materials">Wróć do wyników</Link></> : error.message}</Empty>;
   if (!data) return <Empty>Ładowanie…</Empty>;
   const { material: m, analysis: a, findings, entities, history, threshold, risk, similar = [] } = data;
   const rejectedSet = new Set(data.rejected ?? []);
@@ -475,6 +517,7 @@ export default function Material() {
       <div className="page-head">
         <div style={{ minWidth: 0 }}>
           <h1>{m.title || '(bez tytułu)'}</h1>
+          {data.prior_history?.repeat && <span className="chip high" title="Wcześniejsze materiały tego konta miały wysokie ryzyko lub podejrzenie oszustwa">⚠ konto z historią naruszeń ({data.prior_history.high + data.prior_history.scams})</span>}
           <p className="truncate" style={{ maxWidth: 760 }}><a href={m.final_url || m.url} target="_blank" rel="noreferrer noopener">{m.final_url || m.url}</a></p>
         </div>
         <div className="btn-row">
@@ -602,6 +645,7 @@ export default function Material() {
         <div className="grid g2">
           <ProfilePanel r={r} m={m} onChange={reload} />
           <AdvisorVerification key={data.verified_advisor?.id ?? 'none'} m={m} verified={data.verified_advisor} candidate={data.advisor_candidate} onChange={reload} />
+          <AccountHistory account={data.account} prior={data.prior_history} />
           <Panel title="Podmioty powiązane w analizie">
             <div className="notice" style={{ marginBottom: 10 }}>Powiązanie automatyczne nie potwierdza współpracy. Sprawdź źródła i dane rejestrowe przed wyciągnięciem wniosków.</div>
             {entities.length ? <div className="entity-links">{entities.map((entity) => (

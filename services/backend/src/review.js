@@ -86,9 +86,34 @@ export function withVerifiedAdvisor(result, advisor) {
     modules: Object.entries(s.module_scores).filter(([, v]) => v >= 20).map(([m]) => m) };
 }
 
-/** Wynik po weryfikacji: sprawdzony doradca, bez odrzuconych przesłanek/elementów, z problemami dodanymi ręcznie. */
-export function reviewResult(result, rejected = [], manual = [], advisor = null) {
-  const verified = withVerifiedAdvisor(result, advisor);
+/** Konto z historią naruszeń: przesłanka „do sprawdzenia” (M1.11) na podstawie wcześniejszych materiałów konta. */
+export function historyFinding(h) {
+  if (!h?.repeat) return null;
+  const parts = [];
+  if (h.high) parts.push(`${h.high} z wysokim ryzykiem`);
+  if (h.scams) parts.push(`${h.scams} z podejrzeniem oszustwa`);
+  const severity = Math.min(50, 20 + 8 * h.high + 12 * h.scams);
+  return { module: 'm1', rule_id: 'M1.11', title: 'Konto z historią naruszeń', status: 'warn', severity, history: true,
+    legal_basis: 'historia konta (sygnał, nie dowód)',
+    explanation: `To konto opublikowało wcześniej ${h.materials} przeanalizowanych materiałów, w tym ${parts.join(' i ')} `
+      + `(najwyższy wynik ${h.max_score}/100). Wcześniejsze zachowanie zwiększa priorytet weryfikacji tego materiału.`,
+    evidence: h.items.filter((x) => x.score >= 70 || x.profile === 'podejrzenie_oszustwa').slice(0, 3)
+      .map((x) => ({ text: x.title || x.url, where: `wcześniejszy materiał · ${Math.round(x.score)}/100`, material_id: x.id })) };
+}
+
+export function withHistory(result, history) {
+  const f = historyFinding(history);
+  if (!f) return result;
+  const findings = [...result.findings.filter((x) => x.rule_id !== 'M1.11'), f];
+  const s = scoreOf(findings);
+  const profile = result.profile ? { ...result.profile, tags: [...new Set([...(result.profile.tags ?? []), 'konto z historią naruszeń'])] } : result.profile;
+  return { ...result, findings, profile, score: s.score, module_scores: { ...result.module_scores, ...s.module_scores },
+    modules: Object.entries(s.module_scores).filter(([, v]) => v >= 20).map(([m]) => m) };
+}
+
+/** Wynik po weryfikacji: historia konta, sprawdzony doradca, bez odrzuconych przesłanek/elementów, z problemami ręcznymi. */
+export function reviewResult(result, rejected = [], manual = [], advisor = null, history = null) {
+  const verified = withVerifiedAdvisor(withHistory(result, history), advisor);
   const base = rejected.length ? withoutRejected(verified, rejected) : verified;
   if (!manual.length) return base;
   const findings = [...base.findings, ...manual.map(manualFinding)];

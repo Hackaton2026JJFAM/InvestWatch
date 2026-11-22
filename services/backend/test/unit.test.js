@@ -164,3 +164,28 @@ test('sprawdzony doradca: znikają przesłanki o braku zezwolenia (M3.1–M3.3),
   assert.equal(reviewResult(withPromise, [], [], adv).score, 50);
   assert.equal(withVerifiedAdvisor(result, null), result);
 });
+
+test('historia konta: klucz konta z profilu/adresu/domeny', async () => {
+  const { accountKeyOf } = await import('../src/accounts.js');
+  assert.equal(accountKeyOf({ platform: 'tiktok', url: 'https://www.tiktok.com/@Krypto_Marek/video/1' }), 'tiktok:krypto_marek');
+  assert.equal(accountKeyOf({ platform: 'youtube', url: 'https://www.youtube.com/watch?v=x', social_handle: '@GotowyNaKrypto' }), 'youtube:gotowynakrypto');
+  assert.equal(accountKeyOf({ platform: 'x', url: 'https://x.com/MatRM1902/status/2121599292099948624' }), 'x:matrm1902');
+  assert.equal(accountKeyOf({ platform: 'web', url: 'https://www.xtb.com/pl' }), 'web:xtb.com');
+  assert.equal(accountKeyOf({ platform: 'web', url: 'https://scam-demo.example/x' }), null);
+});
+
+test('historia konta: wcześniejsze naruszenia oznaczają kolejny materiał (M1.11), czyste konto bez zmian', async () => {
+  const { reviewResult, withHistory } = await import('../src/review.js');
+  const result = { score: 10, module_scores: { m1: 10 }, findings: [{ module: 'm1', rule_id: 'M1.2', status: 'warn', severity: 20, title: 'x', evidence: [] }],
+    profile: { primary: 'informacja', tags: [] } };
+  const bad = { repeat: true, materials: 4, high: 2, scams: 1, max_score: 92,
+    items: [{ id: 5, title: 'Bot AI 5% dziennie', score: 92, profile: 'podejrzenie_oszustwa' }] };
+  const r = withHistory(result, bad);
+  const f = r.findings.find((x) => x.rule_id === 'M1.11');
+  assert.equal(f.status, 'warn');
+  assert.equal(f.severity, 48);           // 20 + 8×2 + 12×1
+  assert.ok(r.score > result.score);
+  assert.ok(r.profile.tags.includes('konto z historią naruszeń'));
+  assert.equal(withHistory(result, { repeat: false }), result);
+  assert.equal(reviewResult(result, ['M1.11'], [], null, bad).findings.some((x) => x.rule_id === 'M1.11'), false); // analityk może odznaczyć
+});

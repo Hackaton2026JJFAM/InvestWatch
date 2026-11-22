@@ -192,7 +192,10 @@ export async function processScan(job) {
 
   // doradca sprawdzony wcześniej przez analityka – od razu wynik po weryfikacji (bez „możliwego braku zezwolenia”)
   try {
-    if (await verifiedAdvisorFor(saved.materialId)) await (await import('./routes/materials.js')).storeReviewFor(saved.materialId);
+    const { priorHistoryFor } = await import('./accounts.js');
+    if (await verifiedAdvisorFor(saved.materialId) || (await priorHistoryFor(saved.materialId))?.repeat) {
+      await (await import('./routes/materials.js')).storeReviewFor(saved.materialId);
+    }
   } catch (err) { log.warn('verified advisor apply failed', { id: saved.materialId, err: err.message }); }
 
   const payload = { id: saved.materialId, title: material.title, url: material.url, score: result.score, modules: result.modules, platform: material.platform };

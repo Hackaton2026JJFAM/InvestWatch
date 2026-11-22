@@ -1,7 +1,8 @@
 import { Router } from 'express';
 import { saveReach } from '../reach.js';
-import { isKnownKey, KEY_RX, reviewResult, summaryPoints, withVerifiedAdvisor } from '../review.js';
+import { isKnownKey, KEY_RX, reviewResult, summaryPoints, withHistory, withVerifiedAdvisor } from '../review.js';
 import { advisorCandidate, applyVerifiedAdvisors, verifiedAdvisorFor } from '../advisors.js';
+import { accountHistory, priorHistoryFor } from '../accounts.js';
 import { z } from 'zod';
 import { getShowDemo, getThreshold, one, q, tx } from '../db.js';
 import { emit } from '../realtime.js';
@@ -18,10 +19,12 @@ const rejectedOf = async (materialId) => (await q('SELECT rule_id FROM finding_r
 
 const manualOf = async (materialId) => q('SELECT * FROM manual_findings WHERE material_id = $1 ORDER BY id', [materialId]);
 const advisorOf = (materialId) => verifiedAdvisorFor(materialId);
+const historyOf = (materialId) => priorHistoryFor(materialId);
 
 // wynik i profil po weryfikacji analityka (odrzucone punkty + problemy dodane ręcznie; ręcznie ustawiony profil ma pierwszeństwo)
-async function storeReview(db, id, result, rejected, manual, advisor = null) {
-  const reviewed = rejected.length || manual.length || advisor ? reviewResult(result, rejected, manual, advisor) : null;
+async function storeReview(db, id, result, rejected, manual, advisor = null, history = undefined) {
+  const h = history === undefined ? await historyOf(id) : history;
+  const reviewed = rejected.length || manual.length || advisor || h?.repeat ? reviewResult(result, rejected, manual, advisor, h) : null;
   const p = (reviewed ?? result).profile;
   await db.q(`UPDATE materials SET reviewed_score = $2, reviewed_modules = $3, profile_type = COALESCE(profile_manual, $4), scam_score = $5
                WHERE id = $1`,
@@ -53,7 +56,8 @@ r.get('/materials', async (req, res) => {
     min_followers: z.coerce.number().int().min(0).optional(), tag: z.string().max(60).optional(),
     profile: z.enum(PROFILES).optional(),
     media: z.enum(['video', 'image', 'web']).optional(), watch: z.coerce.number().int().positive().optional(),
-    lang: z.enum(['pl', 'other']).optional(), demo: z.enum(['0', '1', 'only']).optional(),
+    lang: z.enum(['pl', 'other']).optional(), demo: z.enum(['0', '1', 'only']).optional(), repeat: z.enum(['1']).optional(),
+    account: z.string().max(300).optional(),
     sort: z.enum(['score', 'fetched_at', 'published_at', 'title', 'views', 'priority']).default('fetched_at'), dir: z.enum(['asc', 'desc']).default('desc'),
     page: z.coerce.number().int().min(1).default(1), size: z.coerce.number().int().min(1).max(200).default(50),
   }), req.query);
@@ -80,6 +84,11 @@ r.get('/materials', async (req, res) => {
   if (f.media === 'video') where.push("m.raw->'layout' ? 'video'");
   if (f.media === 'image') where.push("m.raw->'layout'->>'engine' = 'ocr'");
   if (f.media === 'web') where.push("NOT (m.raw->'layout' ? 'video') AND coalesce(m.raw->'layout'->>'engine', '') <> 'ocr'");
+  if (f.account) add('m.account_key = ?', f.account);
+  // konto z historią naruszeń: inne materiały konta z wysokim wynikiem klasyfikatora lub podejrzeniem oszustwa
+  if (f.repeat) where.push(`m.account_key IS NOT NULL AND EXISTS (SELECT 1 FROM materials o JOIN LATERAL (SELECT score, result FROM analyses
+      WHERE material_id = o.id ORDER BY created_at DESC LIMIT 1) oa ON TRUE WHERE o.account_key = m.account_key AND o.id <> m.id AND NOT o.demo
+      AND (oa.score >= 70 OR oa.result->'profile'->>'primary' = 'podejrzenie_oszustwa'))`);
   if (f.demo === 'only') where.push('m.demo');
   else if (f.demo !== '1') where.push(demoSql(f.demo === '0' ? false : await getShowDemo()));
   const w = where.length ? `WHERE ${where.join(' AND ')}` : '';
@@ -92,6 +101,7 @@ r.get('/materials', async (req, res) => {
   const items = await q(
     `SELECT m.id, m.url, m.title, m.author, m.platform, m.status, m.fetched_at, m.published_at, m.demo, m.ground_truth, m.near_duplicate_of,
             m.views, m.followers, m.tags, m.profile_type, m.scam_score, (m.raw->'layout' ? 'video') AS is_video,
+            m.account_key, (SELECT count(*)::int FROM materials o WHERE o.account_key = m.account_key AND o.id <> m.id AND NOT o.demo) AS account_others,
             a.id AS analysis_id, a.score, a.classifier_score, (m.reviewed_score IS NOT NULL) AS reviewed, a.modules, a.module_scores,
             ${riskSql()} AS risk, ${aboveSql()} AS above_threshold
        FROM materials m ${LATEST} ${w}
@@ -138,6 +148,8 @@ r.get('/materials/:id', async (req, res) => {
     history: analyses, findings, entities, alerts, threshold, rejected: await rejectedOf(id),
     manual_findings: await manualOf(id),
     verified_advisor: await advisorOf(id),
+    account: m.account_key && !m.demo ? await accountHistory(m.account_key, { excludeId: m.id }) : null,
+    prior_history: await historyOf(id),
     advisor_candidate: advisorCandidate(m, latest?.result),
     similar: await findSimilar(m.simhash, { excludeId: m.id }),
     // wynik efektywny = po weryfikacji analityka (gdy jest), inaczej wynik klasyfikatora
@@ -218,13 +230,14 @@ r.get('/summary/:materialId', async (req, res) => {
   const rejected = await rejectedOf(materialId);
   const manual = await manualOf(materialId);
   const advisor = await advisorOf(materialId);
-  const reviewed = rejected.length || manual.length || advisor ? reviewResult(a.result, rejected, manual, advisor) : null;
+  const history = await historyOf(materialId);
+  const reviewed = rejected.length || manual.length || advisor || history?.repeat ? reviewResult(a.result, rejected, manual, advisor, history) : null;
   let s = { summary: a.summary, engine: a.summary_engine };
   if (!a.summary || req.query.refresh === '1') {
     s = await analyzer.summary(reviewed ?? a.result);
     await q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   }
-  res.json({ ...s, points: summaryPoints(withVerifiedAdvisor(a.result, advisor), rejected, manual), score: Number(a.score), reviewed_score: reviewed ? reviewed.score : null,
+  res.json({ ...s, points: summaryPoints(withVerifiedAdvisor(withHistory(a.result, history), advisor), rejected, manual), score: Number(a.score), reviewed_score: reviewed ? reviewed.score : null,
     verified_advisor: advisor,
     module_scores: a.result.module_scores, reviewed_modules: reviewed?.module_scores ?? null });
 });
@@ -236,10 +249,11 @@ r.put('/materials/:id/review', async (req, res) => {
   const a = await one('SELECT id, score, result FROM analyses WHERE material_id = $1 ORDER BY created_at DESC LIMIT 1', [id]);
   if (!a) return res.status(404).json({ error: 'Brak analizy' });
   // klucz „reguła” = cała przesłanka, „reguła:element” = pojedynczy sygnał/fragment
-  const rejected = [...new Set(b.rejected)].filter((k) => isKnownKey(a.result, k));
+  const history = await historyOf(id);
+  const rejected = [...new Set(b.rejected)].filter((k) => isKnownKey(withHistory(a.result, history), k));
   const manual = await manualOf(id);
   const advisor = await advisorOf(id);
-  const reviewed = rejected.length || manual.length || advisor ? reviewResult(a.result, rejected, manual, advisor) : null;
+  const reviewed = rejected.length || manual.length || advisor || history?.repeat ? reviewResult(a.result, rejected, manual, advisor, history) : null;
   // podgląd na żywo w trybie edycji – bez zapisu
   if (req.query.dry === '1') {
     return res.json({ score: Number(a.score), reviewed_score: reviewed ? reviewed.score : null, module_scores: a.result.module_scores,
@@ -252,12 +266,12 @@ r.put('/materials/:id/review', async (req, res) => {
       await t.q(`INSERT INTO finding_reviews (material_id, rule_id, note) VALUES ($1, $2, $3)
                  ON CONFLICT (material_id, rule_id) DO UPDATE SET note = COALESCE(EXCLUDED.note, finding_reviews.note)`, [id, rule, b.note ?? null]);
     }
-    await storeReview(t, id, a.result, rejected, manual, advisor);
+    await storeReview(t, id, a.result, rejected, manual, advisor, history);
     if (s) await t.q('UPDATE analyses SET summary = $2, summary_engine = $3 WHERE id = $1', [a.id, s.summary, s.engine]);
   });
   emit('material:status', { id });
   res.json({ rejected, reviewed_score: reviewed ? reviewed.score : null, score: Number(a.score), summary: s?.summary ?? null,
-    points: summaryPoints(withVerifiedAdvisor(a.result, advisor), rejected, manual), profile: reviewed?.profile?.primary ?? a.result.profile?.primary ?? null });
+    points: summaryPoints(withVerifiedAdvisor(withHistory(a.result, history), advisor), rejected, manual), profile: reviewed?.profile?.primary ?? a.result.profile?.primary ?? null });
 });
 
 // Problemy dodane ręcznie (np. fragment filmu, którego automat nie wychwycił) – liczą się do wyniku po weryfikacji

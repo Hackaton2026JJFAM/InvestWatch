@@ -89,6 +89,13 @@ startScheduler();
 startReservesSchedule();
 startWatchSchedule();
 startTagSchedule();
+import('./accounts.js').then(async ({ backfillAccountKeys }) => {
+  await backfillAccountKeys();
+  // oznaczenie materiałów kont z historią naruszeń (także sprzed tej funkcji)
+  const { storeReviewFor } = await import('./routes/materials.js');
+  const { q: dbq } = await import('./db.js');
+  for (const { id } of await dbq('SELECT id FROM materials WHERE account_key IS NOT NULL AND NOT demo')) await storeReviewFor(id).catch(() => {});
+}).catch((err) => log.warn('account history init failed', { err: err.message }));
 server.listen(config.port, () => log.info('backend listening', { port: config.port }));
 if (config.seedDemo) seedSamples().catch((err) => log.warn('seed failed', { err: err.message }));
 
