@@ -136,7 +136,7 @@ export async function migrate() {
 
 export async function getShowDemo() {
   const row = await one("SELECT value FROM settings WHERE key = 'show_demo'");
-  return row ? row.value === true : false;
+  return row ? row.value === true : true;
 }
 
 export async function getThreshold() {

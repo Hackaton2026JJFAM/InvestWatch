@@ -29,7 +29,7 @@ cp .env.example .env        # ustaw POSTGRES_PASSWORD i ADMIN_PASSWORD
 docker compose up -d --build
 ```
 
-Dashboard: http://localhost:8080 (domyślnie tylko z tego komputera, `WEB_BIND`). Przy pierwszym starcie ładowanych jest 20 oznaczonych próbek demo (w tym grafika reklamy do OCR i reels do transkrypcji) (`data/samples`) i fikcyjne podmioty DEMO. Wyłącza to `SEED_DEMO=false`.
+Dashboard: http://localhost:8080 (domyślnie tylko z tego komputera, `WEB_BIND`). Przy pierwszym starcie ładowane są 3 oznaczone próbki do testów (`data/samples`: strona z „pewnym zyskiem”, oznaczona współpraca, TikTok) i fikcyjne podmioty DEMO; pełen zestaw 23 próbek (z grafiką do OCR i reelsem do transkrypcji) wczytuje `SEED_SAMPLES=all`, a `SEED_DEMO=false` wyłącza próbki całkiem. Próbki mają oznaczenie „próbka” i można je ukryć przełącznikiem „pokaż próbki demo”.
 
 Przeglądanie i import materiałów nie wymagają logowania. Zmiana progu, zarządzanie źródłami, ładowanie próbek i usuwanie materiałów wymagają hasła administratora (`ADMIN_PASSWORD`).
 
@@ -90,6 +90,7 @@ Wideo: model Whisper `small` zajmuje ~0,5 GB (wolumen `whisper`, pobierany przy 
 | `OLLAMA_URL`, `OLLAMA_MODEL` | –, `gemma3:4b` | LLM do podsumowań |
 | `ENRICH_AUTO` | true | Automatyczne wzbogacanie nowych spółek (KRS, GLEIF, listy) – wymaga internetu z analizatora |
 | `SEED_DEMO` | true | Próbki przy pustej bazie i fikcyjne podmioty DEMO w rejestrze (oznaczone jako DEMO, nigdy jako wpis KNF) |
+| `SEED_SAMPLES` | 3 próbki | Lista plików z `data/samples` wczytywanych przy pustej bazie; `all` = wszystkie (kalibracja) |
 
 ## Uruchomienie bez Dockera (dev)
 

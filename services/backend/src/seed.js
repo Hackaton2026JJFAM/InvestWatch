@@ -24,8 +24,9 @@ export async function seedSamples({ force = false } = {}) {
     return { queued: 0 };
   }
   let queued = 0;
+  const only = config.seedSamples === 'all' ? null : new Set(config.seedSamples.split(',').map((x) => x.trim()).filter(Boolean));
   for (const [file, meta] of Object.entries(labels)) {
-    if (file.startsWith('_')) continue;
+    if (file.startsWith('_') || (only && !only.has(file))) continue;
     const ext = path.extname(file).toLowerCase();
     if (IMAGE_EXT.has(ext)) {
       // grafika reklamy – OCR w scraperze (wymaga Tesseracta: obraz Docker; w dev bez niego zadanie zakończy się błędem 501)

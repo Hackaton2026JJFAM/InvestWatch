@@ -74,6 +74,7 @@ Legenda: [x] zrobione · [ ] do zrobienia · (!) blokuje demo · ❓ wymaga decy
 - [x] Data publikacji: w nagłówku materiału, kolumna i sortowanie w wynikach; scraper – data z ID posta X/TikToka, `<time datetime>`, więcej metatagów, metadane posta
 - [x] „Mock data”: scraper działa (prawdziwe filmy YT i post X przeanalizowane); dane demo to próbki kalibracyjne (`SEED_DEMO`) – oznaczone jako „próbka”, domyślnie ukryte w pulpicie, wynikach i alertach (przełącznik „pokaż próbki demo”), zostają w kalibracji; `DELETE /api/demo` (admin) usuwa je całkiem
 - [x] Alerty: „Weryfikuję” (W trakcie weryfikacji) i „↺ Porzuć” – powrót do stanu początkowego (nowy, nieprzeczytany); status alertu i materiału zsynchronizowany w obie strony
+- [x] Usunięte dane testowe: zostały 3 próbki do testów (Złota Przystań – oszustwo, ETF – oznaczona współpraca, TikTok krypto); seed przy pustej bazie wczytuje tylko je (`SEED_SAMPLES`, `all` = pełen zestaw do kalibracji); próbki widoczne domyślnie z oznaczeniem „próbka”
 - [x] Prostszy język: „problem / do sprawdzenia / w porządku”, „Ocena ryzyka”, „Wykryte problemy”, „Co sprawdzamy / Dlaczego / Przepis”
 
 ## Weryfikacja analityka – iteracja 2

@@ -34,6 +34,8 @@ export const config = {
   defaultThreshold: Number(env('DEFAULT_THRESHOLD', '45')),
   seedDemo: env('SEED_DEMO', 'true') === 'true',
   samplesDir: env('SAMPLES_DIR', '/app/samples'),
+  // które próbki wczytać przy pustej bazie: domyślnie 3 do testów (oszustwo, oznaczona współpraca, TikTok); „all” = pełen zestaw do kalibracji
+  seedSamples: env('SEED_SAMPLES', '07_gwarantowany_zysk.html,09_finfluencer_oznaczony.html,17_tiktok_krypto.json'),
   concurrency: Number(env('WORKER_CONCURRENCY', '2')),
   // wideo (Whisper na CPU) – osobny tor kolejki; zwiększać razem z liczbą replik scrapera
   videoConcurrency: Number(env('VIDEO_WORKER_CONCURRENCY', '1')),
